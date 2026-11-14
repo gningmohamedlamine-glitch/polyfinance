@@ -1,5 +1,5 @@
 import { CurrencyPipe, DecimalPipe, PercentPipe } from '@angular/common';
-import { Component, input } from '@angular/core';
+import { Component, input, output } from '@angular/core';
 import { Analysis } from '../../services/market-api';
 
 @Component({
@@ -10,4 +10,9 @@ import { Analysis } from '../../services/market-api';
 })
 export class MovementAnalysis {
   analysis = input.required<Analysis>();
+  retry = output<void>();
+
+  bullets(text: string) {
+    return text.split(/\r?\n/).map(line => line.trim().replace(/^(?:[-*•]|\d+[.)])\s+/, '').replaceAll('**', '')).filter(Boolean);
+  }
 }

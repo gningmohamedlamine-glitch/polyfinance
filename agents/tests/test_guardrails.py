@@ -6,16 +6,12 @@ from unittest import mock
 from agents import events
 from agents.event_agent import run_event_agent
 from agents.impact_agent import profile_coherence, run_impact_agent
-from markets.views import _event_cache
 from markets.window import resolve_window, risk_indicators, window_returns
 
 SCENARIO = {"position_cad": 10000, "withdrawal_cad": 9500, "portfolio_cad": 100000, "purchase_cad": 5000}
 
 
 class CoherenceTests(unittest.TestCase):
-    def setUp(self):
-        _event_cache.clear()
-
     def test_risk_uses_no_future_data(self):
         risk = risk_indicators("NVDA", "2024-08-29")
         self.assertEqual(risk["status"], "ok")

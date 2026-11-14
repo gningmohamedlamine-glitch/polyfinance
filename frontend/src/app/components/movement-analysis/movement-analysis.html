@@ -3,15 +3,9 @@
   <article class="panel">
     <h2>Ce qui s’est passé</h2>
     <dl class="metrics">
-      <div><dt>Action · USD</dt><dd>{{ result.movement.usd_return | percent:'1.1-2' }}</dd></div>
+      <div class="lead-metric"><dt>Action · USD</dt><dd>{{ result.movement.usd_return | percent:'1.1-2' }}</dd></div>
       <div><dt>SPY</dt><dd>{{ result.movement.benchmarks['SPY']?.return | percent:'1.1-2' }}</dd></div>
       <div><dt>QQQ</dt><dd>{{ result.movement.benchmarks['QQQ']?.return | percent:'1.1-2' }}</dd></div>
-      @if (result.dossier?.benchmarks?.['SPY']?.gap_pp != null) {
-        <div><dt>Écart SPY</dt><dd>{{ result.dossier!.benchmarks['SPY'].gap_pp | number:'1.1-2' }} pts</dd></div>
-      }
-      @if (result.dossier?.benchmarks?.['QQQ']?.gap_pp != null) {
-        <div><dt>Écart QQQ</dt><dd>{{ result.dossier!.benchmarks['QQQ'].gap_pp | number:'1.1-2' }} pts</dd></div>
-      }
       @if (result.dossier?.benchmarks?.['XLK']?.gap_pp != null) {
         <div><dt>Écart secteur (XLK)</dt><dd>{{ result.dossier!.benchmarks['XLK'].gap_pp | number:'1.1-2' }} pts</dd></div>
       }
@@ -20,17 +14,23 @@
         <div><dt>Part propre au titre</dt><dd>{{ result.dossier!.returns!.market_model!.residual_pp | number:'1.1-2' }} pts</dd></div>
       }
     </dl>
+    <ul class="takeaways">
+      @for (benchmark of ['SPY', 'QQQ', 'XLK']; track benchmark) {
+        @if (result.movement.benchmarks[benchmark]?.gap; as gap) {
+          <li [class.negative]="gap < 0"><strong>{{ gap > 0 ? 'Positif' : 'Négatif' }}</strong> · L’action {{ gap > 0 ? 'surperforme' : 'sous-performe' }} {{ benchmark }} de {{ ((gap > 0 ? gap : -gap) * 100) | number:'1.1-2' }} points de pourcentage.</li>
+        }
+      }
+      @for (bullet of bullets(result.event.text); track $index) { <li>{{ bullet }}</li> }
+    </ul>
     @if (result.dossier?.notable_sessions?.sessions?.length) {
-      <div class="notable">
-        <h3>Séances marquantes · {{ result.dossier!.notable_sessions.concentration }}</h3>
+      <details><summary>Séances marquantes</summary>
         <ul>
           @for (session of result.dossier!.notable_sessions.sessions; track session.date) {
             <li>{{ session.date }} · {{ session.daily_return | percent:'1.1-2' }}</li>
           }
         </ul>
-      </div>
+      </details>
     }
-    <p>{{ result.event.text }}</p>
     @for (source of result.event.sources; track source.url) {
       <a [href]="source.url" target="_blank" rel="noopener">{{ source.title }}</a>
       @if (source.excerpt) {
@@ -47,11 +47,32 @@
         {{ source.publisher }} · {{ source.time_et.replace('T', ' ') }} HE
       </small>
     }
-    <small>
-      @if (result.event.mode === 'bedrock') { Synthèse Amazon Bedrock }
-      @else { Synthèse locale@if (result.event.mode_reason) { · {{ result.event.mode_reason }} }
-      }
-    </small>
+    @if (result.dossier?.coverage?.web_leads?.length) {
+      <details open>
+        <summary>Pistes trouvées sur le web</summary>
+        @for (lead of result.dossier!.coverage.web_leads; track lead.url) {
+          <a [href]="lead.url" target="_blank" rel="noopener">{{ lead.title }}</a>
+          <small>
+            {{ lead.published_date }} ·
+            @if (lead.after_session) { Suivi publié après la séance du {{ lead.session }} }
+            @else { Heure à vérifier }
+          </small>
+          <p>{{ lead.summary }}</p>
+        }
+      </details>
+    } @else if (result.dossier?.coverage?.web_search === 'no_dated_sources') {
+      <small>Aucune piste web avec une date et un lien cités dans la fenêtre élargie.</small>
+    } @else if (result.dossier?.coverage?.web_search === 'unavailable') {
+      <small>
+        @switch (result.dossier?.coverage?.web_search_reason) {
+          @case ('timeout') { La recherche web a dépassé son délai d’attente. }
+          @case ('not_executed') { Nova n’a pas lancé la recherche web. }
+          @case ('invalid_response') { Nova a renvoyé une réponse web inexploitable. }
+          @default { La recherche web est indisponible. }
+        }
+      </small>
+      <button class="retry" type="button" (click)="retry.emit()">Relancer l’analyse</button>
+    }
   </article>
   <article class="panel">
     <h2>Ce que ça change pour toi</h2>
@@ -66,6 +87,19 @@
       }
       <small>{{ coherence.notice }}</small>
     }
+    @if (result.impact.scenario; as scenario) {
+      @if (scenario.position_cad != null) {
+        <small>
+          Exemple fictif · Position de {{ scenario.position_cad | number:'1.0-0' }} CAD
+          @if (scenario.portfolio_cad != null) {
+            sur {{ scenario.portfolio_cad | number:'1.0-0' }} CAD,
+            achat de {{ scenario.purchase_cad | number:'1.0-0' }} CAD
+          } @else if (scenario.withdrawal_cad != null) {
+            · Retrait prévu de {{ scenario.withdrawal_cad | number:'1.0-0' }} CAD
+          }
+        </small>
+      }
+    }
     <dl class="metrics">
       @for (metric of result.impact.metrics; track metric.label) {
         <div><dt>{{ metric.label }}</dt><dd>
@@ -74,17 +108,19 @@
         </dd></div>
       }
     </dl>
-    <p>{{ result.impact.text }}</p>
+    <ul class="takeaways">
+      @for (bullet of bullets(result.impact.text); track $index) { <li>{{ bullet }}</li> }
+    </ul>
   </article>
 </section>
 @if (result.trace?.length) {
-  <section class="panel trace">
-    <h2>Outils exécutés</h2>
+  <details class="panel trace">
+    <summary>Détails de l’analyse</summary>
   @for (step of result.trace!; track $index) {
     <div class="trace-row">
       <strong>{{ step.agent }} · {{ step.name }}</strong>
       <span>{{ step.source }} · {{ step.status }}</span>
     </div>
   }
-  </section>
+  </details>
 }

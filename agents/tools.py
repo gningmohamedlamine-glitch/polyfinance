@@ -1,72 +1,12 @@
-"""Python tools invoked by market agents."""
-
-from __future__ import annotations
+"""Gather deterministic market evidence for the analysis pipeline."""
 
 from dataclasses import dataclass
 
-from markets.market import load_prices, stock_history
+from markets.market import stock_history
 from markets.window import ResolvedWindow, notable_sessions, window_returns
 
 from .events import publication_coverage, search_publications
 
-
-MAX_TOOL_CALLS = 6
-
-EVENT_TOOL_SPECS = [
-    {
-        "toolSpec": {
-            "name": "compare_market",
-            "description": (
-                "Compare le rendement USD du titre avec SPY, QQQ et son FNB sectoriel entre deux clôtures ajustées, "
-                "et renvoie le bêta face à QQQ avec la part du mouvement non expliquée par le marché."
-            ),
-            "inputSchema": {
-                "json": {
-                    "type": "object",
-                    "properties": {
-                        "ticker": {"type": "string"},
-                        "start_close_date": {"type": "string"},
-                        "end_close_date": {"type": "string"},
-                    },
-                    "required": ["ticker", "start_close_date", "end_close_date"],
-                }
-            },
-        }
-    },
-    {
-        "toolSpec": {
-            "name": "find_notable_sessions",
-            "description": "Repère jusqu’à trois séances marquantes sur une période.",
-            "inputSchema": {
-                "json": {
-                    "type": "object",
-                    "properties": {
-                        "ticker": {"type": "string"},
-                        "start_close_date": {"type": "string"},
-                        "end_close_date": {"type": "string"},
-                    },
-                    "required": ["ticker", "start_close_date", "end_close_date"],
-                }
-            },
-        }
-    },
-    {
-        "toolSpec": {
-            "name": "search_publications",
-            "description": "Cherche des publications vérifiées pour une liste de séances.",
-            "inputSchema": {
-                "json": {
-                    "type": "object",
-                    "properties": {
-                        "ticker": {"type": "string"},
-                        "sessions": {"type": "array", "items": {"type": "string"}},
-                    },
-                    "required": ["ticker", "sessions"],
-                }
-            },
-        }
-    },
-]
 
 @dataclass
 class ToolContext:
@@ -78,60 +18,20 @@ class ToolContext:
     price_rows: list[dict]
 
 
-def build_tool_context(window: ResolvedWindow) -> ToolContext:
+def build_tool_context(window: ResolvedWindow, notify) -> ToolContext:
+    notify("event", "compare_market", "running")
     returns = window_returns(window)
+    notify("event", "compare_market", "done")
+
+    if window.applied == "period":
+        notify("event", "find_notable_sessions", "running")
     notable = notable_sessions(window)
+    if window.applied == "period":
+        notify("event", "find_notable_sessions", "done", len(notable["sessions"]))
+
+    notify("event", "search_publications", "running")
     price_rows = stock_history(window.ticker)
     publications = search_publications(window.ticker, window.measured_sessions, price_rows)
     coverage = publication_coverage(window.measured_sessions, publications)
+    notify("event", "search_publications", "done", len(publications))
     return ToolContext(window, returns, notable, publications, coverage, price_rows)
-
-
-def validate_event_args(name: str, args: dict, window: ResolvedWindow) -> str | None:
-    if name == "compare_market":
-        if args.get("ticker") != window.ticker:
-            return "ticker invalide"
-        if args.get("start_close_date") != window.start_close_date or args.get("end_close_date") != window.end_close_date:
-            return "fenêtre invalide"
-        return None
-    if name == "find_notable_sessions":
-        if args.get("ticker") != window.ticker:
-            return "ticker invalide"
-        if args.get("start_close_date") != window.start_close_date or args.get("end_close_date") != window.end_close_date:
-            return "fenêtre invalide"
-        return None
-    if name == "search_publications":
-        if args.get("ticker") != window.ticker:
-            return "ticker invalide"
-        sessions = args.get("sessions") or []
-        allowed = set(window.measured_sessions)
-        if not isinstance(sessions, list) or any(session not in allowed for session in sessions):
-            return "sessions invalides"
-        return None
-    return "outil inconnu"
-
-
-def run_event_tool(name: str, context: ToolContext, args: dict | None = None) -> dict:
-    if name == "compare_market":
-        return {
-            "returns": context.returns,
-            "benchmarks": context.returns["benchmarks"],
-            "market_model": context.returns.get("market_model"),
-        }
-    if name == "find_notable_sessions":
-        return context.notable
-    if name == "search_publications":
-        sessions = (args or {}).get("sessions", list(context.window.measured_sessions))
-        publications = search_publications(context.window.ticker, sessions, context.price_rows)
-        return {
-            "publications": publications,
-            "coverage": publication_coverage(sessions, publications),
-        }
-    raise ValueError("outil inconnu")
-
-
-def required_event_tools(window: ResolvedWindow) -> list[str]:
-    tools = ["compare_market", "search_publications"]
-    if window.applied == "period":
-        tools.insert(1, "find_notable_sessions")
-    return tools

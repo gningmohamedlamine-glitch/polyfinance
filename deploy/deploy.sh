@@ -41,6 +41,12 @@ esac
 endpoint="${endpoint%/}"
 curl --fail --silent --show-error --max-time 15 --retry 10 --retry-all-errors --retry-delay 5 "$endpoint/api/health/"
 curl --fail --silent --show-error --max-time 15 "$endpoint/" > /dev/null
-curl --fail --silent --show-error --max-time 40 "$endpoint/api/analysis/?ticker=NVDA&date=2024-08-29&profile=robert" |
-  python -c 'import json,sys; r=json.load(sys.stdin); assert r["event"]["mode"] == r["impact"]["mode"] == "bedrock", "Les deux agents doivent répondre via Bedrock"'
+curl --fail --silent --show-error --no-buffer --max-time 110 "$endpoint/api/analysis/?ticker=NVDA&date=2024-08-29&profile=robert&stream=1" |
+  python -c '
+import json, sys
+result = next((message["analysis"] for line in sys.stdin if (message := json.loads(line))["kind"] == "result"), None)
+assert result, "L’analyse en flux doit retourner un résultat"
+assert result["event"]["mode"] == result["impact"]["mode"] == "bedrock", "Les deux agents doivent répondre via Bedrock"
+assert result["dossier"]["coverage"]["web_search"] != "disabled", "La recherche web doit être activée"
+'
 printf '\nApplication : %s\n' "$endpoint"

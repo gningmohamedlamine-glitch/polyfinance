@@ -1,8 +1,9 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
+import { Observable } from 'rxjs';
 
 export interface Stock { ticker: string; name: string }
-export interface Price { date: string; close: number; adj_close: number; volume: number }
+export interface Price { date: string; open: number; high: number; low: number; close: number; adj_close: number; volume: number }
 export interface Source {
   session?: string;
   time_et: string;
@@ -35,6 +36,19 @@ export interface ToolTrace {
   arguments: Record<string, unknown>;
   error?: string;
 }
+export interface AgentProgress {
+  kind: 'progress';
+  agent: 'event' | 'impact';
+  action: string;
+  status: 'running' | 'done' | 'unavailable';
+  count?: number | null;
+  mode?: string | null;
+  duration_ms?: number | null;
+  reason?: string | null;
+}
+
+type AnalysisMessage = AgentProgress | { kind: 'result'; analysis: Analysis } | { kind: 'error'; message: string };
+
 export interface Analysis {
   movement: {
     date: string;
@@ -57,7 +71,19 @@ export interface Analysis {
       concentration: string;
       sessions: { date: string; daily_return: number }[];
     };
-    coverage: { sessions_unexplained: string[] };
+    coverage: {
+      sessions_unexplained: string[];
+      web_search?: string;
+      web_search_reason?: string;
+      web_leads?: {
+        url: string;
+        title: string;
+        published_date: string;
+        summary: string;
+        session?: string;
+        after_session?: boolean;
+      }[];
+    };
   };
   event: { text: string; mode: string; mode_reason?: string | null; sources: Source[] };
   impact: {
@@ -67,6 +93,7 @@ export interface Analysis {
     metrics: { label: string; value: number; unit: string }[];
     assumptions?: string;
     coherence?: Coherence;
+    scenario?: Partial<Record<'position_cad' | 'purchase_cad' | 'portfolio_cad' | 'withdrawal_cad', number>>;
   };
   trace?: ToolTrace[];
 }
@@ -85,6 +112,44 @@ export class MarketApi {
   }
 
   analyze(params: Record<string, string | number>) {
-    return this.http.get<Analysis>('/api/analysis/', { params });
+    return new Observable<AgentProgress | Analysis>(subscriber => {
+      const controller = new AbortController();
+      const query = new URLSearchParams({ stream: '1' });
+      Object.entries(params).forEach(([key, value]) => query.set(key, String(value)));
+
+      void (async () => {
+        try {
+          const response = await fetch('/api/analysis/?' + query, { signal: controller.signal });
+          if (!response.ok) {
+            const body = await response.json();
+            throw new Error(body.error);
+          }
+          if (!response.body) throw new Error('Flux d’analyse indisponible.');
+          const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
+          let buffer = '';
+          while (!subscriber.closed) {
+            const { value, done } = await reader.read();
+            if (done) throw new Error('La connexion a été interrompue pendant l’analyse.');
+            buffer += value;
+            const lines = buffer.split('\n');
+            buffer = lines.pop() ?? '';
+            for (const line of lines) {
+              if (!line) continue;
+              const message: AnalysisMessage = JSON.parse(line);
+              if (message.kind === 'error') throw new Error(message.message);
+              if (message.kind === 'result') {
+                subscriber.next(message.analysis);
+                subscriber.complete();
+                return;
+              }
+              subscriber.next(message);
+            }
+          }
+        } catch (error) {
+          if (!subscriber.closed) subscriber.error(error);
+        }
+      })();
+      return () => controller.abort();
+    });
   }
 }

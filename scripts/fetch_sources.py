@@ -3,7 +3,7 @@
 Usage (depuis la racine) :
     SEC_USER_AGENT="Equipe AlphaForge courriel@exemple.com" python scripts/fetch_sources.py
 
-Pour chaque ligne de data/market_events.csv ayant un source_id, le script télécharge l'URL,
+Pour chaque ligne de data/market_events.csv ayant un source_id, le script télécharge source_url (sinon url),
 convertit le HTML en texte brut et l'enregistre dans data/sources/<source_id>.txt.
 Il indique ensuite si l'extrait (colonne excerpt) figure mot pour mot dans la source.
 Un fichier déjà présent n'est pas réécrit (supprimez-le pour le retélécharger).
@@ -63,10 +63,11 @@ def main() -> int:
             continue
         target = SOURCES / f"{source_id}.txt"
         if not target.exists():
-            request = urllib.request.Request(event["url"], headers={"User-Agent": agent})
+            url = (event.get("source_url") or event["url"]).strip()
+            request = urllib.request.Request(url, headers={"User-Agent": agent})
             with urllib.request.urlopen(request, timeout=30) as response:
                 html = response.read().decode(response.headers.get_content_charset() or "utf-8", "replace")
-            target.write_text(f"source: {event['url']}\n\n{html_to_text(html)}", encoding="utf-8")
+            target.write_text(f"source: {url}\n\n{html_to_text(html)}", encoding="utf-8")
             time.sleep(0.5)  # limite de fréquence de la SEC
         print(f"{source_id}: {verify_excerpt(event)}")
     return 0

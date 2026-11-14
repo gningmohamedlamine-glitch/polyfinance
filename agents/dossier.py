@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from .tools import ToolContext, build_tool_context
+from .tools import ToolContext
 
 SCHEMA = "alphaforge.market_dossier.v1"
 
@@ -25,27 +25,15 @@ def selection_payload(window) -> dict:
 
 
 def build_dossier(
-    window,
+    context: ToolContext,
     *,
-    returns: dict | None = None,
-    notable: dict | None = None,
-    publications: list | None = None,
-    coverage: dict | None = None,
     synthesis_text: str,
-    synthesis_mode: str,
-    mode_reason: str | None,
     tools_executed: list[dict],
 ) -> dict:
-    context = None
-    if returns is None or notable is None or publications is None or coverage is None:
-        context = build_tool_context(window)
-        returns = returns or context.returns
-        notable = notable or context.notable
-        publications = publications if publications is not None else context.publications
-        coverage = coverage or context.coverage
+    returns = context.returns
     return {
         "schema": SCHEMA,
-        "selection": selection_payload(window),
+        "selection": selection_payload(context.window),
         "returns": {
             "usd_return": returns["usd_return"],
             "fx_return": returns["fx_return"],
@@ -55,21 +43,20 @@ def build_dossier(
             "market_model": returns.get("market_model"),
         },
         "benchmarks": returns["benchmarks"],
-        "notable_sessions": notable,
-        "publications": publications,
-        "coverage": coverage,
+        "notable_sessions": context.notable,
+        "publications": context.publications,
+        "coverage": context.coverage,
         "synthesis": {
             "text": synthesis_text,
-            "mode": synthesis_mode,
-            "mode_reason": mode_reason,
+            "mode": "local",
+            "mode_reason": None,
         },
         "limits": {
-            "max_tool_calls": 6,
             "causality": "Un écart avec SPY ou QQQ ne prouve pas une cause.",
             "figures_source": "python",
-            "verified_events_source": "market_events.csv",
-            "direction": "Une publication datée ne prouve pas le sens du mouvement : les attentes du marché ne sont pas dans le catalogue.",
-            "excerpts": "Chaque extrait affiché est comparé au texte de la source enregistrée dans data/sources/.",
+            "verified_events_source": "market_events.csv et SEC EDGAR",
+            "direction": "Une publication datée ne prouve pas le sens du mouvement : les attentes du marché ne sont pas dans les sources.",
+            "excerpts": "Chaque extrait du catalogue est comparé au texte de la source enregistrée dans data/sources/.",
         },
         "tools_executed": tools_executed,
     }
@@ -99,9 +86,9 @@ def local_event_text(context: ToolContext) -> str:
         parts.append(f"Publications vérifiées : {titles}.")
         parts.append("Ces publications datent la séance, mais ne prouvent pas à elles seules le sens du mouvement.")
     else:
-        parts.append("Aucune publication vérifiée dans le catalogue pour cette fenêtre.")
+        parts.append("Aucune publication vérifiée pour cette fenêtre. La cause du mouvement demeure indéterminée.")
     if context.coverage["sessions_unexplained"]:
         unexplained = ", ".join(context.coverage["sessions_unexplained"][:4])
-        parts.append(f"Séances sans preuve dans le catalogue : {unexplained}.")
+        parts.append(f"Séances sans publication vérifiée : {unexplained}.")
     parts.append("Les écarts avec les indices restent descriptifs et n’établissent pas une cause.")
     return " ".join(parts)

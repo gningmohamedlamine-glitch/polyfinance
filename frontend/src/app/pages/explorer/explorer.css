@@ -18,3 +18,15 @@ h1 { font-size: clamp(2rem, 5vw, 3.4rem); letter-spacing: -.045em; margin: 0; }
   overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
 }
 @media(max-width: 720px) { .layout { grid-template-columns: 1fr; } main { padding-inline: 14px; } }
+
+header span { color: var(--text); letter-spacing: -.04em; }
+.intro { padding: 44px 0 25px; }
+.intro p { line-height: 1.5; }
+.market-title { display: flex; gap: 12px; align-items: center; margin-bottom: 20px; }
+.market-title div > span { color: var(--muted); font-size: .8rem; }
+.ticker { display: grid; place-items: center; min-width: 52px; height: 48px; border-radius: 14px; background: #e4f2ea; color: var(--accent); font-weight: 700; padding: 0 8px; }
+.context { background: #edf3ed; }
+.examples button { border-radius: 999px; }
+.mode { border-radius: 999px; background: #f2f5f2; padding: 4px 10px; }
+.mode input { accent-color: var(--accent); }
+@media(max-width: 720px) { header small { font-size: .7rem; } .intro { padding-top: 30px; } .heading select { max-width: 100%; } }
