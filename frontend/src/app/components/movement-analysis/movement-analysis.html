@@ -1,0 +1,29 @@
+@let result = analysis();
+<section class="results">
+  <article class="panel">
+    <h2>Ce qui s’est passé</h2>
+    <dl class="metrics">
+      <div><dt>Action · USD</dt><dd>{{ result.movement.usd_return | percent:'1.1-2' }}</dd></div>
+      <div><dt>SPY</dt><dd>{{ result.movement.benchmarks['SPY']?.return | percent:'1.1-2' }}</dd></div>
+      <div><dt>QQQ</dt><dd>{{ result.movement.benchmarks['QQQ']?.return | percent:'1.1-2' }}</dd></div>
+    </dl>
+    <p>{{ result.event.text }}</p>
+    @for (source of result.event.sources; track source.url) {
+      <a [href]="source.url" target="_blank" rel="noopener">{{ source.title }}</a>
+      <small>{{ source.publisher }} · {{ source.time_et.replace('T', ' ') }} HE</small>
+    }
+  </article>
+  <article class="panel">
+    <h2>Ce que ça change pour toi</h2>
+    <dl class="metrics">
+      @for (metric of result.impact.metrics; track metric.label) {
+        <div><dt>{{ metric.label }}</dt><dd>
+          @if (metric.unit === '%') { {{ metric.value | percent:'1.1-2' }} }
+          @else { {{ metric.value | currency:'CAD':'code':'1.0-2' }} }
+        </dd></div>
+      }
+    </dl>
+    <p>{{ result.impact.text }}</p>
+    <small>Simulation · {{ result.impact.mode === 'bedrock' ? 'Amazon Bedrock' : 'Analyse locale' }}</small>
+  </article>
+</section>

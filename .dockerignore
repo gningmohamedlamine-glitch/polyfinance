@@ -1,0 +1,11 @@
+.git
+.github
+.venv
+**/__pycache__
+**/.env*
+**/.aws
+**/*.pem
+**/credentials
+frontend/node_modules
+frontend/dist
+frontend/.angular
