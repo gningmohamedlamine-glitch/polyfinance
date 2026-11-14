@@ -184,7 +184,7 @@ def run_impact_agent(dossier: dict, profile: str, scenario: dict, progress=None)
             "publications": dossier["publications"][:8],
             "web_leads": dossier["coverage"].get("web_leads", []),
         },
-        320,
+        700,
         notify,
     )
     return {
