@@ -8,7 +8,7 @@ EVENTS = Path(__file__).resolve().parents[1] / "data" / "market_events.csv"
 
 
 @lru_cache(maxsize=1)
-def load_events():
+def _read_catalog(_fingerprint):
     with EVENTS.open(newline="", encoding="utf-8-sig") as source:
         return tuple(csv.DictReader(source))
 
@@ -16,7 +16,7 @@ def load_events():
 def catalog_fingerprint():
     try:
         stat = EVENTS.stat()
-        return f"{stat.st_size}:{int(stat.st_mtime)}"
+        return f"{stat.st_size}:{stat.st_mtime_ns}"
     except OSError:
         return "missing"
 
@@ -26,12 +26,16 @@ def session_window(previous_date, session):
     return previous_date + "T16:00", session + "T16:00"
 
 
-def find_events(ticker, previous_date, session):
+def _matching_events(events, ticker, previous_date, session):
     start, end = session_window(previous_date, session)
     return [
-        dict(event) for event in load_events()
+        dict(event) for event in events
         if event["ticker"] in ("*", ticker) and start < event["time_et"] <= end
     ]
+
+
+def find_events(ticker, previous_date, session):
+    return _matching_events(_read_catalog(catalog_fingerprint()), ticker, previous_date, session)
 
 
 def previous_session_dates(ticker, sessions, price_rows):
@@ -47,6 +51,7 @@ def previous_session_dates(ticker, sessions, price_rows):
 
 
 def search_publications(ticker, sessions, price_rows):
+    events = _read_catalog(catalog_fingerprint())
     prev_map = previous_session_dates(ticker, sessions, price_rows)
     seen_urls = set()
     results = []
@@ -54,7 +59,7 @@ def search_publications(ticker, sessions, price_rows):
         previous = prev_map.get(session)
         if not previous:
             continue
-        for event in find_events(ticker, previous, session):
+        for event in _matching_events(events, ticker, previous, session):
             url = event.get("url", "").strip()
             if url and url in seen_urls:
                 continue

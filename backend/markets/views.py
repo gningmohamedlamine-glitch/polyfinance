@@ -1,45 +1,20 @@
+import json
+import logging
 import math
 from datetime import date
+from queue import Queue
+from threading import Thread
 
-from django.http import JsonResponse
+from django.http import JsonResponse, StreamingHttpResponse
 from django.views.decorators.http import require_GET
 
-from agents.events import catalog_fingerprint
-from agents.main import PROFILES, event_agent, impact_agent
+from agents.main import PROFILES
 
 from .market import STOCKS, load_prices, stock_history
-from .window import movement_legacy, resolve_window, window_returns
+from .pipeline import run_analysis
+from .window import resolve_window
 
-_event_cache: dict = {}
-
-
-def dossier_cache_key(window):
-    return (window.ticker, window.requested, window.start_close_date, window.end_close_date, catalog_fingerprint())
-
-
-def get_dossier(window):
-    key = dossier_cache_key(window)
-    cached = _event_cache.get(key)
-    if cached:
-        return cached
-    dossier = event_agent(window)
-    if dossier["synthesis"].get("mode_reason") not in (None, "model_unconfigured"):
-        return dossier
-    _event_cache[key] = dossier
-    if len(_event_cache) > 64:
-        _event_cache.pop(next(iter(_event_cache)))
-    return dossier
-
-
-def dossier_to_event(dossier: dict) -> dict:
-    synthesis = dossier["synthesis"]
-    sources = [{key: row[key] for key in row if key != "ticker"} for row in dossier["publications"]]
-    return {
-        "text": synthesis["text"],
-        "mode": synthesis["mode"],
-        "mode_reason": synthesis.get("mode_reason"),
-        "sources": sources,
-    }
+logger = logging.getLogger(__name__)
 
 
 @require_GET
@@ -106,21 +81,41 @@ def analysis(request):
     except ValueError as error:
         return JsonResponse({"error": str(error)}, status=400)
 
-    returns = window_returns(window)
-    move = movement_legacy(window, returns)
-    dossier = get_dossier(window)
     scenario = {
         "position_cad": position,
         "withdrawal_cad": withdrawal,
         "portfolio_cad": portfolio,
         "purchase_cad": purchase,
     }
-    impact = impact_agent(dossier, profile, scenario)
-    event = dossier_to_event(dossier)
-    return JsonResponse({
-        "movement": move,
-        "dossier": dossier,
-        "event": event,
-        "impact": impact,
-        "trace": impact.get("trace", dossier.get("tools_executed", [])),
-    })
+    if request.GET.get("stream") == "1":
+        response = StreamingHttpResponse(
+            analysis_stream(window, profile, scenario), content_type="application/x-ndjson",
+        )
+        response["Cache-Control"] = "no-store"
+        response["X-Accel-Buffering"] = "no"
+        return response
+    return JsonResponse(run_analysis(window, profile, scenario))
+
+
+def analysis_stream(window, profile, scenario):
+    messages = Queue()
+
+    def progress(agent, action, status, count, mode, duration_ms, reason):
+        messages.put({"kind": "progress", "agent": agent, "action": action,
+                      "status": status, "count": count, "mode": mode, "duration_ms": duration_ms,
+                      "reason": reason})
+
+    def run():
+        try:
+            result = run_analysis(window, profile, scenario, progress)
+            messages.put({"kind": "result", "analysis": result})
+        except Exception:
+            logger.exception("Analysis failed while streaming")
+            messages.put({"kind": "error", "message": "L’analyse a échoué. Réessaie dans un instant."})
+
+    Thread(target=run, daemon=True).start()
+    while True:
+        message = messages.get()
+        yield json.dumps(message, ensure_ascii=False) + "\n"
+        if message["kind"] != "progress":
+            return
