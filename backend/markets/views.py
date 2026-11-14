@@ -4,9 +4,40 @@ from datetime import date
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET
 
+from agents.events import catalog_fingerprint
 from agents.main import PROFILES, event_agent, impact_agent
 
-from .market import STOCKS, load_prices, movement, stock_history
+from .market import STOCKS, load_prices, stock_history
+from .window import movement_legacy, resolve_window, window_returns
+
+_event_cache: dict[str, dict] = {}
+
+
+def dossier_cache_key(window):
+    return f"{window.ticker}|{window.start_close_date}|{window.end_close_date}|{catalog_fingerprint()}"
+
+
+def get_dossier(window):
+    key = dossier_cache_key(window)
+    cached = _event_cache.get(key)
+    if cached:
+        return cached
+    dossier = event_agent(window)
+    _event_cache[key] = dossier
+    if len(_event_cache) > 64:
+        _event_cache.pop(next(iter(_event_cache)))
+    return dossier
+
+
+def dossier_to_event(dossier: dict) -> dict:
+    synthesis = dossier["synthesis"]
+    sources = [{key: row[key] for key in row if key != "ticker"} for row in dossier["publications"]]
+    return {
+        "text": synthesis["text"],
+        "mode": synthesis["mode"],
+        "mode_reason": synthesis.get("mode_reason"),
+        "sources": sources,
+    }
 
 
 @require_GET
@@ -37,6 +68,25 @@ def amount(request, key, default):
     return value
 
 
+def parse_selection(request, ticker: str):
+    start = request.GET.get("start_date")
+    end = request.GET.get("end_date")
+    session = request.GET.get("date")
+    if start or end:
+        if session:
+            raise ValueError("Utilise date ou start_date et end_date, pas les deux.")
+        if not start or not end:
+            raise ValueError("Fournis start_date et end_date ensemble.")
+        return resolve_window(
+            ticker,
+            start_date=date.fromisoformat(start).isoformat(),
+            end_date=date.fromisoformat(end).isoformat(),
+        )
+    if not session:
+        raise ValueError("Sélectionne une date valide.")
+    return resolve_window(ticker, date=date.fromisoformat(session).isoformat())
+
+
 @require_GET
 def analysis(request):
     ticker = request.GET.get("ticker")
@@ -44,11 +94,7 @@ def analysis(request):
     if ticker not in STOCKS or profile not in PROFILES:
         return JsonResponse({"error": "Action ou profil inconnu."}, status=400)
     try:
-        session = date.fromisoformat(request.GET.get("date", "")).isoformat()
-    except ValueError:
-        return JsonResponse({"error": "Sélectionne une date valide."}, status=400)
-    try:
-        move = movement(ticker, session)
+        window = parse_selection(request, ticker)
         position = amount(request, "position_cad", 10_000)
         withdrawal = amount(request, "withdrawal_cad", 9_500)
         portfolio = amount(request, "portfolio_cad", 100_000)
@@ -58,6 +104,21 @@ def analysis(request):
     except ValueError as error:
         return JsonResponse({"error": str(error)}, status=400)
 
-    event = event_agent(move)
-    impact = impact_agent(move, event["sources"], profile, position, withdrawal, portfolio, purchase)
-    return JsonResponse({"movement": move, "event": event, "impact": impact})
+    returns = window_returns(window)
+    move = movement_legacy(window, returns)
+    dossier = get_dossier(window)
+    scenario = {
+        "position_cad": position,
+        "withdrawal_cad": withdrawal,
+        "portfolio_cad": portfolio,
+        "purchase_cad": purchase,
+    }
+    impact = impact_agent(dossier, profile, scenario, trace=dossier.get("tools_executed"))
+    event = dossier_to_event(dossier)
+    return JsonResponse({
+        "movement": move,
+        "dossier": dossier,
+        "event": event,
+        "impact": impact,
+        "trace": impact.get("trace", dossier.get("tools_executed", [])),
+    })
