@@ -5,11 +5,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-from .market import BENCHMARKS, STOCKS, fx_at, load_prices
+from .market import BENCHMARKS, REFERENCE_NAMES, STOCK_SECTOR, STOCKS, fx_at, load_prices
 
 NOTABLE_RULE = "abs_daily_top3_2pp"
 NOTABLE_MIN_ABS = 0.02
 NOTABLE_MAX_COUNT = 3
+RISK_WINDOW_SESSIONS = 252
+BETA_REFERENCE = "QQQ"
 
 
 @dataclass(frozen=True)
@@ -124,7 +126,8 @@ def _benchmark(symbol: str, start: str, end: str, usd_return: float) -> dict:
     closes = {row.date: row.adj_close for row in prices[symbol]}
     missing = [d for d in (start, end) if d not in closes]
     base = {
-        "name": BENCHMARKS[symbol],
+        "name": REFERENCE_NAMES[symbol],
+        "kind": "sector" if symbol not in BENCHMARKS else "market",
         "start_close_date": start,
         "end_close_date": end,
     }
@@ -156,7 +159,7 @@ def window_returns(window: ResolvedWindow) -> dict:
     cad_return = (1 + usd) * (1 + fx_return) - 1 if fx_return is not None else None
     benchmarks = {
         symbol: _benchmark(symbol, window.start_close_date, window.end_close_date, usd)
-        for symbol in BENCHMARKS
+        for symbol in reference_symbols(window.ticker)
     }
     return {
         "usd_return": usd,
@@ -165,6 +168,87 @@ def window_returns(window: ResolvedWindow) -> dict:
         "fx_dates": [old_day, new_day],
         "fx_rates": [old_rate, new_rate] if old_rate and new_rate else [None, None],
         "benchmarks": benchmarks,
+        "market_model": market_model(window, usd, benchmarks),
+    }
+
+
+def reference_symbols(ticker: str) -> list[str]:
+    """SPY et QQQ, plus le FNB sectoriel du titre quand ses données sont chargées."""
+    symbols = list(BENCHMARKS)
+    sector = STOCK_SECTOR.get(ticker)
+    if sector and sector in load_prices():
+        symbols.append(sector)
+    return symbols
+
+
+def _daily_returns_before(ticker: str, end_date: str, sessions: int) -> dict[str, float]:
+    """Rendements quotidiens des `sessions` séances se terminant à end_date (aucune donnée future)."""
+    rows = [row for row in _rows_any(ticker) if row.date <= end_date][-(sessions + 1):]
+    return {rows[i].date: rows[i].adj_close / rows[i - 1].adj_close - 1 for i in range(1, len(rows))}
+
+
+def _rows_any(symbol: str):
+    prices = load_prices()
+    if symbol not in prices:
+        raise ValueError(f"Série absente : {symbol}")
+    return prices[symbol]
+
+
+def risk_indicators(ticker: str, end_date: str, sessions: int = RISK_WINDOW_SESSIONS) -> dict:
+    """Volatilité annualisée et pire baisse sur l'année qui précède end_date (incluse)."""
+    rows = [row for row in _rows_any(ticker) if row.date <= end_date][-(sessions + 1):]
+    if len(rows) < 30:
+        return {"status": "insufficient", "sessions": max(len(rows) - 1, 0)}
+    returns = [rows[i].adj_close / rows[i - 1].adj_close - 1 for i in range(1, len(rows))]
+    mean = sum(returns) / len(returns)
+    variance = sum((r - mean) ** 2 for r in returns) / (len(returns) - 1)
+    peak, drawdown = rows[0].adj_close, 0.0
+    for row in rows:
+        peak = max(peak, row.adj_close)
+        drawdown = min(drawdown, row.adj_close / peak - 1)
+    return {
+        "status": "ok",
+        "start_date": rows[0].date,
+        "end_date": rows[-1].date,
+        "sessions": len(returns),
+        "annual_volatility": (variance ** 0.5) * (252 ** 0.5),
+        "max_drawdown": drawdown,
+    }
+
+
+def market_model(window: ResolvedWindow, usd_return: float, benchmarks: dict) -> dict:
+    """Bêta du titre face à QQQ, estimé AVANT la fenêtre, et part du mouvement non expliquée par le marché.
+
+    attendu = bêta × rendement de QQQ sur la fenêtre ; résiduel = rendement du titre − attendu.
+    Un bêta élevé signifie que le titre amplifie habituellement les mouvements du marché.
+    """
+    bench = benchmarks.get(BETA_REFERENCE, {})
+    if bench.get("status") != "ok":
+        return {"status": "missing", "reference": BETA_REFERENCE}
+    stock = _daily_returns_before(window.ticker, window.start_close_date, RISK_WINDOW_SESSIONS)
+    ref = _daily_returns_before(BETA_REFERENCE, window.start_close_date, RISK_WINDOW_SESSIONS)
+    common = sorted(set(stock) & set(ref))
+    if len(common) < 60:
+        return {"status": "insufficient", "reference": BETA_REFERENCE, "sessions": len(common)}
+    xs = [ref[d] for d in common]
+    ys = [stock[d] for d in common]
+    mx, my = sum(xs) / len(xs), sum(ys) / len(ys)
+    var_x = sum((x - mx) ** 2 for x in xs)
+    beta = sum((x - mx) * (y - my) for x, y in zip(xs, ys)) / var_x if var_x else None
+    if beta is None:
+        return {"status": "insufficient", "reference": BETA_REFERENCE, "sessions": len(common)}
+    expected = beta * bench["return"]
+    residual = usd_return - expected
+    return {
+        "status": "ok",
+        "reference": BETA_REFERENCE,
+        "estimation_end": common[-1],
+        "sessions": len(common),
+        "beta": beta,
+        "expected_return": expected,
+        "residual": residual,
+        "residual_pp": residual * 100,
+        "rule": "bêta estimé sur 252 séances avant la fenêtre ; attendu = bêta × rendement de QQQ",
     }
 
 

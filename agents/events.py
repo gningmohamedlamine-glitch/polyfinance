@@ -1,10 +1,36 @@
 """Look up contemporaneous, curated public sources in a read-only CSV."""
 
 import csv
+import re
+import unicodedata
 from functools import lru_cache
 from pathlib import Path
 
 EVENTS = Path(__file__).resolve().parents[1] / "data" / "market_events.csv"
+SOURCES = Path(__file__).resolve().parents[1] / "data" / "sources"
+
+
+def _normalize(text: str) -> str:
+    text = unicodedata.normalize("NFKC", text or "")
+    text = text.replace("’", "'").replace("“", '"').replace("”", '"')
+    return re.sub(r"\s+", " ", text).strip().lower()
+
+
+def verify_excerpt(event: dict) -> str:
+    """Garde-fou : l'extrait affiché existe-t-il mot pour mot dans la source enregistrée ?
+
+    verified        l'extrait figure dans data/sources/<source_id>.txt
+    mismatch        la source est enregistrée mais ne contient pas l'extrait
+    source_missing  la source n'a pas encore été téléchargée (scripts/fetch_sources.py)
+    no_excerpt      aucune citation déclarée dans le catalogue
+    """
+    excerpt = (event.get("excerpt") or "").strip()
+    if not excerpt:
+        return "no_excerpt"
+    path = SOURCES / f"{(event.get('source_id') or '').strip()}.txt"
+    if not event.get("source_id") or not path.exists():
+        return "source_missing"
+    return "verified" if _normalize(excerpt) in _normalize(path.read_text(encoding="utf-8")) else "mismatch"
 
 
 @lru_cache(maxsize=1)
@@ -16,7 +42,8 @@ def load_events():
 def catalog_fingerprint():
     try:
         stat = EVENTS.stat()
-        return f"{stat.st_size}:{int(stat.st_mtime)}"
+        sources = max((int(f.stat().st_mtime) for f in SOURCES.glob("*.txt")), default=0)
+        return f"{stat.st_size}:{int(stat.st_mtime)}:{sources}"
     except OSError:
         return "missing"
 
@@ -60,7 +87,7 @@ def search_publications(ticker, sessions, price_rows):
                 continue
             if url:
                 seen_urls.add(url)
-            row = {**event, "session": session}
+            row = {**event, "session": session, "excerpt_status": verify_excerpt(event)}
             results.append(row)
     results.sort(key=lambda item: (item["session"], item["time_et"], item.get("url", "")))
     return results

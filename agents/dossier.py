@@ -52,6 +52,7 @@ def build_dossier(
             "cad_return": returns["cad_return"],
             "fx_dates": returns["fx_dates"],
             "fx_rates": returns["fx_rates"],
+            "market_model": returns.get("market_model"),
         },
         "benchmarks": returns["benchmarks"],
         "notable_sessions": notable,
@@ -67,6 +68,8 @@ def build_dossier(
             "causality": "Un écart avec SPY ou QQQ ne prouve pas une cause.",
             "figures_source": "python",
             "verified_events_source": "market_events.csv",
+            "direction": "Une publication datée ne prouve pas le sens du mouvement : les attentes du marché ne sont pas dans le catalogue.",
+            "excerpts": "Chaque extrait affiché est comparé au texte de la source enregistrée dans data/sources/.",
         },
         "tools_executed": tools_executed,
     }
@@ -79,14 +82,22 @@ def local_event_text(context: ToolContext) -> str:
         f"{window.name} passe de {window.start_adj_close:.2f} USD à {window.end_adj_close:.2f} USD "
         f"entre le {window.start_close_date} et le {window.end_close_date}, soit {usd:+.2%} en USD."
     ]
-    spy = context.returns["benchmarks"].get("SPY", {})
-    if spy.get("status") == "ok":
-        parts.append(f"L’écart avec SPY est d’environ {spy['gap_pp']:.2f} points de pourcentage.")
-    elif spy.get("status") == "missing":
-        parts.append("SPY n’est pas disponible sur toute la fenêtre.")
+    for symbol, bench in context.returns["benchmarks"].items():
+        if bench.get("status") == "ok":
+            parts.append(f"L’écart avec {bench['name']} est d’environ {bench['gap_pp']:.2f} points de pourcentage.")
+        elif bench.get("status") == "missing":
+            parts.append(f"{symbol} n’est pas disponible sur toute la fenêtre.")
+    model = context.returns.get("market_model") or {}
+    if model.get("status") == "ok":
+        parts.append(
+            f"Avec un bêta de {model['beta']:.2f} face à QQQ (estimé avant la fenêtre), le mouvement du marché "
+            f"laissait attendre {model['expected_return']:+.2%} ; la part non expliquée par le marché est de "
+            f"{model['residual_pp']:+.2f} points."
+        )
     if context.publications:
         titles = "; ".join(source["title"] for source in context.publications[:2])
         parts.append(f"Publications vérifiées : {titles}.")
+        parts.append("Ces publications datent la séance, mais ne prouvent pas à elles seules le sens du mouvement.")
     else:
         parts.append("Aucune publication vérifiée dans le catalogue pour cette fenêtre.")
     if context.coverage["sessions_unexplained"]:

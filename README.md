@@ -11,6 +11,16 @@ Clique sur une séance pour comprendre le mouvement, puis change le profil pour 
 | `notebooks/` | Exploration dans JupyterLab. |
 | `deploy/` | Conteneur déployé via ECR, CloudFormation et ECS Express Mode. |
 
+## Garde-fous et hypothèses
+
+- **Chiffres en Python, jamais générés par le modèle.** Les agents Bedrock n'écrivent que la synthèse.
+- **Part propre au titre (bêta).** `market_model` estime le bêta du titre face à QQQ sur les 252 séances qui précèdent la fenêtre (aucune donnée future). Rendement attendu = bêta × rendement de QQQ ; la part résiduelle est la seule attribuable au titre. Exemple : le 13 septembre 2022 (IPC américain), NVDA baisse de 9,47 % et QQQ de 5,48 % ; avec un bêta de 1,85, la baisse attendue était d'environ 10,2 %, donc la part propre au titre est quasi nulle (choc de marché amplifié). Le 29 août 2024, la part propre au titre est d'environ −6,1 points.
+- **Secteur.** NVDA, AAPL et MSFT sont aussi comparés à XLK (`data/sector_etfs_daily.csv`, facultatif). GOOGL, AMZN et TSLA ne sont comparés qu'à SPY et QQQ faute de FNB sectoriel téléchargé.
+- **Cohérence avec le profil.** `profile_coherence` compare la volatilité annuelle et la baisse maximale des 12 derniers mois du titre, ainsi que la concentration après achat, à des limites **fictives** par profil (Amira 60 % / −60 % / 15 % ; Mateo 30 % / −35 % / 10 % ; Robert 20 % / −20 % / 5 %). Les conflits sont calculés en Python et affichés avant toute autre métrique.
+- **Extraits vérifiés.** Chaque publication du catalogue porte un `excerpt` recopié de la source. Après `SEC_USER_AGENT="Equipe courriel@exemple.com" python scripts/fetch_sources.py`, l'interface indique si l'extrait figure mot pour mot dans le texte téléchargé (`verified`, `mismatch` ou `source_missing`).
+- **Sens du mouvement.** Une publication datée ne prouve pas le sens du mouvement : le 28 août 2024, NVIDIA publie des résultats et des prévisions en hausse, mais le titre baisse le lendemain. Les attentes des analystes ne sont pas dans le catalogue ; l'agent doit le dire.
+- **Simulation uniquement.** Aucun conseil d'achat ou de vente, aucune transaction réelle.
+
 ## Lancement local
 
 Depuis la racine, avec Python 3.12+ et Node 24, dans deux terminaux. Sur Windows, remplacer `.venv/bin/python` par `.venv\Scripts\python.exe` et utiliser `npm.cmd` si PowerShell bloque les scripts npm.

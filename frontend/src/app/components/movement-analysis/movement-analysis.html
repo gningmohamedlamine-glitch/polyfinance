@@ -12,6 +12,13 @@
       @if (result.dossier?.benchmarks?.['QQQ']?.gap_pp != null) {
         <div><dt>Écart QQQ</dt><dd>{{ result.dossier!.benchmarks['QQQ'].gap_pp | number:'1.1-2' }} pts</dd></div>
       }
+      @if (result.dossier?.benchmarks?.['XLK']?.gap_pp != null) {
+        <div><dt>Écart secteur (XLK)</dt><dd>{{ result.dossier!.benchmarks['XLK'].gap_pp | number:'1.1-2' }} pts</dd></div>
+      }
+      @if (result.dossier?.returns?.market_model?.status === 'ok') {
+        <div><dt>Bêta face à QQQ</dt><dd>{{ result.dossier!.returns!.market_model!.beta | number:'1.2-2' }}</dd></div>
+        <div><dt>Part propre au titre</dt><dd>{{ result.dossier!.returns!.market_model!.residual_pp | number:'1.1-2' }} pts</dd></div>
+      }
     </dl>
     @if (result.dossier?.notable_sessions?.sessions?.length) {
       <div class="notable">
@@ -26,6 +33,15 @@
     <p>{{ result.event.text }}</p>
     @for (source of result.event.sources; track source.url) {
       <a [href]="source.url" target="_blank" rel="noopener">{{ source.title }}</a>
+      @if (source.excerpt) {
+        <blockquote class="excerpt">« {{ source.excerpt }} »
+          @switch (source.excerpt_status) {
+            @case ('verified') { <span class="badge ok">Extrait vérifié dans la source</span> }
+            @case ('mismatch') { <span class="badge ko">Extrait introuvable dans la source</span> }
+            @default { <span class="badge">Source non téléchargée : extrait non vérifié</span> }
+          }
+        </blockquote>
+      }
       <small>
         @if (source.session) { Séance {{ source.session }} · }
         {{ source.publisher }} · {{ source.time_et.replace('T', ' ') }} HE
@@ -39,6 +55,17 @@
   </article>
   <article class="panel">
     <h2>Ce que ça change pour toi</h2>
+    @if (result.impact.coherence; as coherence) {
+      @if (coherence.conflicts.length) {
+        <div class="coherence ko">
+          <strong>Incohérence avec ton profil</strong>
+          <ul>@for (conflict of coherence.conflicts; track conflict) { <li>{{ conflict }}</li> }</ul>
+        </div>
+      } @else if (coherence.risk.status === 'ok') {
+        <div class="coherence ok"><strong>Risque du titre compatible avec ton profil</strong></div>
+      }
+      <small>{{ coherence.notice }}</small>
+    }
     <dl class="metrics">
       @for (metric of result.impact.metrics; track metric.label) {
         <div><dt>{{ metric.label }}</dt><dd>

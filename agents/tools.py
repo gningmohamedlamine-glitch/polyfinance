@@ -16,7 +16,10 @@ EVENT_TOOL_SPECS = [
     {
         "toolSpec": {
             "name": "compare_market",
-            "description": "Compare le rendement USD du titre avec SPY et QQQ entre deux clôtures ajustées.",
+            "description": (
+                "Compare le rendement USD du titre avec SPY, QQQ et son FNB sectoriel entre deux clôtures ajustées, "
+                "et renvoie le bêta face à QQQ avec la part du mouvement non expliquée par le marché."
+            ),
             "inputSchema": {
                 "json": {
                     "type": "object",
@@ -113,6 +116,7 @@ def run_event_tool(name: str, context: ToolContext, args: dict | None = None) ->
         return {
             "returns": context.returns,
             "benchmarks": context.returns["benchmarks"],
+            "market_model": context.returns.get("market_model"),
         }
     if name == "find_notable_sessions":
         return context.notable

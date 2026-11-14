@@ -18,6 +18,11 @@ STOCKS = {
     "TSLA": "Tesla",
 }
 BENCHMARKS = {"SPY": "S&P 500", "QQQ": "Nasdaq-100"}
+# FNB sectoriels téléchargés via yfinance (data/sector_etfs_daily.csv, facultatif).
+SECTORS = {"XLK": "Technologie (XLK)", "XLE": "Énergie (XLE)", "XLF": "Finance (XLF)", "XLV": "Santé (XLV)"}
+# Secteur de comparaison par titre ; None quand aucun FNB sectoriel adapté n'est disponible.
+STOCK_SECTOR = {"NVDA": "XLK", "AAPL": "XLK", "MSFT": "XLK", "GOOGL": None, "AMZN": None, "TSLA": None}
+REFERENCE_NAMES = BENCHMARKS | SECTORS
 
 
 @dataclass(frozen=True)
@@ -33,8 +38,22 @@ class Price:
 
 @lru_cache(maxsize=1)
 def load_prices():
-    tables = {ticker: {} for ticker in STOCKS | BENCHMARKS}
-    with (DATA / "prices_daily.csv").open(newline="", encoding="utf-8-sig") as source:
+    tables = {ticker: {} for ticker in STOCKS | BENCHMARKS | SECTORS}
+    files = [DATA / "prices_daily.csv"]
+    if (DATA / "sector_etfs_daily.csv").exists():
+        files.append(DATA / "sector_etfs_daily.csv")
+    for path in files:
+        _read_prices(path, tables)
+    # Un FNB sectoriel absent (fichier facultatif) est retiré plutôt que laissé vide.
+    return {
+        ticker: tuple(table[key] for key in sorted(table))
+        for ticker, table in tables.items()
+        if table or ticker not in SECTORS
+    }
+
+
+def _read_prices(path, tables):
+    with path.open(newline="", encoding="utf-8-sig") as source:
         for row in csv.DictReader(source):
             ticker = row["ticker"].strip().upper()
             if ticker not in tables or row["currency"].strip().upper() != "USD":
@@ -54,7 +73,6 @@ def load_prices():
             previous = tables[ticker].setdefault(session, price)
             if previous != price:
                 raise ValueError(f"Prix contradictoires pour {ticker} le {session}")
-    return {ticker: tuple(table[key] for key in sorted(table)) for ticker, table in tables.items()}
 
 
 @lru_cache(maxsize=1)

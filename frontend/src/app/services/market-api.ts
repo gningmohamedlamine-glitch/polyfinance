@@ -10,6 +10,22 @@ export interface Source {
   title: string;
   url: string;
   summary: string;
+  excerpt?: string;
+  excerpt_status?: 'verified' | 'mismatch' | 'source_missing' | 'no_excerpt';
+}
+export interface MarketModel {
+  status: string;
+  reference: string;
+  beta?: number;
+  expected_return?: number;
+  residual_pp?: number;
+}
+export interface Coherence {
+  coherent: boolean;
+  conflicts: string[];
+  limits: { annual_volatility: number; max_drawdown: number; max_weight: number; horizon_years: number };
+  risk: { status: string; annual_volatility?: number; max_drawdown?: number };
+  notice: string;
 }
 export interface ToolTrace {
   agent: string;
@@ -35,7 +51,8 @@ export interface Analysis {
       end_close_date: string;
       bounds?: { start_date: string; end_date: string };
     };
-    benchmarks: Record<string, { gap_pp: number | null; status: string }>;
+    benchmarks: Record<string, { name?: string; kind?: string; return?: number | null; gap_pp: number | null; status: string }>;
+    returns?: { market_model?: MarketModel | null };
     notable_sessions: {
       concentration: string;
       sessions: { date: string; daily_return: number }[];
@@ -49,6 +66,7 @@ export interface Analysis {
     mode_reason?: string | null;
     metrics: { label: string; value: number; unit: string }[];
     assumptions?: string;
+    coherence?: Coherence;
   };
   trace?: ToolTrace[];
 }
