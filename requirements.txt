@@ -5,3 +5,5 @@ yfinance==1.2.0
 boto3
 strands-agents
 strands-agents-tools
+requests
+beautifulsoup4
