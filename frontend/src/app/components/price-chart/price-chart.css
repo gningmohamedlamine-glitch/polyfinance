@@ -7,5 +7,6 @@ svg { width: 100%; display: block; }
 .selected { fill: var(--accent); stroke: #101925; stroke-width: 2; }
 .hit { fill: transparent; cursor: pointer; }
 .hit:hover { fill: #60e3b675; }
+.range { fill: #60e3b620; }
 .dates { display: flex; justify-content: space-between; font-variant-numeric: tabular-nums; }
 .dates strong { color: var(--text); }

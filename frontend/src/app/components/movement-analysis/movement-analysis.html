@@ -6,12 +6,36 @@
       <div><dt>Action · USD</dt><dd>{{ result.movement.usd_return | percent:'1.1-2' }}</dd></div>
       <div><dt>SPY</dt><dd>{{ result.movement.benchmarks['SPY']?.return | percent:'1.1-2' }}</dd></div>
       <div><dt>QQQ</dt><dd>{{ result.movement.benchmarks['QQQ']?.return | percent:'1.1-2' }}</dd></div>
+      @if (result.dossier?.benchmarks?.['SPY']?.gap_pp != null) {
+        <div><dt>Écart SPY</dt><dd>{{ result.dossier!.benchmarks['SPY'].gap_pp | number:'1.1-2' }} pts</dd></div>
+      }
+      @if (result.dossier?.benchmarks?.['QQQ']?.gap_pp != null) {
+        <div><dt>Écart QQQ</dt><dd>{{ result.dossier!.benchmarks['QQQ'].gap_pp | number:'1.1-2' }} pts</dd></div>
+      }
     </dl>
+    @if (result.dossier?.notable_sessions?.sessions?.length) {
+      <div class="notable">
+        <h3>Séances marquantes · {{ result.dossier!.notable_sessions.concentration }}</h3>
+        <ul>
+          @for (session of result.dossier!.notable_sessions.sessions; track session.date) {
+            <li>{{ session.date }} · {{ session.daily_return | percent:'1.1-2' }}</li>
+          }
+        </ul>
+      </div>
+    }
     <p>{{ result.event.text }}</p>
     @for (source of result.event.sources; track source.url) {
       <a [href]="source.url" target="_blank" rel="noopener">{{ source.title }}</a>
-      <small>{{ source.publisher }} · {{ source.time_et.replace('T', ' ') }} HE</small>
+      <small>
+        @if (source.session) { Séance {{ source.session }} · }
+        {{ source.publisher }} · {{ source.time_et.replace('T', ' ') }} HE
+      </small>
     }
+    <small>
+      @if (result.event.mode === 'bedrock') { Synthèse Amazon Bedrock }
+      @else { Synthèse locale@if (result.event.mode_reason) { · {{ result.event.mode_reason }} }
+      }
+    </small>
   </article>
   <article class="panel">
     <h2>Ce que ça change pour toi</h2>
@@ -24,6 +48,16 @@
       }
     </dl>
     <p>{{ result.impact.text }}</p>
-    <small>Simulation · {{ result.impact.mode === 'bedrock' ? 'Amazon Bedrock' : 'Analyse locale' }}</small>
   </article>
 </section>
+@if (result.trace?.length) {
+  <section class="panel trace">
+    <h2>Outils exécutés</h2>
+  @for (step of result.trace!; track $index) {
+    <div class="trace-row">
+      <strong>{{ step.agent }} · {{ step.name }}</strong>
+      <span>{{ step.source }} · {{ step.status }}</span>
+    </div>
+  }
+  </section>
+}

@@ -83,26 +83,8 @@ def stock_history(ticker):
 
 
 def movement(ticker, session):
-    prices = load_prices()
-    rows = prices[ticker]
-    index = next((i for i, row in enumerate(rows) if row.date == session), 0)
-    if index == 0:
-        raise ValueError("Sélectionne une séance avec une clôture précédente.")
-    previous, current = rows[index - 1:index + 1]
-    usd = current.adj_close / previous.adj_close - 1
-    benchmarks = {}
-    for symbol, name in BENCHMARKS.items():
-        closes = {row.date: row.adj_close for row in prices[symbol]}
-        if previous.date in closes and session in closes:
-            change = closes[session] / closes[previous.date] - 1
-            benchmarks[symbol] = {"name": name, "return": change, "gap": usd - change}
-    old_day, old_rate = fx_at(previous.date)
-    new_day, new_rate = fx_at(session)
-    fx = new_rate / old_rate - 1 if old_rate and new_rate else None
+    from .window import movement_legacy, resolve_window, window_returns
 
-    return {
-        "ticker": ticker, "date": session, "previous_date": previous.date,
-        "usd_return": usd, "fx_return": fx,
-        "cad_return": (1 + usd) * (1 + fx) - 1 if fx is not None else None,
-        "fx_dates": [old_day, new_day], "benchmarks": benchmarks,
-    }
+    window = resolve_window(ticker, date=session)
+    returns = window_returns(window)
+    return movement_legacy(window, returns)

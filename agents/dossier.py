@@ -1,0 +1,96 @@
+"""Build alphaforge.market_dossier.v1 payloads."""
+
+from __future__ import annotations
+
+from .tools import ToolContext, build_tool_context
+
+SCHEMA = "alphaforge.market_dossier.v1"
+
+
+def selection_payload(window) -> dict:
+    payload = {
+        "ticker": window.ticker,
+        "name": window.name,
+        "requested": window.requested,
+        "applied": window.applied,
+        "reason": window.reason,
+        "start_close_date": window.start_close_date,
+        "end_close_date": window.end_close_date,
+        "start_adj_close": window.start_adj_close,
+        "end_adj_close": window.end_adj_close,
+    }
+    if window.bounds:
+        payload["bounds"] = window.bounds
+    return payload
+
+
+def build_dossier(
+    window,
+    *,
+    returns: dict | None = None,
+    notable: dict | None = None,
+    publications: list | None = None,
+    coverage: dict | None = None,
+    synthesis_text: str,
+    synthesis_mode: str,
+    mode_reason: str | None,
+    tools_executed: list[dict],
+) -> dict:
+    context = None
+    if returns is None or notable is None or publications is None or coverage is None:
+        context = build_tool_context(window)
+        returns = returns or context.returns
+        notable = notable or context.notable
+        publications = publications if publications is not None else context.publications
+        coverage = coverage or context.coverage
+    return {
+        "schema": SCHEMA,
+        "selection": selection_payload(window),
+        "returns": {
+            "usd_return": returns["usd_return"],
+            "fx_return": returns["fx_return"],
+            "cad_return": returns["cad_return"],
+            "fx_dates": returns["fx_dates"],
+            "fx_rates": returns["fx_rates"],
+        },
+        "benchmarks": returns["benchmarks"],
+        "notable_sessions": notable,
+        "publications": publications,
+        "coverage": coverage,
+        "synthesis": {
+            "text": synthesis_text,
+            "mode": synthesis_mode,
+            "mode_reason": mode_reason,
+        },
+        "limits": {
+            "max_tool_calls": 6,
+            "causality": "Un écart avec SPY ou QQQ ne prouve pas une cause.",
+            "figures_source": "python",
+            "verified_events_source": "market_events.csv",
+        },
+        "tools_executed": tools_executed,
+    }
+
+
+def local_event_text(context: ToolContext) -> str:
+    window = context.window
+    usd = context.returns["usd_return"]
+    parts = [
+        f"{window.name} passe de {window.start_adj_close:.2f} USD à {window.end_adj_close:.2f} USD "
+        f"entre le {window.start_close_date} et le {window.end_close_date}, soit {usd:+.2%} en USD."
+    ]
+    spy = context.returns["benchmarks"].get("SPY", {})
+    if spy.get("status") == "ok":
+        parts.append(f"L’écart avec SPY est d’environ {spy['gap_pp']:.2f} points de pourcentage.")
+    elif spy.get("status") == "missing":
+        parts.append("SPY n’est pas disponible sur toute la fenêtre.")
+    if context.publications:
+        titles = "; ".join(source["title"] for source in context.publications[:2])
+        parts.append(f"Publications vérifiées : {titles}.")
+    else:
+        parts.append("Aucune publication vérifiée dans le catalogue pour cette fenêtre.")
+    if context.coverage["sessions_unexplained"]:
+        unexplained = ", ".join(context.coverage["sessions_unexplained"][:4])
+        parts.append(f"Séances sans preuve dans le catalogue : {unexplained}.")
+    parts.append("Les écarts avec les indices restent descriptifs et n’établissent pas une cause.")
+    return " ".join(parts)
