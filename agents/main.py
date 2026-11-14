@@ -18,5 +18,5 @@ def event_agent(window):
     return run_event_agent(window)
 
 
-def impact_agent(dossier, profile, scenario, trace=None):
-    return run_impact_agent(dossier, profile, scenario, trace)
+def impact_agent(dossier, profile, scenario):
+    return run_impact_agent(dossier, profile, scenario)

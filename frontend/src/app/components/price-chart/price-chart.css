@@ -1,12 +1,11 @@
 .chart { padding: 16px 0 0; }
 p, .dates { color: var(--muted); font-size: .78rem; }
 svg { width: 100%; display: block; }
+svg.interactive { touch-action: none; cursor: crosshair; }
 .grid { stroke: var(--border); fill: none; }
 .series { fill: none; stroke: var(--accent); stroke-width: 2.5; }
+.range { fill: #60e3b622; stroke: var(--accent); stroke-width: 1; }
 .selection { stroke: var(--accent); stroke-dasharray: 4 4; }
 .selected { fill: var(--accent); stroke: #101925; stroke-width: 2; }
-.hit { fill: transparent; cursor: pointer; }
-.hit:hover { fill: #60e3b675; }
-.range { fill: #60e3b620; }
-.dates { display: flex; justify-content: space-between; font-variant-numeric: tabular-nums; }
-.dates strong { color: var(--text); }
+.dates { display: flex; justify-content: space-between; gap: 8px; font-variant-numeric: tabular-nums; }
+.dates strong { color: var(--text); text-align: center; }

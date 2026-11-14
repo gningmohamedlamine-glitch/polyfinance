@@ -29,7 +29,7 @@ npm start
 
 Ouvrir `http://localhost:4200`. Les deux boutons de démo sélectionnent NVIDIA après la publication du 8-K et NVIDIA le jour de la publication de l’IPC américain. La vue compare les clôtures ajustées sur la même fenêtre avec SPY et QQQ. Le calcul CAD utilise le taux disponible à chaque date. Les points du graphique sont des séances quotidiennes. Les publications apportent un contexte plausible et les chiffres mesurent les écarts observés.
 
-Le mode local fonctionne avec le catalogue seul. Pour essayer Bedrock, configurer une session AWS valide et les variables `AWS_PROFILE` (si un profil est utilisé), `AWS_REGION=us-east-1` et `BEDROCK_MODEL_ID` avant de lancer Django.
+Le mode local fonctionne avec le catalogue seul. Pour utiliser un profil créé avec `aws login`, installer aussi `botocore[crt]` dans le venv. Pour essayer Bedrock, configurer une session AWS valide et les variables `AWS_PROFILE` (si un profil est utilisé), `AWS_REGION=us-east-1` et `BEDROCK_MODEL_ID` avant de lancer Django.
 
 ## Déploiement AWS
 

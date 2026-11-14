@@ -10,11 +10,11 @@ from agents.main import PROFILES, event_agent, impact_agent
 from .market import STOCKS, load_prices, stock_history
 from .window import movement_legacy, resolve_window, window_returns
 
-_event_cache: dict[str, dict] = {}
+_event_cache: dict = {}
 
 
 def dossier_cache_key(window):
-    return f"{window.ticker}|{window.start_close_date}|{window.end_close_date}|{catalog_fingerprint()}"
+    return (window.ticker, window.requested, window.start_close_date, window.end_close_date, catalog_fingerprint())
 
 
 def get_dossier(window):
@@ -23,6 +23,8 @@ def get_dossier(window):
     if cached:
         return cached
     dossier = event_agent(window)
+    if dossier["synthesis"].get("mode_reason") not in (None, "model_unconfigured"):
+        return dossier
     _event_cache[key] = dossier
     if len(_event_cache) > 64:
         _event_cache.pop(next(iter(_event_cache)))
@@ -113,7 +115,7 @@ def analysis(request):
         "portfolio_cad": portfolio,
         "purchase_cad": purchase,
     }
-    impact = impact_agent(dossier, profile, scenario, trace=dossier.get("tools_executed"))
+    impact = impact_agent(dossier, profile, scenario)
     event = dossier_to_event(dossier)
     return JsonResponse({
         "movement": move,

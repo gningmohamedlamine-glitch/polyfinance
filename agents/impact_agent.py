@@ -11,7 +11,6 @@ from botocore.exceptions import BotoCoreError, ClientError
 from markets.window import ResolvedWindow, max_drawdown_cad
 
 from .event_agent import bedrock_client
-from .tools import IMPACT_TOOL_SPECS
 
 PROFILES = {
     "amira": "Amira envisage un achat. Elle vise la croissance à long terme et veut limiter la concentration.",
@@ -163,58 +162,75 @@ def _fallback_text(profile: str, metrics: list[dict], assumptions: str) -> str:
     return assumptions
 
 
-def run_impact_agent(dossier: dict, profile: str, scenario: dict, trace: list[dict] | None = None) -> dict:
-    metrics, assumptions, impact_tools = _compute(profile, dossier, scenario)
-    payload = {
-        "profile": PROFILES[profile],
-        "dossier": {
-            "selection": dossier["selection"],
-            "returns": dossier["returns"],
-            "publications": dossier["publications"],
-            "notable_sessions": dossier["notable_sessions"],
-        },
-        "metrics": metrics,
-        "assumptions": assumptions,
-    }
+def run_impact_agent(dossier: dict, profile: str, scenario: dict) -> dict:
     model = os.getenv("BEDROCK_MODEL_ID")
     mode = "local"
     mode_reason = "model_unconfigured"
-    text = _fallback_text(profile, metrics, assumptions)
+    impact_tools = []
+    result = None
+    text = ""
     if model:
+        tool_name = "calculate_profile_impact"
+        config = {"tools": [{"toolSpec": {
+            "name": tool_name,
+            "description": "Calcule les métriques et les hypothèses pour le profil et la sélection validés.",
+            "inputSchema": {"json": {"type": "object", "properties": {}, "additionalProperties": False}},
+        }}]}
+        payload = {
+            "profile": PROFILES[profile],
+            "selection": dossier["selection"],
+            "publications": dossier["publications"],
+        }
+        messages = [{"role": "user", "content": [{"text": json.dumps(payload, ensure_ascii=False)}]}]
+        params = {
+            "modelId": model,
+            "system": [{"text": (
+                "Appelle calculate_profile_impact avant de répondre. Explique les résultats "
+                "du scénario fictif en français en deux phrases maximum. "
+                "Utilise uniquement les données fournies, sans conseil de transaction."
+            )}],
+            "inferenceConfig": {"maxTokens": 320, "temperature": 0.1},
+            "toolConfig": config,
+        }
+        mode_reason = "bedrock_tool_missing"
         try:
-            response = bedrock_client().converse(
-                modelId=model,
-                system=[
-                    {
-                        "text": (
-                            "Explique ce que les métriques calculées et les faits sourcés changent pour la décision "
-                            "fictive du profil. Utilise uniquement les entrées. Ne recommande aucune transaction. "
-                            "Réponds en français en deux phrases maximum."
-                        )
-                    }
-                ],
-                messages=[{"role": "user", "content": [{"text": json.dumps(payload, ensure_ascii=False)}]}],
-                toolConfig={"tools": IMPACT_TOOL_SPECS},
-                inferenceConfig={"maxTokens": 320, "temperature": 0.1},
-            )
-            answer = " ".join(
-                block["text"]
-                for block in response["output"]["message"]["content"]
-                if isinstance(block, dict) and "text" in block
-            ).strip()
-            if answer and response.get("stopReason") == "end_turn":
-                text = answer
-                mode = "bedrock"
-                mode_reason = None
+            response = bedrock_client().converse(messages=messages, **params)
+            message = response["output"]["message"]
+            calls = [block["toolUse"] for block in message["content"] if "toolUse" in block]
+            if (response.get("stopReason") == "tool_use" and len(calls) == 1
+                    and calls[0]["name"] == tool_name and calls[0].get("input") == {}):
+                result = _compute(profile, dossier, scenario)
+                metrics, assumptions, calculations = result
+                impact_tools = [{
+                    "agent": "impact", "name": tool_name, "source": "model",
+                    "status": "executed", "arguments": {},
+                }, *calculations]
+                messages.extend([message, {"role": "user", "content": [{"toolResult": {
+                    "toolUseId": calls[0]["toolUseId"],
+                    "content": [{"json": {"metrics": metrics, "assumptions": assumptions}}],
+                }}]}])
+                response = bedrock_client().converse(messages=messages, **params)
+                mode_reason = "bedrock_incomplete"
+                if response.get("stopReason") == "end_turn":
+                    text = " ".join(
+                        block["text"] for block in response["output"]["message"]["content"]
+                        if "text" in block
+                    ).strip()
+                    if text:
+                        mode = "bedrock"
+                        mode_reason = None
         except (BotoCoreError, ClientError):
             mode_reason = "bedrock_error"
 
-    combined_trace = list(trace or []) + list(dossier.get("tools_executed", [])) + impact_tools
+    if result is None:
+        result = _compute(profile, dossier, scenario)
+        impact_tools = result[2]
+    metrics, assumptions, _ = result
     return {
-        "text": text,
+        "text": text or _fallback_text(profile, metrics, assumptions),
         "mode": mode,
         "mode_reason": mode_reason,
         "metrics": metrics,
         "assumptions": assumptions,
-        "trace": combined_trace,
+        "trace": list(dossier.get("tools_executed", [])) + impact_tools,
     }

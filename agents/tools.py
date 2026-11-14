@@ -65,69 +65,6 @@ EVENT_TOOL_SPECS = [
     },
 ]
 
-IMPACT_TOOL_SPECS = [
-    {
-        "toolSpec": {
-            "name": "position_value_cad",
-            "description": "Calcule la variation et la valeur finale d’une position en CAD.",
-            "inputSchema": {
-                "json": {
-                    "type": "object",
-                    "properties": {
-                        "position_cad": {"type": "number"},
-                        "cad_return": {"type": "number"},
-                        "withdrawal_cad": {"type": "number"},
-                    },
-                    "required": ["position_cad", "cad_return"],
-                }
-            },
-        }
-    },
-    {
-        "toolSpec": {
-            "name": "max_drawdown_cad",
-            "description": "Calcule la baisse maximale d’une position en CAD sur une période.",
-            "inputSchema": {
-                "json": {
-                    "type": "object",
-                    "properties": {
-                        "ticker": {"type": "string"},
-                        "start_close_date": {"type": "string"},
-                        "end_close_date": {"type": "string"},
-                        "position_cad": {"type": "number"},
-                    },
-                    "required": ["ticker", "start_close_date", "end_close_date", "position_cad"],
-                }
-            },
-        }
-    },
-    {
-        "toolSpec": {
-            "name": "direct_weight",
-            "description": "Calcule les poids directs avant et après un achat simulé.",
-            "inputSchema": {
-                "json": {
-                    "type": "object",
-                    "properties": {
-                        "position_cad": {"type": "number"},
-                        "purchase_cad": {"type": "number"},
-                        "portfolio_cad": {"type": "number"},
-                    },
-                    "required": ["position_cad", "purchase_cad", "portfolio_cad"],
-                }
-            },
-        }
-    },
-    {
-        "toolSpec": {
-            "name": "exclusion_evidence",
-            "description": "Liste les preuves ESG disponibles pour Mateo.",
-            "inputSchema": {"json": {"type": "object", "properties": {}}},
-        }
-    },
-]
-
-
 @dataclass
 class ToolContext:
     window: ResolvedWindow

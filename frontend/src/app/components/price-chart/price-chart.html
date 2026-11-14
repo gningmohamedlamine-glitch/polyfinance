@@ -1,34 +1,32 @@
 <div class="chart">
-  <p>Clôture ajustée · USD · clique ou glisse pour choisir une période</p>
+  <p>Clôture ajustée · USD</p>
   @if (points().length) {
-    <svg viewBox="0 0 720 234" aria-label="Graphique des clôtures ajustées"
-      (pointerup)="onPointerUp(hoverDate() ?? selected())" (pointerleave)="cancelDrag()">
+    <svg
+      #chartSvg
+      viewBox="0 0 720 234"
+      aria-label="Graphique des clôtures ajustées"
+      class="interactive"
+      (pointerdown)="onPointerDown($event)"
+      (pointermove)="onPointerMove($event)"
+      (pointerup)="onPointerUp($event)"
+      (pointercancel)="onPointerCancel()"
+    >
       <path d="M18 37H702 M18 93H702 M18 150H702 M18 206H702" class="grid"/>
+      @if (rangeOverlay(); as band) {
+        <rect [attr.x]="band.x1" y="24" [attr.width]="band.x2 - band.x1" height="190" class="range"/>
+      }
       <polyline [attr.points]="line()" class="series"/>
       @for (point of points(); track point.date) {
-        @if (inRange(point.date) || point.date === selected()) {
-          <rect [attr.x]="point.x - 7" y="24" width="14" height="190" class="range"/>
-        }
-        @if (point.date === selected()) {
+        @if (point.date === sessionMarker()) {
           <line [attr.x1]="point.x" [attr.x2]="point.x" y1="24" y2="214" class="selection"/>
           <circle [attr.cx]="point.x" [attr.cy]="point.y" r="5" class="selected"/>
-        }
-        @if (point.canSelect) {
-          <circle [attr.cx]="point.x" [attr.cy]="point.y" r="9" class="hit"
-            (pointerdown)="$event.preventDefault(); onPointerDown(point.date)"
-            (pointerenter)="onPointerEnter(point.date)">
-            <title>{{ point.date }} · {{ point.adj_close }} USD</title>
-          </circle>
         }
       }
     </svg>
     <div class="dates">
-      <span>{{ points()[0].date }}</span>
-      <strong>
-        @if (rangeStart() && rangeEnd()) { {{ rangeStart() }} → {{ rangeEnd() }} }
-        @else { {{ selected() }} }
-      </strong>
-      <span>{{ points().at(-1)?.date }}</span>
+      <span>{{ caption().left }}</span>
+      <strong>{{ caption().center }}</strong>
+      <span>{{ caption().right }}</span>
     </div>
   }
 </div>
