@@ -14,6 +14,15 @@ export interface Analysis {
 }
 export type Profile = 'amira' | 'robert' | 'mateo';
 
+type AnalyzeBase = {
+  ticker: string;
+  profile: Profile;
+  position_cad: number;
+  purchase_cad: number;
+  portfolio_cad: number;
+  withdrawal_cad: number;
+};
+
 @Injectable({ providedIn: 'root' })
 export class MarketApi {
   private http = inject(HttpClient);
@@ -26,7 +35,11 @@ export class MarketApi {
     return this.http.get<{ ticker: string; rows: Price[] }>(`/api/stocks/${ticker}/`);
   }
 
-  analyze(params: Record<string, string | number>) {
+  analyze(params: AnalyzeBase & { date: string }) {
+    return this.http.get<Analysis>('/api/analysis/', { params });
+  }
+
+  analyzePeriod(params: AnalyzeBase & { start_date: string; end_date: string }) {
     return this.http.get<Analysis>('/api/analysis/', { params });
   }
 }

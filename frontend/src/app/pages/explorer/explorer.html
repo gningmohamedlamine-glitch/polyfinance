@@ -2,7 +2,7 @@
   <header><span>AlphaForge</span><small>Simulation historique · PolyFinances</small></header>
   <section class="intro">
     <h1>Qu’est-ce qui s’est passé ici&nbsp;?</h1>
-    <p>Choisis une séance pour comprendre le mouvement et son effet sur ton scénario.</p>
+    <p>Choisis une séance ou une période pour comprendre le mouvement et son effet sur ton scénario.</p>
   </section>
   <div class="layout">
     <section class="panel market">
@@ -14,22 +14,55 @@
             }
           </select>
         </label>
-        <label>Séance
-          <select [ngModel]="date" (ngModelChange)="analyze($event)" [disabled]="!rows().length">
-            @for (row of rows(); track row.date; let first = $first) {
-              @if (!first) { <option [value]="row.date">{{ row.date }}</option> }
-            }
-          </select>
-        </label>
+        <fieldset class="mode" role="radiogroup" aria-label="Type de sélection">
+          <legend class="sr-only">Type de sélection</legend>
+          <label><input type="radio" name="selection-mode" [value]="'session'"
+            [checked]="mode() === 'session'" (change)="setMode('session')"> Séance</label>
+          <label><input type="radio" name="selection-mode" [value]="'range'"
+            [checked]="mode() === 'range'" (change)="setMode('range')"> Période</label>
+        </fieldset>
+        @if (mode() === 'session') {
+          <label>Séance
+            <select [ngModel]="sessionDate" (ngModelChange)="onSessionDateChange($event)" [disabled]="!rows().length">
+              @for (row of rows(); track row.date; let first = $first) {
+                @if (!first) { <option [value]="row.date">{{ row.date }}</option> }
+              }
+            </select>
+          </label>
+        } @else {
+          <label>Début
+            <select [ngModel]="rangeStart" (ngModelChange)="onRangeStartChange($event)" [disabled]="!rows().length">
+              @for (row of rows(); track row.date) {
+                <option [value]="row.date">{{ row.date }}</option>
+              }
+            </select>
+          </label>
+          <label>Fin
+            <select [ngModel]="rangeEnd" (ngModelChange)="onRangeEndChange($event)" [disabled]="!rows().length">
+              @for (row of rows(); track row.date) {
+                <option [value]="row.date">{{ row.date }}</option>
+              }
+            </select>
+          </label>
+        }
       </div>
-      <app-price-chart [rows]="rows()" [selected]="date" (selectDate)="analyze($event)" />
+      <app-price-chart
+        [rows]="rows()"
+        [selection]="selection()"
+        (selectionChange)="onChartSelection($event)"
+      />
+      @if (mode() === 'range' && !rangeInvalid()) {
+        <p class="range-note">
+          Comparaison&nbsp;: clôture du {{ rangeStart }} → clôture du {{ rangeEnd }}.
+        </p>
+      }
       <div class="examples">
         <span>Cas de démo</span>
-        <button (click)="load('NVDA', '2024-08-29')">Résultats NVIDIA</button>
-        <button (click)="load('NVDA', '2022-09-13')">IPC américain</button>
+        <button type="button" (click)="load('NVDA', '2024-08-29')">Résultats NVIDIA</button>
+        <button type="button" (click)="load('NVDA', '2022-09-13')">IPC américain</button>
       </div>
     </section>
-    <form class="panel context" (ngSubmit)="analyze()">
+    <form class="panel context" (ngSubmit)="submitAnalysis()">
       <h2>Ton scénario fictif</h2>
       <label>Profil
         <select name="profile" [ngModel]="profile" (ngModelChange)="selectProfile($event)">
@@ -48,10 +81,15 @@
       @if (profile === 'robert') {
         <label>Retrait fictif (CAD)<input name="withdrawal" type="number" min="0" required [(ngModel)]="withdrawal"></label>
       }
-      <button class="primary" type="submit" [disabled]="!date || busy()">Analyser</button>
+      <button class="primary" type="submit" [disabled]="!canAnalyze()">Analyser</button>
     </form>
   </div>
-  @if (busy()) { <p class="status" role="status">Analyse de la séance en cours…</p> }
+  @if (busy()) {
+    <p class="status" role="status">
+      {{ mode() === 'session' ? 'Analyse de la séance en cours…' : 'Analyse de la période en cours…' }}
+    </p>
+  }
   @if (error()) { <p class="status" role="alert">{{ error() }}</p> }
+  @if (notice()) { <p class="status notice" role="status">{{ notice() }}</p> }
   @if (result(); as analysis) { <app-movement-analysis [analysis]="analysis" /> }
 </main>
