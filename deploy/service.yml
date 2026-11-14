@@ -1,0 +1,82 @@
+Parameters:
+  Image:
+    Type: String
+  BedrockModelId:
+    Type: String
+    MinLength: 1
+
+Resources:
+  Cluster:
+    Type: AWS::ECS::Cluster
+
+  ExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+
+  InfrastructureRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonECSInfrastructureRoleforExpressGatewayServices
+
+  TaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: InvokeBedrock
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: bedrock:InvokeModel
+                Resource:
+                  - !Sub arn:${AWS::Partition}:bedrock:*::foundation-model/*
+                  - !Sub arn:${AWS::Partition}:bedrock:${AWS::Region}:${AWS::AccountId}:inference-profile/*
+
+  Dashboard:
+    Type: AWS::ECS::ExpressGatewayService
+    Properties:
+      Cluster: !Ref Cluster
+      ServiceName: alphaforge
+      ExecutionRoleArn: !GetAtt ExecutionRole.Arn
+      InfrastructureRoleArn: !GetAtt InfrastructureRole.Arn
+      TaskRoleArn: !GetAtt TaskRole.Arn
+      HealthCheckPath: /api/health/
+      ScalingTarget:
+        MinTaskCount: 1
+        MaxTaskCount: 2
+      PrimaryContainer:
+        Image: !Ref Image
+        ContainerPort: 8080
+        Environment:
+          - Name: AWS_REGION
+            Value: !Ref AWS::Region
+          - Name: BEDROCK_MODEL_ID
+            Value: !Ref BedrockModelId
+
+Outputs:
+  Endpoint:
+    Value: !GetAtt Dashboard.Endpoint

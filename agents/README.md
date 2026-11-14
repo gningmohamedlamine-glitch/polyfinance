@@ -1,11 +1,7 @@
-# agents/ — code de la solution (Kiro)
+# Agents AlphaForge
 
-Idée de découpage (à adapter) :
+`event_agent` cherche les publications du titre et du marché dans `data/market_events.csv` entre les deux clôtures comparées. Les sources restent liées au résultat, avec l’heure de publication en heure de New York.
 
-- `profile_agent.py` : lit le profil (Amira, Mateo, Robert) et ses contraintes
-- `data_agent.py` : récupère les données et calcule les indicateurs
-- `guardrail_agent.py` : vérifie la cohérence demande / profil (cas Robert)
-- `explainer_agent.py` : produit l'explication (sources, hypothèses, limites)
-- `main.py` : orchestration
+`impact_agent` utilise les métriques du scénario fictif. Pour Robert, il calcule la variation de la position en CAD et son écart par rapport au retrait. Pour Amira, il calcule l’exposition directe avant et après l’achat. Pour Mateo, il indique les preuves ESG à obtenir.
 
-Chaque agent doit avoir un rôle justifiable (voir la diapo 5 de la présentation).
+Avec `BEDROCK_MODEL_ID`, les deux agents demandent une synthèse à Bedrock sur les résultats calculés et les sources sélectionnées. L’API expose le mode utilisé. Les dates du catalogue sont limitées aux cas de démo. L’ajout d’un événement se fait en enrichissant le CSV en amont du déploiement.
