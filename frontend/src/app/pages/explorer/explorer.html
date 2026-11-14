@@ -2,10 +2,14 @@
   <header><span>AlphaForge</span><small>Simulation historique · PolyFinances</small></header>
   <section class="intro">
     <h1>Qu’est-ce qui s’est passé ici&nbsp;?</h1>
-    <p>Choisis une séance ou une période pour comprendre le mouvement et son effet sur ton scénario.</p>
+    <p>Clique sur une séance ou glisse sur une période pour comprendre le mouvement.</p>
   </section>
   <div class="layout">
     <section class="panel market">
+      <div class="market-title">
+        <span class="ticker">{{ ticker }}</span>
+        <div><h2>{{ stockName() }}</h2><span>Cours historique · USD</span></div>
+      </div>
       <div class="heading">
         <label>Action
           <select [(ngModel)]="ticker" (ngModelChange)="load($event)">
@@ -48,6 +52,7 @@
       </div>
       <app-price-chart
         [rows]="rows()"
+        [rangeMode]="mode() === 'range'"
         [selection]="selection()"
         (selectionChange)="onChartSelection($event)"
       />
@@ -62,8 +67,8 @@
         <button type="button" (click)="load('NVDA', '2022-09-13')">IPC américain</button>
       </div>
     </section>
-    <form class="panel context" (ngSubmit)="submitAnalysis()">
-      <h2>Ton scénario fictif</h2>
+    <section class="panel context">
+      <h2>Ton profil</h2>
       <label>Profil
         <select name="profile" [ngModel]="profile" (ngModelChange)="selectProfile($event)">
           <option value="amira">Amira · Croissance</option>
@@ -71,24 +76,15 @@
           <option value="mateo">Mateo · Préférences ESG</option>
         </select>
       </label>
-      @if (profile !== 'mateo') {
-        <label>Position initiale (CAD)<input name="position" type="number" min="0" required [(ngModel)]="position"></label>
-      }
-      @if (profile === 'amira') {
-        <label>Portefeuille (CAD)<input name="portfolio" type="number" min="1" required [(ngModel)]="portfolio"></label>
-        <label>Achat simulé (CAD)<input name="purchase" type="number" min="0" required [(ngModel)]="purchase"></label>
-      }
-      @if (profile === 'robert') {
-        <label>Retrait fictif (CAD)<input name="withdrawal" type="number" min="0" required [(ngModel)]="withdrawal"></label>
-      }
-      <button class="primary" type="submit" [disabled]="busy() || !canAnalyze()">Analyser</button>
-    </form>
+    </section>
   </div>
-  @if (busy()) {
-    <p class="status" role="status">
-      {{ mode() === 'session' ? 'Analyse de la séance en cours…' : 'Analyse de la période en cours…' }}
-    </p>
+  @if (busy() || progress().length) {
+    <app-agent-timeline
+      [steps]="progress()" [busy]="busy()" [hasResult]="result() !== null"
+      [selectionLabel]="ticker + ' · ' + (mode() === 'range' ? rangeStart + ' → ' + rangeEnd : sessionDate)"
+      [profileLabel]="profile === 'amira' ? 'Amira' : profile === 'robert' ? 'Robert' : 'Mateo'"
+    />
   }
   @if (error()) { <p class="status" role="alert">{{ error() }}</p> }
-  @if (result(); as analysis) { <app-movement-analysis [analysis]="analysis" /> }
+  @if (result(); as analysis) { <app-movement-analysis [analysis]="analysis" (retry)="analyzeCurrent()" /> }
 </main>

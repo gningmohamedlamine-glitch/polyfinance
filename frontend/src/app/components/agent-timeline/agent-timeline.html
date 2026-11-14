@@ -1,0 +1,79 @@
+<section class="panel pipeline" [class.finished]="hasResult()" aria-label="Pipeline des agents">
+  <header class="pipeline-header">
+    <h2>Pipeline des agents</h2>
+  </header>
+
+  <div class="progress-track">
+    <ol class="flow">
+    @for (node of nodes; track node.id) {
+      @let state = nodeStates()[node.id];
+      <li [class.complete]="state === 'done'" [class.active]="state === 'running'"
+          [class.interrupted]="state === 'interrupted'">
+        <button class="node" type="button" (click)="toggle(node.id)"
+          [attr.aria-expanded]="expanded() === node.id" aria-controls="pipeline-details"
+          [attr.aria-label]="node.label + ' · ' + stateLabels[state]">
+          <span class="icon-bubble">
+            <svg [lucideIcon]="icons[node.id]" aria-hidden="true"></svg>
+            @if (state === 'done') {
+              <span class="node-status"><svg [lucideIcon]="icons.check" aria-hidden="true"></svg></span>
+            } @else if (state === 'interrupted') {
+              <span class="node-status"><svg [lucideIcon]="icons.warning" aria-hidden="true"></svg></span>
+            }
+          </span>
+          <span>{{ node.label }}</span>
+        </button>
+      </li>
+    }
+    </ol>
+    <p class="activity" role="status">
+      @if (busy()) {
+        <svg class="activity-spinner" [lucideIcon]="icons.spinner" aria-hidden="true"></svg>
+      }
+      @for (message of [activity()]; track message) {
+        <span class="activity-text">{{ message }}</span>
+      }
+    </p>
+  </div>
+
+  <div id="pipeline-details" class="details" [hidden]="expanded() === null">
+    @switch (expanded()) {
+      @case ('selection') {
+        <strong>Sélection</strong>
+        <span>{{ selectionLabel() }}</span>
+      }
+      @case ('dossier') {
+        <strong>Dossier de marché</strong>
+        <span>{{ nodeStates().dossier === 'done'
+          ? 'Rendements, événements et sources prêts pour l’agent d’impact.'
+          : 'En attente des rendements, événements et sources.' }}</span>
+      }
+      @case ('output') {
+        <strong>Résultat</strong>
+        <span>{{ hasResult() ? 'Analyse et impact disponibles ci-dessous.' : 'Résultat en attente.' }}</span>
+      }
+      @default {
+        @if (expanded(); as agent) {
+          @if (agent === 'event' || agent === 'impact') {
+            <div class="details-heading">
+              <strong>{{ agent === 'event' ? 'Agent marché' : 'Agent d’impact · ' + profileLabel() }}</strong>
+              <span>{{ stageStatus(agent === 'event' ? market() : impact()) }}</span>
+            </div>
+            @if (actions(agent); as tools) {
+              @if (tools.length) {
+                <ul class="tools">
+                  @for (step of tools; track step.action) {
+                    <li class="tool">
+                      <svg [lucideIcon]="toolIcons[step.action] ?? icons.tool" aria-hidden="true"></svg>
+                      <span>{{ labels[step.action] ?? step.action }}</span>
+                      <small>{{ toolStatus(step) }}</small>
+                    </li>
+                  }
+                </ul>
+              }
+            }
+          }
+        }
+      }
+    }
+  </div>
+</section>

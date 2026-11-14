@@ -2,12 +2,14 @@ import {
   Component,
   computed,
   ElementRef,
+  effect,
   HostListener,
   input,
   output,
   signal,
   viewChild,
 } from '@angular/core';
+import { DecimalPipe } from '@angular/common';
 import { Price } from '../../services/market-api';
 
 export type ChartSelection =
@@ -17,15 +19,23 @@ export type ChartSelection =
 const DRAG_THRESHOLD = 8;
 const VIEW_WIDTH = 720;
 
-type ChartPoint = Price & { x: number; y: number; globalIndex: number };
+type ChartPoint = Price & {
+  x: number; y: number; openY: number; highY: number; lowY: number;
+};
 
 @Component({
   selector: 'app-price-chart',
+  imports: [DecimalPipe],
   templateUrl: './price-chart.html',
   styleUrl: './price-chart.css',
 })
 export class PriceChart {
   rows = input.required<Price[]>();
+  rangeMode = input(false);
+  chartStyle = signal<'line' | 'candles'>('line');
+  horizons = ["1J", "5J", "1M", "6M", "YTD", "1A", "5A", "Max"] as const;
+  horizon = signal<(typeof this.horizons)[number]>("1M");
+  firstBound = signal<string | null>(null);
   selection = input.required<ChartSelection>();
   selectionChange = output<ChartSelection>();
 
@@ -37,61 +47,64 @@ export class PriceChart {
   private exceededThreshold = false;
   dragPreview = signal<{ startDate: string; endDate: string } | null>(null);
 
-  private windowSlice = computed(() => {
-    const rows = this.rows();
-    if (!rows.length) return { start: 0, end: 0, window: [] as Price[] };
-    const sel = this.selection();
-    let start = 0;
-    let end = rows.length - 1;
-    if (sel.kind === 'session') {
-      const index = rows.findIndex(row => row.date === sel.date);
-      end = index < 0 ? rows.length - 1 : Math.min(rows.length - 1, index + 17);
-      start = Math.max(0, end - 47);
-    } else {
-      const from = rows.findIndex(row => row.date === sel.startDate);
-      const to = rows.findIndex(row => row.date === sel.endDate);
-      if (from < 0 || to < 0) {
-        start = Math.max(0, rows.length - 48);
-        end = rows.length - 1;
-      } else {
-        const lo = Math.min(from, to);
-        const hi = Math.max(from, to);
-        const span = hi - lo + 1;
-        if (span >= 48) {
-          start = lo;
-          end = hi;
-        } else {
-          const pad = Math.floor((48 - span) / 2);
-          start = Math.max(0, lo - pad);
-          end = Math.min(rows.length - 1, start + 47);
-          start = Math.min(start, lo);
-          end = Math.max(end, hi);
-        }
-      }
-    }
-    return { start, end, window: rows.slice(start, end + 1) };
+  private resetBound = effect(() => {
+    this.rows();
+    this.rangeMode();
+    this.firstBound.set(null);
   });
 
-  points = computed(() => {
+  private windowSlice = computed(() => {
     const rows = this.rows();
-    const { start, window } = this.windowSlice();
-    if (!window.length) return [] as ChartPoint[];
-    const values = window.map(row => row.adj_close);
-    const low = Math.min(...values);
-    const range = Math.max(Math.max(...values) - low, 0.01);
-    return window.map((row, index) => ({
+    const sel = this.selection();
+    const anchor = sel.kind === 'range' ? sel.endDate : sel.date;
+    const selected = rows.findIndex(row => row.date === anchor);
+    const horizon = this.horizon();
+    const counts = { '1J': 2, '5J': 6, '1M': 22, '6M': 127, '1A': 253, '5A': 1261 };
+    const count = horizon === 'YTD' || horizon === 'Max' ? rows.length : counts[horizon];
+    const end = horizon === 'Max' || selected < 0 ? rows.length - 1
+      : Math.min(rows.length - 1, selected + (horizon === '1M' ? 8 : 0));
+    const yearStart = rows.findIndex(row => row.date.startsWith(rows[end]?.date.slice(0, 4) ?? ''));
+    const start = horizon === 'YTD' ? Math.max(0, yearStart) : Math.max(0, end - count + 1);
+    return rows.slice(start, end + 1);
+  });
+
+  setHorizon(horizon: (typeof this.horizons)[number]) {
+    this.firstBound.set(null);
+    this.horizon.set(horizon);
+  }
+
+  points = computed(() => {
+    const rows = this.windowSlice();
+    if (!rows.length) return [] as ChartPoint[];
+    // Apply the same adjustment factor to each OHLC value.
+    const prices = rows.map(row => {
+      const adjustment = row.adj_close / row.close;
+      return { ...row, open: row.open * adjustment, high: row.high * adjustment,
+        low: row.low * adjustment, close: row.adj_close };
+    });
+    const showCandles = this.chartStyle() === 'candles';
+    const low = Math.min(...prices.map(row => showCandles ? row.low : row.close));
+    const high = Math.max(...prices.map(row => showCandles ? row.high : row.close));
+    const range = Math.max(high - low, 0.01);
+    const toY = (price: number) => 206 - ((price - low) * 169) / range;
+    return prices.map((row, index) => ({
       ...row,
-      x: 18 + (index * 684) / Math.max(1, window.length - 1),
-      y: 206 - ((row.adj_close - low) * 169) / range,
-      globalIndex: start + index,
+      x: 18 + (index * 684) / Math.max(1, rows.length - 1),
+      y: toY(row.close),
+      openY: toY(row.open),
+      highY: toY(row.high),
+      lowY: toY(row.low),
     }));
   });
+
+  candleWidth = computed(() => Math.min(12, 684 / Math.max(1, this.points().length) * 0.65));
 
   line = computed(() => this.points().map(point => `${point.x},${point.y}`).join(' '));
 
   displayRange = computed(() => {
     const preview = this.dragPreview();
     if (preview) return preview;
+    if (this.rangeMode() && this.firstBound()) return null;
     const sel = this.selection();
     if (sel.kind === 'range') {
       return { startDate: sel.startDate, endDate: sel.endDate };
@@ -101,6 +114,7 @@ export class PriceChart {
 
   sessionMarker = computed(() => {
     if (this.dragPreview()) return null;
+    if (this.rangeMode() && this.firstBound()) return this.firstBound();
     const sel = this.selection();
     return sel.kind === 'session' ? sel.date : null;
   });
@@ -111,9 +125,9 @@ export class PriceChart {
     const pts = this.points();
     const start = pts.find(point => point.date === range.startDate);
     const end = pts.find(point => point.date === range.endDate);
-    if (!start || !end) return null;
-    const x1 = Math.min(start.x, end.x);
-    const x2 = Math.max(start.x, end.x);
+    if (!pts.length || range.endDate < pts[0].date || range.startDate > pts.at(-1)!.date) return null;
+    const x1 = start?.x ?? pts[0].x;
+    const x2 = end?.x ?? pts.at(-1)!.x;
     return { x1, x2, startDate: range.startDate, endDate: range.endDate };
   });
 
@@ -169,12 +183,23 @@ export class PriceChart {
     const preview = this.dragPreview();
     this.dragPreview.set(null);
     if (this.exceededThreshold && preview) {
+      this.firstBound.set(null);
       const date = this.dateAtX(this.clientToSvgX(event.clientX));
       const [startDate, endDate] = this.sortDates(this.dragOriginDate, date);
       this.selectionChange.emit(this.rangeOrSession(startDate, endDate));
       return;
     }
     const date = this.dateAtX(this.clientToSvgX(event.clientX));
+    if (this.rangeMode()) {
+      const first = this.firstBound();
+      if (first && this.points().some(point => point.date === first)) {
+        this.firstBound.set(null);
+        this.selectionChange.emit(this.rangeOrSession(...this.sortDates(first, date)));
+      } else {
+        this.firstBound.set(date);
+      }
+      return;
+    }
     if (date !== this.rows()[0]?.date) {
       this.selectionChange.emit({ kind: 'session', date });
     }
@@ -188,7 +213,7 @@ export class PriceChart {
 
   @HostListener('document:keydown.escape')
   onEscape() {
-    if (!this.dragPreview()) return;
+    this.firstBound.set(null);
     this.onPointerCancel();
   }
 

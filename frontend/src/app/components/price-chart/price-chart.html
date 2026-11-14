@@ -1,21 +1,46 @@
 <div class="chart">
-  <p>Clôture ajustée · USD</p>
+  <div class="chart-toolbar">
+    <div class="horizons chart-style" role="group" aria-label="Type de graphique">
+      <button type="button" [attr.aria-pressed]="chartStyle() === 'line'" (click)="chartStyle.set('line')">Courbe</button>
+      <button type="button" [attr.aria-pressed]="chartStyle() === 'candles'" (click)="chartStyle.set('candles')">Bougies</button>
+    </div>
+    <div class="horizons" role="group" aria-label="Horizon du graphique">
+      @for (option of horizons; track option) {
+        <button type="button" [attr.aria-pressed]="horizon() === option" (click)="setHorizon(option)">{{ option }}</button>
+      }
+    </div>
+  </div>
   @if (points().length) {
     <svg
       #chartSvg
       viewBox="0 0 720 234"
-      aria-label="Graphique des clôtures ajustées"
+      [attr.aria-label]="chartStyle() === 'line' ? 'Courbe des clôtures ajustées en USD' : 'Bougies quotidiennes des cours ajustés en USD'"
       class="interactive"
       (pointerdown)="onPointerDown($event)"
       (pointermove)="onPointerMove($event)"
       (pointerup)="onPointerUp($event)"
       (pointercancel)="onPointerCancel()"
     >
+      <defs><linearGradient id="chart-fill" x2="0" y2="1" gradientUnits="objectBoundingBox"><stop stop-color="#6eb69a" stop-opacity=".52"/><stop offset="100%" stop-color="#6eb69a" stop-opacity=".04"/></linearGradient></defs>
       <path d="M18 37H702 M18 93H702 M18 150H702 M18 206H702" class="grid"/>
+      @if (chartStyle() === 'line') {
+        <polygon [attr.points]="line() + ' 702,206 18,206'" class="area"/>
+      }
       @if (rangeOverlay(); as band) {
         <rect [attr.x]="band.x1" y="24" [attr.width]="band.x2 - band.x1" height="190" class="range"/>
       }
-      <polyline [attr.points]="line()" class="series"/>
+      @if (chartStyle() === 'candles') {
+        @for (point of points(); track point.date) {
+          <g class="candle" [class.down]="point.close < point.open">
+            <title>{{ point.date }} · USD ajustés · Ouverture {{ point.open | number:'1.2-2' }} · Haut {{ point.high | number:'1.2-2' }} · Bas {{ point.low | number:'1.2-2' }} · Clôture {{ point.close | number:'1.2-2' }}</title>
+            <line [attr.x1]="point.x" [attr.x2]="point.x" [attr.y1]="point.highY" [attr.y2]="point.lowY"/>
+            <rect [attr.x]="point.x - candleWidth() / 2" [attr.y]="point.openY < point.y ? point.openY : point.y"
+              [attr.width]="candleWidth()" [attr.height]="(point.openY > point.y ? point.openY - point.y : point.y - point.openY) + 0.7"/>
+          </g>
+        }
+      } @else {
+        <polyline [attr.points]="line()" class="series"/>
+      }
       @for (point of points(); track point.date) {
         @if (point.date === sessionMarker()) {
           <line [attr.x1]="point.x" [attr.x2]="point.x" y1="24" y2="214" class="selection"/>
@@ -23,6 +48,9 @@
         }
       }
     </svg>
+    @if (rangeMode()) {
+      <p class="range-help" aria-live="polite">{{ firstBound() ? 'Début choisi le ' + firstBound() + '. Clique la deuxième borne.' : 'Clique les deux bornes ou glisse sur le graphique.' }}</p>
+    }
     <div class="dates">
       <span>{{ caption().left }}</span>
       <strong>{{ caption().center }}</strong>

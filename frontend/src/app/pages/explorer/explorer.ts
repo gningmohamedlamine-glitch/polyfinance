@@ -2,15 +2,16 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
+import { AgentTimeline } from '../../components/agent-timeline/agent-timeline';
 import { MovementAnalysis } from '../../components/movement-analysis/movement-analysis';
 import { ChartSelection, PriceChart } from '../../components/price-chart/price-chart';
-import { Analysis, MarketApi, Price, Profile, Stock } from '../../services/market-api';
+import { AgentProgress, Analysis, MarketApi, Price, Profile, Stock } from '../../services/market-api';
 
 type SelectionMode = 'session' | 'range';
 
 @Component({
   selector: 'app-explorer',
-  imports: [FormsModule, PriceChart, MovementAnalysis],
+  imports: [FormsModule, PriceChart, MovementAnalysis, AgentTimeline],
   templateUrl: './explorer.html',
   styleUrl: './explorer.css',
 })
@@ -22,6 +23,7 @@ export class Explorer {
   rows = signal<Price[]>([]);
   result = signal<Analysis | null>(null);
   busy = signal(false);
+  progress = signal<AgentProgress[]>([]);
   error = signal('');
   selection = signal<ChartSelection>({ kind: 'session', date: '' });
   mode = signal<SelectionMode>('session');
@@ -30,10 +32,6 @@ export class Explorer {
   rangeStart = '';
   rangeEnd = '';
   profile: Profile = 'amira';
-  position = 10000;
-  purchase = 5000;
-  portfolio = 100000;
-  withdrawal = 9500;
 
   rangeInvalid() {
     const rows = this.rows();
@@ -77,6 +75,10 @@ export class Explorer {
       },
       error: (error) => this.showError(error),
     });
+  }
+
+  stockName() {
+    return this.stocks().find(stock => stock.ticker === this.ticker)?.name ?? this.ticker;
   }
 
   setMode(mode: SelectionMode) {
@@ -124,10 +126,6 @@ export class Explorer {
     this.analyzeCurrent();
   }
 
-  submitAnalysis() {
-    this.analyzeCurrent();
-  }
-
   private applySession(date: string, run = false) {
     this.sessionDate = date;
     this.selection.set({ kind: 'session', date });
@@ -163,7 +161,7 @@ export class Explorer {
     this.analyzeCurrent();
   }
 
-  private analyzeCurrent() {
+  analyzeCurrent() {
     if (!this.canAnalyze()) return;
     if (this.mode() === 'range') {
       if (this.rangeStart === this.rangeEnd) {
@@ -184,13 +182,22 @@ export class Explorer {
       ...selection,
       ticker: this.ticker,
       profile: this.profile,
-      position_cad: this.position,
-      purchase_cad: this.purchase,
-      portfolio_cad: this.portfolio,
-      withdrawal_cad: this.withdrawal,
     }).subscribe({
-      next: (result) => { this.result.set(result); this.busy.set(false); },
-      error: (error) => this.showError(error),
+      next: (message) => {
+        if ('kind' in message) {
+          this.progress.update(steps => {
+            const index = steps.findIndex(step => step.agent === message.agent && step.action === message.action);
+            return index < 0 ? [...steps, message] : steps.map((step, i) => i === index ? message : step);
+          });
+          return;
+        }
+        this.result.set(message);
+        this.busy.set(false);
+      },
+      error: (error: Error) => {
+        this.busy.set(false);
+        this.error.set(error.message || 'Le service est indisponible.');
+      },
     });
   }
 
@@ -209,6 +216,7 @@ export class Explorer {
   }
 
   private cancelAnalysis() {
+    this.progress.set([]);
     this.analysisRequest?.unsubscribe();
     this.analysisRequest = undefined;
   }

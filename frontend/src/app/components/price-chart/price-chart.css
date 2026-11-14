@@ -4,8 +4,20 @@ svg { width: 100%; display: block; }
 svg.interactive { touch-action: none; cursor: crosshair; }
 .grid { stroke: var(--border); fill: none; }
 .series { fill: none; stroke: var(--accent); stroke-width: 2.5; }
-.range { fill: #60e3b622; stroke: var(--accent); stroke-width: 1; }
+.range { fill: #17644f20; stroke: var(--accent); stroke-width: 1; }
 .selection { stroke: var(--accent); stroke-dasharray: 4 4; }
-.selected { fill: var(--accent); stroke: #101925; stroke-width: 2; }
+.selected { fill: var(--accent); stroke: #fff; stroke-width: 2; }
 .dates { display: flex; justify-content: space-between; gap: 8px; font-variant-numeric: tabular-nums; }
 .dates strong { color: var(--text); text-align: center; }
+.area { fill: url(#chart-fill); }
+
+.chart-toolbar { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; color:var(--muted); font-size:.8rem; }
+.horizons { display:flex; gap:4px; flex-wrap:wrap; }
+.horizons button { padding:6px 9px; border:0; font-weight:600; }
+.horizons button[aria-pressed="true"] { color:var(--accent); background:#e4f2ea; }
+
+.chart-style { padding: 2px; border: 1px solid var(--border); border-radius: 11px; }
+.candle { color: var(--accent); }
+.candle.down { color: #a03832; }
+.candle line { stroke: currentColor; stroke-width: .8; }
+.candle rect { fill: currentColor; }

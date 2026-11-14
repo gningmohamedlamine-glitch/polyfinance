@@ -4,7 +4,17 @@ dt, small { color: var(--muted); font-size: .8rem; }
 dd { margin: .35rem 0 0; color: var(--accent); font-size: 1.25rem; font-weight: 700; }
 p { line-height: 1.6; }
 a, small { display: block; margin-top: .5rem; }
+.retry { margin-top: .5rem; font-size: .8rem; }
 .notable ul { margin: 0; padding-left: 1.2rem; color: var(--muted); font-size: .9rem; }
 .trace { margin-top: 20px; }
 .trace-row { display: flex; justify-content: space-between; gap: 12px; padding: .35rem 0; border-top: 1px solid var(--border); font-size: .85rem; }
 @media (max-width: 720px) { .results { grid-template-columns: 1fr; } }
+
+.lead-metric dd { font-size: 1.75rem; }
+details { margin-top: 12px; }
+summary { font-weight: 600; }
+
+.takeaways { padding-left: 1.2rem; line-height: 1.55; }
+.takeaways li { margin: .45rem 0; }
+.takeaways strong { color: var(--accent); }
+.takeaways .negative strong { color: #a03832; }
