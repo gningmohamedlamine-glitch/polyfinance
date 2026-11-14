@@ -20,7 +20,7 @@ repo="$(stack_output "$stack_prefix-registry" RepositoryUri)"
 registry="${repo%%/*}"
 aws ecr get-login-password | docker login --username AWS --password-stdin "$registry"
 docker build --platform linux/amd64 -t "$repo:$image_tag" .
-container="$(docker run -d --read-only --tmpfs /dev/shm -p 127.0.0.1::8080 "$repo:$image_tag")"
+container="$(MSYS_NO_PATHCONV=1 docker run -d --read-only --tmpfs /dev/shm -p 127.0.0.1::8080 "$repo:$image_tag")"
 trap 'docker rm -f "$container" >/dev/null' EXIT
 port="$(docker port "$container" 8080/tcp | cut -d: -f2)"
 curl --fail --silent --show-error --max-time 5 --retry 12 --retry-all-errors --retry-delay 1 "http://127.0.0.1:$port/api/health/"
