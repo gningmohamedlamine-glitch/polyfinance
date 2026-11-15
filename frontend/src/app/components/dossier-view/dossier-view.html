@@ -29,8 +29,11 @@
 
 <section class="panel">
   <div class="section-head"><h3>Registre des preuves</h3><small class="muted">{{ sources().length + leads().length }} élément(s), par ordre chronologique</small></div>
+  @if (webStatus(); as web) { <p class="web-status muted">{{ web }}</p> }
   @if (!sources().length && !leads().length) {
-    <p class="empty">Aucune publication trouvée pour cette séance : la cause reste indéterminée.</p>
+    <p class="empty">Aucune publication trouvée pour cette séance{{ marketDriven()
+      ? ' : l’effet attendu du marché (bêta × indice) explique l’essentiel du mouvement, aucune nouvelle propre au titre n’est nécessaire.'
+      : ' : la cause reste indéterminée.' }}</p>
   }
   @for (source of sources(); track source.url) {
     <article class="evidence">

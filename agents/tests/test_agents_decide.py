@@ -105,3 +105,26 @@ class AdvisorTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class WebGuardTests(unittest.TestCase):
+    @patch.dict(os.environ, {"BEDROCK_MODEL_ID": "gpt-6-astra", "MARKET_WEB_SEARCH": "1"}, clear=True)
+    def test_no_source_forces_web_search_and_rewrite(self):
+        # 2024-08-15 : rien au catalogue ; l'Enquêteur conclut sans chercher sur le web.
+        agent = scripted(
+            tool_use("search_catalog", {"sessions": ["2024-08-15"]}, "Part propre faible : je cherche une publication macro."),
+            final("- Cause indéterminée."),
+        )
+        writer = scripted(final("- Le marché a monté après des ventes au détail solides (piste web non vérifiée)."))
+        lead = {"url": "https://example.com/a", "title": "Stocks rally on retail sales", "published_date": "2024-08-15",
+                "session": "2024-08-15", "summary": "Hausse des marchés.", "after_session": False}
+        with patch("agents.agent_loop.bedrock_client", return_value=agent), \
+             patch("agents.model_text.bedrock_client", return_value=writer), \
+             patch("agents.event_agent.bedrock_client", return_value=Mock()), \
+             patch("agents.event_agent.find_web_leads", return_value=([lead], "found")) as web:
+            dossier = run_event_agent(resolve_window("NVDA", date="2024-08-15"))
+        web.assert_called_once()
+        self.assertEqual(dossier["coverage"]["web_search"], "found")
+        self.assertEqual(len(dossier["coverage"]["web_leads"]), 1)
+        self.assertIn("ventes au détail", dossier["synthesis"]["text"])
+        self.assertTrue(any(t["name"] == "web_search" and t["source"] == "guard" for t in dossier["tools_executed"]))

@@ -31,8 +31,31 @@ export class DossierView {
       value: key === 'figures_source' && value === 'python' ? 'Calculés en Python, jamais par le modèle' : String(value),
     }));
   });
+  /** Mouvement surtout expliqué par l'effet attendu du marché (bêta × indice). */
+  marketDriven = computed(() => {
+    const m = this.analysis().dossier?.returns?.market_model;
+    return !!m && m.status === 'ok' && Math.abs(m.expected_return ?? 0) > Math.abs(m.residual ?? 0);
+  });
+  /** Ce qui s'est passé avec la recherche web, dit en clair. */
+  webStatus = computed(() => {
+    const coverage = this.analysis().dossier?.coverage;
+    const reason = coverage?.web_search_reason;
+    switch (coverage?.web_search) {
+      case 'disabled': return 'Recherche web désactivée (MARKET_WEB_SEARCH ≠ 1).';
+      case 'not_requested': return 'Recherche web non lancée par l’Enquêteur.';
+      case 'unavailable': return `Recherche web indisponible${reason ? ' (' + reason + ')' : ''}.`;
+      case 'no_dated_sources': return 'Recherche web lancée : aucun article daté dans la fenêtre.';
+      case 'no_relevant_sources': return 'Recherche web lancée : articles trouvés, aucun pertinent pour ce mouvement.';
+      case 'not_needed': return 'Recherche web non nécessaire.';
+      default: return coverage?.web_search ? `Recherche web : ${coverage.web_search}.` : '';
+    }
+  });
   status = computed(() => {
-    if (!this.sources().length && !this.leads().length) return { label: 'Cause indéterminée', tone: 'neutral' };
+    if (!this.sources().length && !this.leads().length) {
+      return this.marketDriven()
+        ? { label: 'Mouvement surtout porté par le marché', tone: 'neutral' }
+        : { label: 'Cause indéterminée', tone: 'neutral' };
+    }
     if (this.verified()) return { label: 'Extraits vérifiés', tone: 'ok' };
     return { label: 'Sources datées, extraits à vérifier', tone: 'warn' };
   });

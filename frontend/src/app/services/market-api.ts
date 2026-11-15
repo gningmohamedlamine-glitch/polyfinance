@@ -19,6 +19,7 @@ export interface MarketModel {
   reference: string;
   beta?: number;
   expected_return?: number;
+  residual?: number;
   residual_pp?: number;
 }
 export interface AgentDecision {
