@@ -7,6 +7,8 @@ import { DossierView } from '../../components/dossier-view/dossier-view';
 import { TracesView } from '../../components/traces-view/traces-view';
 import { MovementAnalysis } from '../../components/movement-analysis/movement-analysis';
 import { ChartSelection, PriceChart } from '../../components/price-chart/price-chart';
+import { LucideDynamicIcon } from '@lucide/angular';
+import { ICONS } from '../../icons';
 import { PERSONAS, personaOf } from '../../personas';
 import { AgentProgress, Analysis, MarketApi, Price, Profile, Stock } from '../../services/market-api';
 
@@ -14,7 +16,7 @@ type SelectionMode = 'session' | 'range';
 
 @Component({
   selector: 'app-explorer',
-  imports: [FormsModule, PriceChart, MovementAnalysis, AgentTimeline, DossierView, TracesView],
+  imports: [FormsModule, LucideDynamicIcon, PriceChart, MovementAnalysis, AgentTimeline, DossierView, TracesView],
   templateUrl: './explorer.html',
   styleUrl: './explorer.css',
 })
@@ -36,6 +38,7 @@ export class Explorer {
   rangeEnd = '';
   profile: Profile = 'amira';
   readonly personas = PERSONAS;
+  readonly icons = ICONS;
   entered = signal(false);
   switcherOpen = signal(false);
 
@@ -44,9 +47,9 @@ export class Explorer {
   /** Trois vues : l'analyse (actes 1 à 3), le dossier de preuves et les traces des agents. */
   view = signal<'analyse' | 'dossier' | 'traces'>('analyse');
   readonly pages = [
-    { id: 'analyse' as const, label: 'Analyse', icon: '📈' },
-    { id: 'dossier' as const, label: 'Dossier de preuves', icon: '🗂️' },
-    { id: 'traces' as const, label: 'Traces des agents', icon: '🧾' },
+    { id: 'analyse' as const, label: 'Analyse' },
+    { id: 'dossier' as const, label: 'Dossier de preuves' },
+    { id: 'traces' as const, label: 'Traces des agents' },
   ];
   readonly sections = [
     { id: 'acte1', label: 'La séance' },

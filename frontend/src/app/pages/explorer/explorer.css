@@ -94,3 +94,7 @@
 .sub-nav button { text-align: left; border: 0; padding: 6px 8px; font-size: .84rem; color: var(--muted); background: transparent; }
 .sub-nav button.active { color: var(--accent-strong); font-weight: 600; }
 .sub-nav button:disabled { opacity: .4; }
+.brand-mark svg.ico { width: 20px; height: 20px; }
+.new, .leave, .persona-card .enter, .pending .primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.nav-item svg.ico { width: 18px; height: 18px; }
+.caret { color: var(--muted); }

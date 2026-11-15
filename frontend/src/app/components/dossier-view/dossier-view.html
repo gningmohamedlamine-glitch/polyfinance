@@ -19,7 +19,7 @@
 </section>
 
 <section class="panel rule">
-  <strong>Règle de prudence de l’Enquêteur</strong>
+  <strong><svg class="ico" [lucideIcon]="icons.shield" aria-hidden="true"></svg> Règle de prudence de l’Enquêteur</strong>
   <p>Si aucune source datée n’explique le mouvement, l’agent conclut « cause indéterminée » au lieu d’en inventer une.
      Une publication datée ne prouve pas à elle seule le sens du mouvement.</p>
   @if (unexplained().length) {
@@ -35,10 +35,10 @@
   @for (source of sources(); track source.url) {
     <article class="evidence">
       <header>
-        <span class="kind">{{ source.publisher === 'SEC EDGAR' ? 'SEC' : 'Officiel' }}</span>
+        <span class="kind" [title]="source.publisher"><svg class="ico" [lucideIcon]="source.publisher === 'SEC EDGAR' ? icons.sec : icons.doc" aria-hidden="true"></svg></span>
         <div class="title"><a [href]="source.url" target="_blank" rel="noopener">{{ source.title }}</a>
           <small>{{ source.publisher }} · publié le {{ source.time_et.replace('T', ' à ') }} (heure de l’Est)@if (source.session) { · rattaché à la séance du {{ source.session }} }</small></div>
-        <span class="badge" [attr.data-status]="source.excerpt_status ?? 'none'">{{ statusLabel(source.excerpt_status) }}</span>
+        <span class="badge" [attr.data-status]="source.excerpt_status ?? 'none'">@if (source.excerpt_status === 'verified') { <svg class="ico" [lucideIcon]="icons.check" aria-hidden="true"></svg> } @else if (source.excerpt_status === 'mismatch') { <svg class="ico" [lucideIcon]="icons.cross" aria-hidden="true"></svg> }{{ statusLabel(source.excerpt_status) }}</span>
       </header>
       @if (source.excerpt) { <blockquote>« {{ source.excerpt }} »</blockquote> }
       @if (source.summary) { <p class="summary"><strong>Résumé :</strong> {{ source.summary }}</p> }
@@ -47,7 +47,7 @@
   @for (lead of leads(); track lead.url) {
     <article class="evidence lead">
       <header>
-        <span class="kind web">Web</span>
+        <span class="kind web" title="Web"><svg class="ico" [lucideIcon]="icons.web" aria-hidden="true"></svg></span>
         <div class="title"><a [href]="lead.url" target="_blank" rel="noopener">{{ lead.title }}</a>
           <small>Publié le {{ lead.published_date }} · trouvé par la recherche web (Amazon Nova)</small></div>
         <span class="badge" data-status="lead">Piste non vérifiée</span>

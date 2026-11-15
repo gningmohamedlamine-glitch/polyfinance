@@ -1,16 +1,19 @@
 import { DecimalPipe, PercentPipe } from '@angular/common';
 import { Component, computed, input } from '@angular/core';
+import { LucideDynamicIcon } from '@lucide/angular';
+import { ICONS } from '../../icons';
 import { Analysis } from '../../services/market-api';
 
 /** Dossier de preuves : tout ce que l'Enquêteur a trouvé, vérifié ou écarté, avec ses limites. */
 @Component({
   selector: 'app-dossier-view',
-  imports: [DecimalPipe, PercentPipe],
+  imports: [DecimalPipe, PercentPipe, LucideDynamicIcon],
   templateUrl: './dossier-view.html',
   styleUrl: './dossier-view.css',
 })
 export class DossierView {
   analysis = input.required<Analysis>();
+  readonly icons = ICONS;
 
   sources = computed(() => this.analysis().event.sources);
   leads = computed(() => this.analysis().dossier?.coverage.web_leads ?? []);
@@ -43,8 +46,8 @@ export class DossierView {
 
   statusLabel(status?: string) {
     switch (status) {
-      case 'verified': return '✓ Extrait vérifié dans la source';
-      case 'mismatch': return '✕ Extrait introuvable dans la source';
+      case 'verified': return 'Extrait vérifié dans la source';
+      case 'mismatch': return 'Extrait introuvable dans la source';
       case 'source_missing': return 'Source non téléchargée : extrait non vérifié';
       default: return 'Publication datée, sans extrait';
     }

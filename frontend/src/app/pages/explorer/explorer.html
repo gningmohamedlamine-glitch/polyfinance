@@ -1,7 +1,7 @@
 @if (!entered()) {
   <main class="welcome">
     <div class="welcome-head">
-      <span class="brand-mark" aria-hidden="true">α</span>
+      <span class="brand-mark" aria-hidden="true"><svg class="ico" [lucideIcon]="icons.brand"></svg></span>
       <span class="eyebrow">AlphaForge AI · Simulation</span>
       <h1>Qui es-tu&nbsp;?</h1>
       <p>Choisis un profil d’investisseur fictif. Le même mouvement de marché sera expliqué, puis analysé selon ta situation.</p>
@@ -13,7 +13,7 @@
           <strong>{{ p.name }}, {{ p.age }} ans</strong>
           <span class="tags"><span>{{ p.risk }}</span><span>{{ p.horizon }}</span></span>
           <span class="goal">{{ p.goal }}</span>
-          <span class="enter">Entrer →</span>
+          <span class="enter">Entrer <svg class="ico" [lucideIcon]="icons.arrow" aria-hidden="true"></svg></span>
         </button>
       }
     </div>
@@ -22,15 +22,15 @@
 } @else {
 <div class="shell">
   <aside class="sidebar">
-    <div class="brand"><span class="brand-mark" aria-hidden="true">α</span>
+    <div class="brand"><span class="brand-mark" aria-hidden="true"><svg class="ico" [lucideIcon]="icons.brand"></svg></span>
       <div><strong>AlphaForge AI</strong><small>Explorateur de mouvements</small></div>
     </div>
-    <button type="button" class="primary new" (click)="newAnalysis()">＋ Nouvelle analyse</button>
+    <button type="button" class="primary new" (click)="newAnalysis()"><svg class="ico" [lucideIcon]="icons.plus" aria-hidden="true"></svg> Nouvelle analyse</button>
     <nav aria-label="Navigation">
       @for (page of pages; track page.id) {
         <button type="button" class="nav-item" [class.active]="view() === page.id"
                 [disabled]="page.id !== 'analyse' && !result()" (click)="openPage(page.id)">
-          <span aria-hidden="true">{{ page.icon }}</span>{{ page.label }}
+          <svg class="ico" [lucideIcon]="icons[page.id]" aria-hidden="true"></svg>{{ page.label }}
         </button>
         @if (page.id === 'analyse' && view() === 'analyse') {
           <div class="sub-nav">
@@ -48,7 +48,7 @@
         <div><strong>{{ persona().name }}, {{ persona().age }} ans</strong><small>{{ persona().risk }}</small></div>
       </div>
       @if (aiMode(); as mode) { <span class="ai-mode" [class.on]="mode !== 'Calcul local'">● {{ mode }}</span> }
-      <button type="button" class="leave" (click)="leave()">Se déconnecter</button>
+      <button type="button" class="leave" (click)="leave()"><svg class="ico" [lucideIcon]="icons.logout" aria-hidden="true"></svg> Se déconnecter</button>
     </div>
   </aside>
 
@@ -71,7 +71,7 @@
               [attr.aria-expanded]="switcherOpen()" aria-haspopup="true">
         <span class="avatar small" [attr.data-profile]="profile">{{ persona().initial }}</span>
         <span><strong>{{ persona().name }}</strong><small>Changer de profil</small></span>
-        <span class="caret" aria-hidden="true">▾</span>
+        <svg class="ico caret" [lucideIcon]="icons.chevron" aria-hidden="true"></svg>
       </button>
       @if (switcherOpen()) {
         <div class="switcher" role="menu">
@@ -82,12 +82,12 @@
               <span><strong>{{ p.name }}, {{ p.age }} ans</strong><small>{{ p.risk }} · {{ p.horizon }}</small></span>
             </button>
           }
-          <button type="button" class="leave" (click)="leave()">Se déconnecter</button>
+          <button type="button" class="leave" (click)="leave()"><svg class="ico" [lucideIcon]="icons.logout" aria-hidden="true"></svg> Se déconnecter</button>
         </div>
       }
     </div>
     <button type="button" class="primary run" [class.pulse]="stale()" (click)="run()" [disabled]="busy() || !canAnalyze()">
-      @if (busy()) { <span class="spinner" aria-hidden="true"></span> Analyse en cours… } @else { ▶ Exécuter l’analyse }
+      @if (busy()) { <span class="spinner" aria-hidden="true"></span> Analyse en cours… } @else { <svg class="ico" [lucideIcon]="icons.play" aria-hidden="true"></svg> Exécuter l’analyse }
     </button>
   </header>
 
@@ -157,7 +157,7 @@
       <div class="panel pending">
         <strong>Sélection prête : {{ ticker }} · {{ mode() === 'range' ? rangeStart + ' → ' + rangeEnd : sessionDate }}</strong>
         <span class="muted">Les deux agents analyseront cette séance pour {{ persona().name }}.</span>
-        <button type="button" class="primary" (click)="run()">▶ Exécuter l’analyse</button>
+        <button type="button" class="primary" (click)="run()"><svg class="ico" [lucideIcon]="icons.play" aria-hidden="true"></svg> Exécuter l’analyse</button>
       </div>
     }
     @if (result(); as analysis) {

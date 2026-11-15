@@ -6,7 +6,7 @@
     <header class="act-title">
       <span class="eyebrow">Acte 2 · Ce qui s’est passé</span>
       <span class="chip" [class.bedrock]="result.event.mode === 'bedrock'">
-        {{ result.event.mode === 'bedrock' ? 'Enquêteur · GPT-6 Astra' : 'Calcul local' }}
+        <svg class="ico" [lucideIcon]="icons.bot" aria-hidden="true"></svg> {{ result.event.mode === 'bedrock' ? 'Enquêteur · GPT-6 Astra' : 'Calcul local' }}
       </span>
     </header>
 
@@ -58,8 +58,8 @@
         <div class="source-head">
           <a [href]="source.url" target="_blank" rel="noopener">{{ source.title }}</a>
           @switch (source.excerpt_status) {
-            @case ('verified') { <span class="badge ok">✓ Extrait vérifié</span> }
-            @case ('mismatch') { <span class="badge ko">✕ Extrait introuvable</span> }
+            @case ('verified') { <span class="badge ok"><svg class="ico" [lucideIcon]="icons.check" aria-hidden="true"></svg> Extrait vérifié</span> }
+            @case ('mismatch') { <span class="badge ko"><svg class="ico" [lucideIcon]="icons.cross" aria-hidden="true"></svg> Extrait introuvable</span> }
             @case ('source_missing') { <span class="badge">Source non téléchargée</span> }
             @default { <span class="badge">Publication datée</span> }
           }
@@ -86,7 +86,7 @@
     <header class="act-title">
       <span class="eyebrow">Acte 3 · Ce que ça change pour toi</span>
       <span class="chip" [class.bedrock]="result.impact.mode === 'bedrock'">
-        {{ result.impact.mode === 'bedrock' ? 'Conseiller · GPT-6 Astra' : 'Calcul local' }}
+        <svg class="ico" [lucideIcon]="icons.bot" aria-hidden="true"></svg> {{ result.impact.mode === 'bedrock' ? 'Conseiller · GPT-6 Astra' : 'Calcul local' }}
       </span>
     </header>
     <div class="who-line">
@@ -97,11 +97,11 @@
     @if (result.impact.coherence; as coherence) {
       @if (coherence.conflicts.length) {
         <div class="alert ko" role="alert">
-          <strong>⚠ Ce titre ne correspond pas à ton profil</strong>
+          <strong><svg class="ico" [lucideIcon]="icons.alert" aria-hidden="true"></svg> Ce titre ne correspond pas à ton profil</strong>
           <ul>@for (conflict of coherence.conflicts; track conflict) { <li>{{ conflict }}</li> }</ul>
         </div>
       } @else if (coherence.risk.status === 'ok') {
-        <div class="alert ok"><strong>✓ Le risque observé reste dans les limites de ton profil</strong></div>
+        <div class="alert ok"><strong><svg class="ico" [lucideIcon]="icons.check" aria-hidden="true"></svg> Le risque observé reste dans les limites de ton profil</strong></div>
       }
     }
 

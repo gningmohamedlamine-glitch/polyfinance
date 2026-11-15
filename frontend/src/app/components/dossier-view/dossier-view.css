@@ -19,7 +19,7 @@ h3 { font-size: 1rem; }
 .empty { margin: 0; color: var(--muted); }
 .evidence { display: grid; gap: 10px; padding: 14px 0; border-top: 1px solid var(--border); }
 .evidence header { display: flex; gap: 12px; align-items: flex-start; }
-.kind { flex: none; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 10px; background: var(--accent-soft); color: var(--accent-strong); font-size: .72rem; font-weight: 700; }
+.kind { flex: none; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 10px; background: var(--accent-soft); color: var(--accent-strong); font-size: 1.15rem; }
 .kind.web { background: var(--warn-soft); color: var(--warn); }
 .title { display: grid; gap: 3px; flex: 1; min-width: 0; }
 .title a { font-weight: 600; text-decoration: none; }
@@ -41,3 +41,4 @@ blockquote { margin: 0 0 0 56px; padding: 10px 14px; border-left: 3px solid var(
 .limits dt { color: var(--muted); font-size: .84rem; }
 .limits dd { margin: 0; font-size: .88rem; }
 @media (max-width: 900px) { .kpis { grid-template-columns: 1fr 1fr; } .limits div { grid-template-columns: 1fr; } }
+.badge, .rule > strong { display: inline-flex; align-items: center; gap: 6px; }

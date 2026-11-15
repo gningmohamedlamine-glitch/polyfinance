@@ -1,5 +1,7 @@
 import { CurrencyPipe, DecimalPipe, PercentPipe } from '@angular/common';
 import { Component, computed, input, output } from '@angular/core';
+import { LucideDynamicIcon } from '@lucide/angular';
+import { ICONS } from '../../icons';
 import { Persona } from '../../personas';
 import { AgentDecision, Analysis } from '../../services/market-api';
 
@@ -15,7 +17,7 @@ const TOOL_LABELS: Record<string, string> = {
 
 @Component({
   selector: 'app-movement-analysis',
-  imports: [CurrencyPipe, DecimalPipe, PercentPipe],
+  imports: [CurrencyPipe, DecimalPipe, PercentPipe, LucideDynamicIcon],
   templateUrl: './movement-analysis.html',
   styleUrl: './movement-analysis.css',
 })
@@ -23,6 +25,7 @@ export class MovementAnalysis {
   analysis = input.required<Analysis>();
   persona = input.required<Persona>();
   retry = output<void>();
+  readonly icons = ICONS;
 
   /** Décomposition : mouvement attendu vu la sensibilité au marché (bêta) contre part propre au titre. */
   decomposition = computed(() => {
