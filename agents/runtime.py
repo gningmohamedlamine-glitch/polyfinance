@@ -18,6 +18,13 @@ class BudgetExceeded(Exception):
     pass
 
 
+class ResearchTimeout(Exception):
+    """Optional research ended; the main analysis may still synthesize."""
+
+
+research_scope = ContextVar('research_scope', default=None)
+
+
 def setting(name, default, maximum):
     try:
         return max(1, min(maximum, int(os.getenv(name, default))))
@@ -76,12 +83,16 @@ class ContextExecutor(ThreadPoolExecutor):
 
 
 def checkpoint():
+    scope = research_scope.get()
+    if scope and (scope['cancelled'] or monotonic() >= scope['deadline']):
+        raise ResearchTimeout('Budget de recherche atteint ; synthèse avec les données disponibles.')
     budget = current_budget.get()
     if budget:
         budget.check()
 
 
 def network_call():
+    checkpoint()
     budget = current_budget.get()
     if budget:
         with budget.lock:
@@ -92,6 +103,7 @@ def network_call():
 
 
 def converse(client, **kwargs):
+    checkpoint()
     budget = current_budget.get()
     if budget:
         budget.reserve(kwargs)
@@ -101,8 +113,40 @@ def converse(client, **kwargs):
             usage = response.get('usage', {})
             budget.input_tokens += usage.get('inputTokens', 0)
             budget.output_tokens += usage.get('outputTokens', 0)
-        budget.check()
+        checkpoint()
     return response
+
+
+_research_workers = ContextExecutor(max_workers=4, thread_name_prefix='research')
+_research_slots = BoundedSemaphore(4)
+
+
+def bounded_research(fn, *args, **kwargs):
+    """Stop waiting for research early enough to leave two synthesis calls time."""
+    budget = current_budget.get()
+    seconds = setting('ANALYSIS_RESEARCH_SECONDS', 30, 60)
+    if budget:
+        budget.check()
+        seconds = min(seconds, budget.deadline - monotonic() - 55)
+    if seconds <= 0 or not _research_slots.acquire(blocking=False):
+        raise ResearchTimeout('Temps réservé aux synthèses ; recherche complémentaire interrompue.')
+    scope = {'deadline': monotonic() + seconds, 'cancelled': False}
+    token = research_scope.set(scope)
+    try:
+        future = _research_workers.submit(fn, *args, **kwargs)
+    except BaseException:
+        _research_slots.release()
+        raise
+    finally:
+        research_scope.reset(token)
+    future.add_done_callback(lambda _: _research_slots.release())
+    try:
+        return future.result(timeout=max(0, scope['deadline'] - monotonic()))
+    except FutureTimeout as error:
+        raise ResearchTimeout('Recherche interrompue pour terminer la synthèse.') from error
+    finally:
+        scope['cancelled'] = True
+        future.cancel()
 
 
 _workers = ContextExecutor(max_workers=4, thread_name_prefix='analysis')

@@ -10,7 +10,7 @@ from concurrent.futures import TimeoutError
 from contextvars import copy_context
 from .runtime import ContextExecutor as ThreadPoolExecutor
 from datetime import date, datetime, timedelta
-from itertools import batched
+from itertools import batched, zip_longest
 from threading import BoundedSemaphore, Thread
 from time import monotonic
 from urllib.parse import urlsplit
@@ -360,10 +360,14 @@ def search_agentcore_leads(ticker, name, windows, *, limit=RAW_COLLECT_MAX, move
     if os.getenv("MARKET_WEB_SEARCH_AGENTCORE", "1") != "1":
         return []
     priority, broad = [], []
+    groups = []
     for session, (start, end) in windows.items():
         texts = _agentcore_queries(ticker, name, start, end)
-        priority.extend((session, start, end, text) for text in texts[:PRIORITY_QUERY_COUNT])
+        groups.append([(session, start, end, text) for text in texts[:PRIORITY_QUERY_COUNT]])
         broad.extend((session, start, end, text) for text in texts[PRIORITY_QUERY_COUNT:])
+    # Spread the bounded query budget across dates before broadening any one date.
+    priority = [task for group in zip_longest(*groups) for task in group if task is not None]
+    query_count = 0
     leads: list[dict] = []
     seen: set[str] = set()
     try:
@@ -395,12 +399,14 @@ def search_agentcore_leads(ticker, name, windows, *, limit=RAW_COLLECT_MAX, move
         return []
 
     def collect(queries):
+        nonlocal query_count
         # Keep query priority independent of network completion order. Submit one
         # batch at a time so hitting the lead limit leaves at most one batch in flight.
         with ThreadPoolExecutor(max_workers=AGENTCORE_WORKERS) as workers:
-            for batch in batched(queries, AGENTCORE_WORKERS):
+            for batch in batched(queries[:max(0, 12 - query_count)], AGENTCORE_WORKERS):
                 if len(leads) >= limit:
                     break
+                query_count += len(batch)
                 for (session, start, end, _), results in zip(batch, workers.map(fetch, batch)):
                     for item in results:
                         if len(leads) >= limit:
