@@ -318,8 +318,10 @@ def run_impact_agent(dossier: dict, profile: str, scenario: dict, progress=None)
         700,
         notify,
     )
+    usage = synthesis.pop("usage", {"input_tokens": 0, "output_tokens": 0, "model_calls": 0})
     return {
         **synthesis,
+        "usage": {**usage, "model": model},
         "text": synthesis["text"] or _fallback_text(profile, metrics, assumptions, coherence),
         "coherence": coherence,
         "metrics": metrics,
@@ -394,5 +396,6 @@ def _run_advisor(model, dossier, profile, scenario, scenario_out, notify):
         "scenario": scenario_out,
         "assumptions": assumptions_text,
         "decisions": loop["decisions"],
+        "usage": {**loop["usage"], "model": model},
         "trace": trace,
     }

@@ -37,18 +37,26 @@ def run_tool_loop(agent, model, instructions, payload, tool_specs, execute, noti
         "inferenceConfig": {"maxTokens": max_tokens},
     }
     calls = 0
+    usage = {"input_tokens": 0, "output_tokens": 0, "model_calls": 0}
+
+    def done(text, mode, reason):
+        return {"text": text, "mode": mode, "mode_reason": reason, "decisions": decisions, "usage": usage}
+
     try:
         for _ in range(MAX_DECISIONS + 2):
             response = bedrock_client().converse(messages=messages, **params)
+            usage["model_calls"] += 1
+            usage["input_tokens"] += response.get("usage", {}).get("inputTokens", 0)
+            usage["output_tokens"] += response.get("usage", {}).get("outputTokens", 0)
             message = response["output"]["message"]
             stop = response.get("stopReason")
             if stop == "end_turn":
                 text = public_text(message)
                 if text:
-                    return {"text": text, "mode": "bedrock", "mode_reason": None, "decisions": decisions}
-                return {"text": "", "mode": "local", "mode_reason": "bedrock_incomplete", "decisions": decisions}
+                    return done(text, "bedrock", None)
+                return done("", "local", "bedrock_incomplete")
             if stop != "tool_use":
-                return {"text": "", "mode": "local", "mode_reason": "bedrock_incomplete", "decisions": decisions}
+                return done("", "local", "bedrock_incomplete")
 
             reason = public_text(message, separator=" ")
             messages.append(message)
@@ -76,6 +84,6 @@ def run_tool_loop(agent, model, instructions, payload, tool_specs, execute, noti
                     "status": "success" if ok else "error",
                 }})
             messages.append({"role": "user", "content": results})
-        return {"text": "", "mode": "local", "mode_reason": "bedrock_incomplete", "decisions": decisions}
+        return done("", "local", "bedrock_incomplete")
     except (BotoCoreError, ClientError):
-        return {"text": "", "mode": "local", "mode_reason": "bedrock_error", "decisions": decisions}
+        return done("", "local", "bedrock_error")

@@ -225,6 +225,7 @@ def run_event_agent(window: ResolvedWindow, progress=None) -> dict:
                len(loop["decisions"]), "bedrock", reason=None if loop["mode"] == "bedrock" else loop["mode_reason"])
         dossier = build_dossier(context, synthesis_text=local_event_text(context), tools_executed=trace)
         dossier["agent_decisions"] = loop["decisions"]
+        dossier["usage"] = {**loop["usage"], "model": model}
         if loop["text"]:
             dossier["synthesis"] = {"text": loop["text"], "mode": "bedrock", "mode_reason": None}
         else:
@@ -247,6 +248,8 @@ def run_event_agent(window: ResolvedWindow, progress=None) -> dict:
     # Limit prose context while retaining every checked publication in the API response.
     evidence["publications"] = dossier["publications"][:8]
     synthesis = synthesize("event", SYSTEM, evidence, 700, notify)
+    dossier["usage"] = {**synthesis.pop("usage", {"input_tokens": 0, "output_tokens": 0, "model_calls": 0}),
+                        "model": os.getenv("BEDROCK_MODEL_ID")}
     if synthesis["text"]:
         dossier["synthesis"] = synthesis
     else:

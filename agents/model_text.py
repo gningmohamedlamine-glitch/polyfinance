@@ -45,11 +45,13 @@ def synthesize(agent, instructions, evidence, max_tokens, notify):
             messages=[{"role": "user", "content": [{"text": json.dumps(evidence, ensure_ascii=False)}]}],
             inferenceConfig={"maxTokens": max_tokens},
         )
+        usage = {"input_tokens": response.get("usage", {}).get("inputTokens", 0),
+                 "output_tokens": response.get("usage", {}).get("outputTokens", 0), "model_calls": 1}
         if response.get("stopReason") == "end_turn":
             text = public_text(response["output"]["message"])
             if text:
                 notify(agent, "synthesize", "done", mode="bedrock")
-                return {"text": text, "mode": "bedrock", "mode_reason": None}
+                return {"text": text, "mode": "bedrock", "mode_reason": None, "usage": usage}
         reason = "bedrock_incomplete"
     except (BotoCoreError, ClientError):
         reason = "bedrock_error"
