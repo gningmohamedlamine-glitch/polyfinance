@@ -15,7 +15,7 @@ export interface Persona {
   /** Contrainte propre au profil. */
   constraint: string;
   /** Limites fictives : copie de PROFILE_LIMITS (agents/impact_agent.py), à garder synchronisée. */
-  limits: { volatility: number; drawdown: number; weight: number };
+  limits: { volatility: number; drawdown: number; weight: number; sector?: number };
   /** Cas de démo mis en avant. */
   demo?: string;
 }
@@ -25,7 +25,7 @@ export const PERSONAS: Persona[] = [
   { id: 'amira', name: 'Amira', age: 26, job: 'Ingénieure logicielle', risk: 'Risque élevé', horizon: '15 ans et plus',
     goal: 'Croissance à long terme, sans renoncer à la diversification.', initial: 'A',
     focus: 'Croissance', constraint: 'Concentration limitée',
-    limits: { volatility: 0.60, drawdown: -0.60, weight: 0.15 } },
+    limits: { volatility: 0.60, drawdown: -0.60, weight: 0.15, sector: 0.50 } },
   { id: 'robert', name: 'Robert', age: 59, job: 'Professionnel de la santé', risk: 'Risque faible à modéré', horizon: '3 à 5 ans',
     goal: 'Préserver son capital à l’approche de la retraite. Attiré par un titre très médiatisé.', initial: 'R',
     focus: 'Préservation', constraint: 'Retrait à financer',

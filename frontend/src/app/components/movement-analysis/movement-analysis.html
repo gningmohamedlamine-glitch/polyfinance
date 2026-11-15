@@ -157,6 +157,8 @@
   </article>
 </section>
 
+@if (analysis().sensitivity; as sensitivity) { <app-sensitivity-panel [sensitivity]="sensitivity" /> }
+
 @if (analysis().controls; as controls) { <app-controls-panel [controls]="controls" /> }
 
 @if (decisions().length) {

@@ -83,6 +83,7 @@ export class Explorer {
     { id: 'acte1', label: 'La séance' },
     { id: 'acte2', label: 'Ce qui s’est passé' },
     { id: 'acte3', label: 'Pour toi' },
+    { id: 'sensibilite', label: 'Mise à l’épreuve' },
     { id: 'controles', label: 'Contrôles' },
     { id: 'decisions', label: 'Décisions des agents' },
   ];
@@ -129,6 +130,7 @@ export class Explorer {
     if (id === 'decisions') return !!(result.dossier?.agent_decisions?.length || result.impact.decisions?.length);
     if (id === 'traces') return !!result.trace?.length;
     if (id === 'controles') return !!result.controls;
+    if (id === 'sensibilite') return !!result.sensitivity?.checks.length;
     return true;
   }
 

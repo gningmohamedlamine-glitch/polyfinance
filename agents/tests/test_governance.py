@@ -46,3 +46,32 @@ class GovernanceTests(unittest.TestCase):
     def test_number_parsing(self):
         values = [(raw, value) for raw, value, _ in cited_numbers("baisse de 6,38 % et 9 500 $ et 6 points")]
         self.assertEqual([v for _, v in values], [6.38, 9500.0, 6.0])
+
+
+class SensitivityTests(unittest.TestCase):
+    def setUp(self):
+        env = mock.patch.dict("os.environ", {"MARKET_WEB_SEARCH": "0", "BEDROCK_MODEL_ID": ""})
+        env.start()
+        self.addCleanup(env.stop)
+
+    def run_case(self, date, profile):
+        from agents.sensitivity import run_sensitivity
+        from markets.window import window_returns
+        window = resolve_window("NVDA", date=date)
+        scenario = {**SCENARIO, "tech_weight": 0.47}
+        impact = run_impact_agent(run_event_agent(window), profile, scenario)
+        return run_sensitivity(window, window_returns(window), profile, scenario, impact["coherence"]), impact
+
+    def test_robert_conclusions_hold(self):
+        result, _ = self.run_case("2024-08-29", "robert")
+        ids = {c["id"]: c for c in result["checks"]}
+        self.assertTrue(ids["beta_reference"]["holds"])
+        self.assertTrue(ids["risk_window"]["holds"])
+        self.assertTrue(result["robust"])
+
+    def test_amira_tech_share_depends_on_hypothesis(self):
+        result, impact = self.run_case("2024-08-29", "amira")
+        self.assertTrue(any("technologie" in c for c in impact["coherence"]["conflicts"]))
+        ids = {c["id"]: c for c in result["checks"]}
+        self.assertFalse(ids["tech_weight"]["holds"])
+        self.assertFalse(result["robust"])

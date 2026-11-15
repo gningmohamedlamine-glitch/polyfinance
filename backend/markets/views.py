@@ -76,6 +76,10 @@ def analysis(request):
         withdrawal = amount(request, "withdrawal_cad", 9_500)
         portfolio = amount(request, "portfolio_cad", 100_000)
         purchase = amount(request, "purchase_cad", 5_000)
+        # Hypothèse du scénario : portefeuille fictif d’Amira déjà très exposé à la techno (intérêt pour l’IA).
+        tech_weight = float(request.GET.get("tech_weight", 0.47))
+        if not 0 <= tech_weight <= 1:
+            raise ValueError("La part de technologie doit être comprise entre 0 et 1.")
         if profile == "amira" and (portfolio == 0 or position + purchase > portfolio):
             raise ValueError("La position et l’achat doivent tenir dans le portefeuille existant.")
     except ValueError as error:
@@ -86,6 +90,7 @@ def analysis(request):
         "withdrawal_cad": withdrawal,
         "portfolio_cad": portfolio,
         "purchase_cad": purchase,
+        "tech_weight": tech_weight,
     }
     if request.GET.get("stream") == "1":
         response = StreamingHttpResponse(

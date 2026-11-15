@@ -1,0 +1,28 @@
+@let s = sensitivity();
+@if (s.checks.length) {
+  <section class="panel sensitivity" id="sensibilite" aria-label="Mise à l’épreuve des conclusions">
+    <header>
+      <div>
+        <span class="eyebrow">Mise à l’épreuve</span>
+        <h2><svg class="ico" [lucideIcon]="icons.range" aria-hidden="true"></svg> Et si on changeait d’hypothèse ?</h2>
+      </div>
+      <span class="verdict" [class.fragile]="!s.robust">{{ s.summary }}</span>
+    </header>
+    <div class="grid">
+      @for (check of s.checks; track check.id) {
+        <article [class.fragile]="!check.holds">
+          <strong>{{ check.question }}</strong>
+          <dl>
+            <div><dt>Hypothèse retenue</dt><dd>{{ check.base }}</dd></div>
+            <div><dt>Hypothèse alternative</dt><dd>{{ check.alternative }}</dd></div>
+          </dl>
+          <span class="tag">
+            <svg class="ico" [lucideIcon]="check.holds ? icons.check : icons.alert" aria-hidden="true"></svg>
+            {{ check.holds ? 'La conclusion tient' : 'La conclusion dépend de cette hypothèse' }}
+          </span>
+        </article>
+      }
+    </div>
+    <p class="notice">Recalculs en code, sans modèle, avec les mêmes données historiques.</p>
+  </section>
+}

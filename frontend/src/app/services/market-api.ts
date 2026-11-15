@@ -34,7 +34,8 @@ export interface Usage { input_tokens: number; output_tokens: number; model_call
 export interface Coherence {
   coherent: boolean;
   conflicts: string[];
-  limits: { annual_volatility: number; max_drawdown: number; max_weight: number; horizon_years: number };
+  limits: { annual_volatility: number; max_drawdown: number; max_weight: number; horizon_years: number; max_sector_weight?: number };
+  sector?: { sector: string | null; is_tech: boolean; before: number; after: number; assumption: string } | null;
   risk: { status: string; annual_volatility?: number; max_drawdown?: number };
   notice: string;
 }
@@ -122,9 +123,12 @@ export interface Analysis {
   };
   trace?: ToolTrace[];
   controls?: Controls;
+  sensitivity?: Sensitivity;
 }
 export type Profile = 'amira' | 'robert' | 'mateo';
 
+export interface SensitivityCheck { id: string; question: string; base: string; alternative: string; holds: boolean }
+export interface Sensitivity { checks: SensitivityCheck[]; robust: boolean; summary: string }
 export interface Control { id: string; label: string; status: 'ok' | 'warn' | 'fail' | 'info'; detail: string }
 export interface Controls { verdict: 'ok' | 'warn' | 'fail'; controls: Control[]; notice: string }
 

@@ -7,11 +7,13 @@ from markets.window import ResolvedWindow, max_drawdown_cad, risk_indicators
 from .agent_loop import MAX_DECISIONS, model_for, run_tool_loop
 import os
 
-from .esg import esg_screen
+from .esg import asset_sector, esg_screen
 from .model_text import bedrock_client, synthesize
 
 PROFILES = {
-    "amira": "Amira envisage un achat. Elle vise la croissance à long terme et veut limiter la concentration.",
+    "amira": ("Amira envisage un achat. Profil de risque élevé, horizon de 15 ans ou plus : elle accepte une forte "
+              "volatilité et s’intéresse à l’IA, mais veut garder une diversification et éviter de miser "
+              "exclusivement sur les technologies. Risque élevé ne veut pas dire que tout est acceptable."),
     "robert": (
         "Robert s’intéresse à ce titre très médiatisé. Il préserve son capital et doit financer un retrait ; "
         "l’agent vérifie si le titre est cohérent avec son profil avant tout calcul."
@@ -20,7 +22,7 @@ PROFILES = {
                "liées à des controverses environnementales ou sociales importantes."),
 }
 SCENARIO_FIELDS = {
-    "amira": ("position_cad", "purchase_cad", "portfolio_cad"),
+    "amira": ("position_cad", "purchase_cad", "portfolio_cad", "tech_weight"),
     "robert": ("position_cad", "withdrawal_cad"),
     "mateo": (),
 }
@@ -28,19 +30,36 @@ SCENARIO_FIELDS = {
 
 # Limites fictives par profil (hypothèses documentées, pas des règles réglementaires).
 PROFILE_LIMITS = {
-    "amira": {"annual_volatility": 0.60, "max_drawdown": -0.60, "max_weight": 0.15, "horizon_years": 15},
+    # max_sector_weight : Amira veut « éviter de miser exclusivement sur les technologies » (énoncé).
+    "amira": {"annual_volatility": 0.60, "max_drawdown": -0.60, "max_weight": 0.15, "horizon_years": 15,
+              "max_sector_weight": 0.50},
     "mateo": {"annual_volatility": 0.30, "max_drawdown": -0.35, "max_weight": 0.10, "horizon_years": 10},
     "robert": {"annual_volatility": 0.20, "max_drawdown": -0.20, "max_weight": 0.05, "horizon_years": 4},
 }
 
 
-def profile_coherence(profile: str, ticker: str, end_date: str, weight_after: float | None = None) -> dict:
+TECH_SECTOR = "Information Technology"
+
+
+def sector_exposure(profile: str, ticker: str, scenario: dict) -> dict | None:
+    """Part de technologie du portefeuille fictif d'Amira, avant et après l'achat (hypothèse affichée)."""
+    if profile != "amira" or scenario.get("tech_weight") is None or not scenario.get("portfolio_cad"):
+        return None
+    sector = asset_sector(ticker)
+    before = scenario["tech_weight"]
+    added = scenario["purchase_cad"] / scenario["portfolio_cad"] if sector == TECH_SECTOR else 0.0
+    return {"sector": sector, "is_tech": sector == TECH_SECTOR, "before": before, "after": min(before + added, 1.0),
+            "assumption": f"Portefeuille fictif : {before:.0%} en technologie avant l’achat (hypothèse du scénario)."}
+
+
+def profile_coherence(profile: str, ticker: str, end_date: str, weight_after: float | None = None,
+                      sector: dict | None = None, risk_sessions: int = 252) -> dict:
     """Garde-fou de gouvernance en Python : risque observé du titre (avant end_date) contre limites du profil.
 
     Le modèle ne décide pas de la cohérence ; il explique les conflits calculés ici.
     """
     limits = PROFILE_LIMITS[profile]
-    risk = risk_indicators(ticker, end_date)
+    risk = risk_indicators(ticker, end_date, risk_sessions)
     conflicts: list[str] = []
     if risk.get("status") == "ok":
         if risk["annual_volatility"] > limits["annual_volatility"]:
@@ -53,6 +72,11 @@ def profile_coherence(profile: str, ticker: str, end_date: str, weight_after: fl
                 f"Baisse maximale de {risk['max_drawdown']:.0%} sur les 12 derniers mois, "
                 f"au-delà de la baisse tolérée de {limits['max_drawdown']:.0%}."
             )
+    if sector and limits.get("max_sector_weight") and sector["after"] > limits["max_sector_weight"]:
+        conflicts.append(
+            f"Part de technologie de {sector['after']:.0%} après l’achat, au-delà des {limits['max_sector_weight']:.0%} "
+            "retenus pour garder une diversification hors technologies."
+        )
     if weight_after is not None and weight_after > limits["max_weight"]:
         conflicts.append(
             f"Poids direct de {weight_after:.0%} après l’achat, au-delà de la concentration maximale "
@@ -63,6 +87,7 @@ def profile_coherence(profile: str, ticker: str, end_date: str, weight_after: fl
         "ticker": ticker,
         "limits": limits,
         "risk": risk,
+        "sector": sector,
         "conflicts": conflicts,
         "coherent": not conflicts,
         "missing": [] if risk.get("status") == "ok" else ["historique insuffisant pour mesurer le risque"],
@@ -152,7 +177,7 @@ def _metrics_robert(dossier: dict, scenario: dict) -> tuple[list[dict], str, lis
     return metrics, assumptions, tools
 
 
-def _metrics_amira(scenario: dict) -> tuple[list[dict], str, list[dict]]:
+def _metrics_amira(scenario: dict, ticker: str | None = None) -> tuple[list[dict], str, list[dict]]:
     portfolio = scenario["portfolio_cad"]
     position = scenario["position_cad"]
     purchase = scenario["purchase_cad"]
@@ -164,6 +189,14 @@ def _metrics_amira(scenario: dict) -> tuple[list[dict], str, list[dict]]:
         "Le calcul porte sur le poids direct. La composition des FNB est indisponible dans les CSV, "
         "donc l’exposition indirecte n’est pas mesurée."
     )
+    exposure = sector_exposure("amira", ticker, scenario) if ticker else None
+    if exposure:
+        metrics += [
+            {"label": "Part techno du portefeuille (avant)", "value": exposure["before"], "unit": "%"},
+            {"label": "Part techno du portefeuille (après)", "value": exposure["after"], "unit": "%"},
+        ]
+        assumptions += " " + exposure["assumption"] + (
+            "" if exposure["is_tech"] else f" Le titre est classé {exposure['sector']} : la part techno ne change pas.")
     tools = [
         {
             "agent": "impact",
@@ -174,6 +207,7 @@ def _metrics_amira(scenario: dict) -> tuple[list[dict], str, list[dict]]:
                 "position_cad": position,
                 "purchase_cad": purchase,
                 "portfolio_cad": portfolio,
+                "tech_weight": scenario.get("tech_weight"),
             },
         }
     ]
@@ -210,12 +244,13 @@ def _compute(profile: str, dossier: dict, scenario: dict) -> tuple[list[dict], s
     if profile == "robert":
         metrics, assumptions, tools = _metrics_robert(dossier, scenario)
     elif profile == "amira":
-        metrics, assumptions, tools = _metrics_amira(scenario)
+        metrics, assumptions, tools = _metrics_amira(scenario, selection["ticker"])
         if scenario.get("portfolio_cad"):
             weight_after = (scenario["position_cad"] + scenario["purchase_cad"]) / scenario["portfolio_cad"]
     else:
         metrics, assumptions, tools = _metrics_mateo(dossier)
-    coherence = profile_coherence(profile, selection["ticker"], selection["end_close_date"], weight_after)
+    coherence = profile_coherence(profile, selection["ticker"], selection["end_close_date"], weight_after,
+                                  sector_exposure(profile, selection["ticker"], scenario))
     if coherence["risk"].get("status") == "ok":
         metrics = [
             {"label": "Volatilité annuelle (12 mois)", "value": coherence["risk"]["annual_volatility"], "unit": "%"},
@@ -264,9 +299,11 @@ PROFILE_TOOLS = {
     "mateo": ("verify_profile_coherence", "esg_screen"),
 }
 TOOL_DESCRIPTIONS = {
-    "verify_profile_coherence": "Compare la volatilité et la baisse maximale du titre sur 12 mois (et la concentration après achat) aux limites du profil.",
+    "verify_profile_coherence": ("Compare la volatilité et la baisse maximale du titre sur 12 mois, la concentration "
+                                 "et la part de technologie après achat aux limites du profil."),
     "position_value_cad": "Calcule la variation en CAD de la position fictive, l’effet du change et, sur une période, la baisse maximale ; compare au retrait prévu s’il existe.",
-    "direct_weight": "Calcule le poids direct du titre dans le portefeuille avant et après l’achat fictif.",
+    "direct_weight": ("Calcule le poids direct du titre et la part de technologie du portefeuille fictif, "
+                      "avant et après l’achat."),
     "esg_screen": ("Vérification ESG : secteur du titre, controverses datées des 12 derniers mois et comparaison "
                    "avec ESGV (FNB filtré ESG). Signale les points d’attention et les informations manquantes."),
 }
@@ -283,7 +320,8 @@ def _run_profile_tool(name, profile, dossier, scenario):
     if name == "verify_profile_coherence":
         selection = dossier["selection"]
         weight = _weight_after(profile, scenario)
-        coherence = profile_coherence(profile, selection["ticker"], selection["end_close_date"], weight)
+        coherence = profile_coherence(profile, selection["ticker"], selection["end_close_date"], weight,
+                                      sector_exposure(profile, selection["ticker"], scenario))
         metrics = []
         if coherence["risk"].get("status") == "ok":
             metrics.append({"label": "Volatilité annuelle (12 mois)",
@@ -295,7 +333,7 @@ def _run_profile_tool(name, profile, dossier, scenario):
     if name == "position_value_cad":
         return (*_metrics_robert(dossier, scenario), None)
     if name == "direct_weight":
-        return (*_metrics_amira(scenario), None)
+        return (*_metrics_amira(scenario, dossier["selection"]["ticker"]), None)
     return (*_metrics_mateo(dossier), None)
 
 

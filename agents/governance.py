@@ -59,7 +59,7 @@ def cited_numbers(text: str) -> list[tuple[str, float, float]]:
     return found
 
 
-def run_controls(dossier: dict, event: dict, impact: dict, selection_end: str) -> dict:
+def run_controls(dossier: dict, event: dict, impact: dict, selection_end: str, sensitivity: dict | None = None) -> dict:
     controls = []
 
     def add(control_id, label, status, detail):
@@ -138,7 +138,14 @@ def run_controls(dossier: dict, event: dict, impact: dict, selection_end: str) -
         add("tools", "Appels d’outils validés par le code", "info",
             f"{len(decisions)} décision(s) des agents, {refused} refusée(s) par les garde-fous.")
 
-    # 8. Informations manquantes, déclarées plutôt que comblées.
+    # 8. Mise à l'épreuve : les conclusions changent-elles avec d'autres hypothèses ?
+    if sensitivity and sensitivity.get("checks"):
+        fragile = [c["question"] for c in sensitivity["checks"] if not c["holds"]]
+        add("sensitivity", "Conclusions mises à l’épreuve", "warn" if fragile else "ok",
+            f"Dépend d’une hypothèse : {' ; '.join(fragile)}" if fragile else
+            f"{len(sensitivity['checks'])} conclusion(s) inchangée(s) avec les hypothèses alternatives.")
+
+    # 9. Informations manquantes, déclarées plutôt que comblées.
     missing = [*(coherence.get("missing") or []), *(esg.get("missing") or [])]
     add("missing", "Informations manquantes déclarées", "info" if missing else "ok",
         " ".join(missing) if missing else "Aucune information manquante signalée.")

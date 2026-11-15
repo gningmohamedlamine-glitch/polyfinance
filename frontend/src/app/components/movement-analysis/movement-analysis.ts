@@ -4,6 +4,7 @@ import { LucideDynamicIcon } from '@lucide/angular';
 import { ICONS } from '../../icons';
 import { EsgPanel } from '../esg-panel/esg-panel';
 import { ControlsPanel } from '../controls-panel/controls-panel';
+import { SensitivityPanel } from '../sensitivity-panel/sensitivity-panel';
 import { Persona } from '../../personas';
 import { AgentDecision, Analysis } from '../../services/market-api';
 
@@ -21,7 +22,7 @@ export type TextPart = { text: string; href?: string };
 
 @Component({
   selector: 'app-movement-analysis',
-  imports: [CurrencyPipe, DecimalPipe, PercentPipe, LucideDynamicIcon, EsgPanel, ControlsPanel],
+  imports: [CurrencyPipe, DecimalPipe, PercentPipe, LucideDynamicIcon, EsgPanel, ControlsPanel, SensitivityPanel],
   templateUrl: './movement-analysis.html',
   styleUrl: './movement-analysis.css',
 })
@@ -75,6 +76,11 @@ export class MovementAnalysis {
       { title: 'Pire baisse sur 12 mois', value: drawdown, limit: coherence.limits.max_drawdown,
         breach: drawdown < coherence.limits.max_drawdown, fill: Math.min(Math.abs(drawdown) / Math.max(Math.abs(coherence.limits.max_drawdown) * 2, Math.abs(drawdown)), 1),
         mark: Math.min(Math.abs(coherence.limits.max_drawdown) / Math.max(Math.abs(coherence.limits.max_drawdown) * 2, Math.abs(drawdown)), 1) },
+      // Amira : part de technologie du portefeuille fictif après l'achat (énoncé : ne pas miser que sur la tech).
+      ...(coherence.sector && coherence.limits.max_sector_weight ? [{
+        title: 'Part techno après l’achat', value: coherence.sector.after, limit: coherence.limits.max_sector_weight,
+        breach: coherence.sector.after > coherence.limits.max_sector_weight, fill: coherence.sector.after,
+        mark: coherence.limits.max_sector_weight }] : []),
     ];
   });
 
@@ -88,7 +94,8 @@ export class MovementAnalysis {
   /** Métriques non déjà montrées dans les cartes de règles ou les expositions. */
   extraMetrics = computed(() => this.analysis().impact.metrics.filter(metric =>
     !['Volatilité annuelle (12 mois)', 'Variation de la position'].includes(metric.label)
-    && !metric.label.startsWith('Rendement 12 mois') && metric.label !== 'Volatilité 12 mois (ESGV)'));
+    && !metric.label.startsWith('Rendement 12 mois') && metric.label !== 'Volatilité 12 mois (ESGV)'
+    && !metric.label.startsWith('Part techno')));
 
   /** Consommation réelle du modèle, renvoyée par Bedrock (aucun coût estimé). */
   usage = computed(() => {

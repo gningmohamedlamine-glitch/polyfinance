@@ -224,39 +224,39 @@ def risk_indicators(ticker: str, end_date: str, sessions: int = RISK_WINDOW_SESS
     }
 
 
-def market_model(window: ResolvedWindow, usd_return: float, benchmarks: dict) -> dict:
+def market_model(window: ResolvedWindow, usd_return: float, benchmarks: dict, reference: str = BETA_REFERENCE) -> dict:
     """Bêta du titre face à QQQ, estimé AVANT la fenêtre, et part du mouvement non expliquée par le marché.
 
     attendu = bêta × rendement de QQQ sur la fenêtre ; résiduel = rendement du titre − attendu.
     Un bêta élevé signifie que le titre amplifie habituellement les mouvements du marché.
     """
-    bench = benchmarks.get(BETA_REFERENCE, {})
+    bench = benchmarks.get(reference, {})
     if bench.get("status") != "ok":
-        return {"status": "missing", "reference": BETA_REFERENCE}
+        return {"status": "missing", "reference": reference}
     stock = _daily_returns_before(window.ticker, window.start_close_date, RISK_WINDOW_SESSIONS)
-    ref = _daily_returns_before(BETA_REFERENCE, window.start_close_date, RISK_WINDOW_SESSIONS)
+    ref = _daily_returns_before(reference, window.start_close_date, RISK_WINDOW_SESSIONS)
     common = sorted(set(stock) & set(ref))
     if len(common) < 60:
-        return {"status": "insufficient", "reference": BETA_REFERENCE, "sessions": len(common)}
+        return {"status": "insufficient", "reference": reference, "sessions": len(common)}
     xs = [ref[d] for d in common]
     ys = [stock[d] for d in common]
     mx, my = sum(xs) / len(xs), sum(ys) / len(ys)
     var_x = sum((x - mx) ** 2 for x in xs)
     beta = sum((x - mx) * (y - my) for x, y in zip(xs, ys)) / var_x if var_x else None
     if beta is None:
-        return {"status": "insufficient", "reference": BETA_REFERENCE, "sessions": len(common)}
+        return {"status": "insufficient", "reference": reference, "sessions": len(common)}
     expected = beta * bench["return"]
     residual = usd_return - expected
     return {
         "status": "ok",
-        "reference": BETA_REFERENCE,
+        "reference": reference,
         "estimation_end": common[-1],
         "sessions": len(common),
         "beta": beta,
         "expected_return": expected,
         "residual": residual,
         "residual_pp": residual * 100,
-        "rule": "bêta estimé sur 252 séances avant la fenêtre ; attendu = bêta × rendement de QQQ",
+        "rule": f"bêta estimé sur 252 séances avant la fenêtre ; attendu = bêta × rendement de {reference}",
     }
 
 

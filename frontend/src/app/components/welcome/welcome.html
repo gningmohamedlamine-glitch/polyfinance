@@ -38,6 +38,7 @@
             <dl>
               <div><dt>Pire baisse tolérée</dt><dd class="num">{{ p.limits.drawdown | percent:'1.0-0' }}</dd></div>
               <div><dt>Poids max d’un titre</dt><dd class="num">{{ p.limits.weight | percent:'1.0-0' }}</dd></div>
+              @if (p.limits.sector) { <div><dt>Part techno max</dt><dd class="num">{{ p.limits.sector | percent:'1.0-0' }}</dd></div> }
             </dl>
             <small>Limites fictives sur 12 mois, utilisées par le garde-fou.</small>
           </div>
