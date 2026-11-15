@@ -25,6 +25,13 @@ jobs:
         with:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           aws-region: us-east-1
+      # Textes des sources du catalogue (BLS, Fed, SEC) pour vérifier les extraits cités.
+      # La SEC exige un User-Agent avec un nom et un courriel : variable GitHub SEC_USER_AGENT.
+      - name: Télécharger les sources du catalogue
+        if: vars.SEC_USER_AGENT != ''
+        env:
+          SEC_USER_AGENT: ${{ vars.SEC_USER_AGENT }}
+        run: python scripts/fetch_sources.py || echo "::warning::Sources non téléchargées : extraits non vérifiés"
       - name: Construire, publier et vérifier
         env:
           BEDROCK_MODEL_ID: ${{ vars.BEDROCK_MODEL_ID }}
