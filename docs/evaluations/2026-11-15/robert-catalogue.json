@@ -1,0 +1,248 @@
+{
+  "request": {
+    "ticker": "NVDA",
+    "date": "2024-08-29",
+    "profile": "robert",
+    "stream": "1"
+  },
+  "http_status": 200,
+  "elapsed_seconds": 8.7,
+  "final_kind": "result",
+  "error": null,
+  "web_status": "not_needed",
+  "grounding": null,
+  "research_note": null,
+  "quality_rejected": [],
+  "lead_count": 0,
+  "verified_excerpts": 0,
+  "multi_domain_stories": 0,
+  "temporally_eligible": 0,
+  "leads": [],
+  "event_text": "- Malgré un bêta amplificateur, l’effet attendu du marché reste faible : l’essentiel de la baisse est résiduel, sans cause démontrée.\n- Piste SEC EDGAR, extrait vérifié : « Revenue is expected to be $32.5 billion, plus or minus 2%. »\n- Contexte incertain : prévisions en hausse, mais cette publication ne suffit pas à expliquer la baisse ; attentes du marché absentes, cause indéterminée.",
+  "impact_text": "- NVDA présente des conflits avec le profil de Robert : volatilité et baisse maximale sur les 12 derniers mois dépassent ses limites.\n- Après la séance sélectionnée, la position simulée, change inclus, ne couvre plus le retrait prévu : il manque 136,40 CAD.",
+  "coherence": {
+    "profile": "robert",
+    "ticker": "NVDA",
+    "limits": {
+      "annual_volatility": 0.2,
+      "max_drawdown": -0.2,
+      "max_weight": 0.05,
+      "horizon_years": 4
+    },
+    "risk": {
+      "status": "ok",
+      "start_date": "2023-08-29",
+      "end_date": "2024-08-29",
+      "sessions": 252,
+      "annual_volatility": 0.5011127373045838,
+      "max_drawdown": -0.2704677348415111
+    },
+    "sector": null,
+    "conflicts": [
+      "Volatilité annuelle de 50% sur les 12 mois précédant le 2024-08-29, au-delà de la limite de 20% retenue pour ce profil.",
+      "Baisse maximale de -27% sur les 12 mois précédant le 2024-08-29, au-delà de la baisse tolérée de -20%."
+    ],
+    "coherent": false,
+    "missing": [],
+    "notice": "Simulation : analyse de cohérence, pas un conseil financier."
+  },
+  "esg": null,
+  "controls": {
+    "verdict": "warn",
+    "controls": [
+      {
+        "id": "profile",
+        "label": "Contraintes du profil",
+        "status": "warn",
+        "detail": "2 limite(s) dépassée(s), signalée(s) à l’utilisateur."
+      },
+      {
+        "id": "no_advice",
+        "label": "Aucun conseil d’achat ou de vente",
+        "status": "ok",
+        "detail": "Aucune formulation de transaction."
+      },
+      {
+        "id": "numbers",
+        "label": "Repérage des chiffres (contrôle partiel)",
+        "status": "ok",
+        "detail": "1 chiffre(s) retrouvé(s) ; ce contrôle global ne valide ni le signe, ni l’unité, ni le lien avec une affirmation."
+      },
+      {
+        "id": "sources",
+        "label": "Sources datées",
+        "status": "ok",
+        "detail": "1 source(s), 1 extrait(s) vérifié(s) dans le texte source."
+      },
+      {
+        "id": "claim_evidence",
+        "label": "Références par affirmation",
+        "status": "info",
+        "detail": "5/5 affirmation(s) avec références valides. Le lien sémantique reste à apprécier ; une référence seule ne valide pas la conclusion."
+      },
+      {
+        "id": "claim_numbers",
+        "label": "Chiffres et calculs explicitement cités",
+        "status": "warn",
+        "detail": "1 affirmation(s) à revoir pour signe, unité ou valeur. Contrôle limité aux chiffres avec unité et aux champs de calcul cités ; la formulation peut demander une interprétation."
+      },
+      {
+        "id": "no_future",
+        "label": "Aucune donnée postérieure à la séance",
+        "status": "ok",
+        "detail": "Risque, bêta et comparaisons calculés uniquement avec des données antérieures."
+      },
+      {
+        "id": "sensitivity",
+        "label": "Conclusions mises à l’épreuve",
+        "status": "ok",
+        "detail": "2 conclusion(s) inchangée(s) avec les hypothèses alternatives."
+      },
+      {
+        "id": "missing",
+        "label": "Informations manquantes déclarées",
+        "status": "ok",
+        "detail": "Aucune information manquante signalée."
+      }
+    ],
+    "notice": "Contrôles automatiques en code, sans modèle : ils vérifient, ils ne décident pas."
+  },
+  "execution_budget": {
+    "model_calls": 2,
+    "network_calls": 0,
+    "input_tokens": 4,
+    "output_tokens": 678,
+    "reserved_output_tokens": 4500,
+    "input_bytes": 18781,
+    "elapsed_ms": 7661,
+    "limits": {
+      "seconds": 90,
+      "model_calls": 20,
+      "output_tokens": 50000,
+      "input_bytes": 1000000,
+      "network_calls": 40
+    }
+  },
+  "progress": [
+    {
+      "agent": "event",
+      "action": "stage",
+      "status": "running",
+      "duration_ms": null
+    },
+    {
+      "agent": "event",
+      "action": "compare_market",
+      "status": "running",
+      "duration_ms": null
+    },
+    {
+      "agent": "event",
+      "action": "compare_market",
+      "status": "done",
+      "duration_ms": 2
+    },
+    {
+      "agent": "event",
+      "action": "search_publications",
+      "status": "running",
+      "duration_ms": null
+    },
+    {
+      "agent": "event",
+      "action": "search_publications",
+      "status": "done",
+      "duration_ms": 12
+    },
+    {
+      "agent": "event",
+      "action": "validate_dossier",
+      "status": "running",
+      "duration_ms": null
+    },
+    {
+      "agent": "event",
+      "action": "validate_dossier",
+      "status": "done",
+      "duration_ms": 0
+    },
+    {
+      "agent": "impact",
+      "action": "stage",
+      "status": "running",
+      "duration_ms": null
+    },
+    {
+      "agent": "impact",
+      "action": "advise",
+      "status": "running",
+      "duration_ms": null
+    },
+    {
+      "agent": "event",
+      "action": "synthesize",
+      "status": "running",
+      "duration_ms": null
+    },
+    {
+      "agent": "impact",
+      "action": "advise",
+      "status": "done",
+      "duration_ms": 5422
+    },
+    {
+      "agent": "impact",
+      "action": "verify_profile_coherence",
+      "status": "running",
+      "duration_ms": null
+    },
+    {
+      "agent": "impact",
+      "action": "verify_profile_coherence",
+      "status": "done",
+      "duration_ms": 0
+    },
+    {
+      "agent": "impact",
+      "action": "stage",
+      "status": "done",
+      "duration_ms": 5422
+    },
+    {
+      "agent": "event",
+      "action": "synthesize",
+      "status": "done",
+      "duration_ms": 7609
+    },
+    {
+      "agent": "event",
+      "action": "validate_dossier",
+      "status": "running",
+      "duration_ms": null
+    },
+    {
+      "agent": "event",
+      "action": "validate_dossier",
+      "status": "done",
+      "duration_ms": 0
+    },
+    {
+      "agent": "event",
+      "action": "stage",
+      "status": "done",
+      "duration_ms": 7647
+    },
+    {
+      "agent": "governance",
+      "action": "stage",
+      "status": "running",
+      "duration_ms": null
+    },
+    {
+      "agent": "governance",
+      "action": "stage",
+      "status": "done",
+      "duration_ms": 2
+    }
+  ]
+}

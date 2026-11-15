@@ -22,7 +22,11 @@ La recherche web utilise Amazon Nova 2 Lite (`web_search.py`), seul modèle dot�
 
 ## Recherche web (travail d’Adam)
 
-`search_web` lance **Bedrock AgentCore Search** et **Nova Web Grounding** en parallèle. AgentCore exécute jusqu’à trois requêtes à la fois. Si des résultats déjà classés couvrent les séances clés, le mode rapide peut terminer sans attendre Nova au-delà de 10 secondes. Les recherches avec une couverture plus faible attendent le résultat de Nova jusqu’au délai réseau de 40 secondes.
+`search_web` lance **Bedrock AgentCore Search** et **Nova Web Grounding** en parallèle. AgentCore exécute jusqu’à trois requêtes à la fois. En mode rapide, dès que des pistes AgentCore sont disponibles, l’attente de Nova est limitée par le budget souple de grounding, même si la couverture reste partielle. Les pistes conservées et l’interruption du complément sont déclarées séparément. Le délai réseau de Nova reste de 40 secondes pour un appel déjà lancé ; le plafond global de recherche s’applique aussi.
+
+`search_quality.py` écarte avant remplissage du quota les titres génériques, formulaires de propriété, index EDGAR sans document, dépôts d’autres émetteurs et certains résultats parasites. Au plus quatre résultats bruts par domaine peuvent remplir le lot. Ce filtrage ne certifie pas les articles restants. L’horodatage AgentCore est conservé comme métadonnée du moteur, sans lui attribuer une heure de publication exacte : seule une métadonnée de l’éditeur peut la préciser.
+
+Pour Amira, `crypto_context.py` fournit les risques historiques de BTC et ETH issus des prix locaux, arrêtés à la date analysée, avec annualisation quotidienne sur 365 jours. Ce sont des références, pas des positions détenues ni de nouveaux titres sélectionnables. Les concentrations fictives restent contrôlées et la diversification globale reste partielle faute de positions détaillées dans les FNB et les cryptoactifs.
 
 En mode rapide, le regroupement et la pertinence partagent un appel au modèle, avec un classement séparé si sa réponse est incomplète. L’application vérifie jusqu’à cinq articles de sites officiels, en parallèle entre domaines, et compare les citations au texte récupéré. La recherche approfondie garde les deux appels spécialisés et vérifie toutes les pistes officielles retenues.
 
@@ -47,6 +51,6 @@ Le budget est partagé entre les threads des deux agents et la recherche. Une r�
 
 Le dossier marché expire après 15 minutes, les soumissions SEC après 15 minutes et les pages officielles après une heure. Les résultats sont copiés pour éviter les mutations entre requêtes. Les échecs de lecture et les dossiers avec recherche incomplète ne sont pas mis en cache. Les paramètres sont documentés dans `.env.example`. Les caches restent locaux au processus.
 
-Le comportement API est compatible avec l’interface existante ; les nouveaux champs de provenance n’ont pas encore de vue dédiée. Les tests sont locaux avec services simulés. Une vérification avec les modèles Bedrock réels reste nécessaire avant déploiement.
+Le comportement API est compatible avec l’interface existante ; les nouveaux champs de provenance n’ont pas encore de vue dédiée. Les tests unitaires utilisent des services simulés. Des mesures avec les services Bedrock réels sont conservées dans `docs/evaluations/2026-11-15/README.md`. `scripts/evaluate_analysis.py` permet de les reproduire ; il utilise les services configurés et leur facturation normale.
 
 La recherche web complémentaire dispose de son propre plafond (`ANALYSIS_RESEARCH_SECONDS`, 30 secondes par défaut), réduit pour réserver 55 secondes aux synthèses dans le délai global. Une interruption ferme cette recherche sans annuler les calculs ; sa couverture est déclarée incomplète et aucun nouvel appel web du même Enquêteur n’est accepté. Les requêtes AgentCore sont limitées à 12 par recherche, réparties entre les dates ciblées. Une longue période cible au plus trois séances marquantes plus la fin de période ; les rendements et mesures de risque conservent leur fenêtre complète. Les appels réseau déjà lancés restent soumis à leur timeout, mais ne bloquent plus l’attente de la synthèse.

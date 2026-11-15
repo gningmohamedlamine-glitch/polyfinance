@@ -22,6 +22,7 @@ from botocore.exceptions import BotoCoreError, ClientError, ConnectTimeoutError,
 from .runtime import converse, network_call
 from .model_text import public_text
 from .temporal import annotate
+from .search_quality import filter_leads, rejection_reason
 from .source_quality import COMPANY_HOSTS, check_source, is_official
 
 logger = logging.getLogger(__name__)
@@ -174,8 +175,8 @@ def _agentcore_queries(ticker, name, start, end):
         f"site:sec.gov {name} after:{start} before:{end}",
         f"site:federalreserve.gov monetary after:{start} before:{end}",
         f"site:bls.gov news release after:{start} before:{end}",
-        f"{ticker} {name} stock news"[:200],
-        f"{ticker} {name} earnings analyst"[:200],
+        f"{ticker} {name} stock news Reuters Bloomberg CNBC after:{start} before:{end}"[:200],
+        f"{ticker} {name} earnings analyst after:{start} before:{end}"[:200],
         f"{ticker} CEO resignation governance"[:200],
         f"{ticker} export ban sanctions tariffs chips"[:200],
         f"US China trade war tariffs semiconductor market"[:200],
@@ -351,7 +352,7 @@ def _cluster_leads(client, ticker, name, leads: list[dict], *, moves=None) -> li
     return _simple_dedupe_leads(leads)
 
 
-def search_agentcore_leads(ticker, name, windows, *, limit=RAW_COLLECT_MAX, moves=None, covered_sessions=()):
+def search_agentcore_leads(ticker, name, windows, *, limit=RAW_COLLECT_MAX, moves=None, covered_sessions=(), rejections=None):
     """Dated news via Bedrock AgentCore invoke_web_search.
 
     Company and official-site queries always run. Generic geopolitical queries
@@ -423,17 +424,29 @@ def search_agentcore_leads(ticker, name, windows, *, limit=RAW_COLLECT_MAX, move
                         title = item.get("title")
                         text = item.get("text")
                         summary = (_clean_snippet(text) if isinstance(text, str) else "") or "Extrait indisponible."
-                        _append_lead(leads, seen, {
+                        candidate = {
                             "url": url,
                             "title": _clean_snippet(title) if isinstance(title, str) else "Article",
                             "published_date": published,
-                            "published_at": str(item.get("publishedAt")) if "T" in str(item.get("publishedAt")) or isinstance(item.get("publishedAt"), datetime) else None,
+                            # AgentCore often supplies midnight for a date-only result.
+                            # Preserve it for audit, never promote it to a publication hour.
+                            "search_reported_timestamp": str(item.get("publishedAt")),
+                            "published_at": None,
                             "session": session,
                             "summary": summary,
                             "original_excerpt": summary,
                             "source_type": "news",
                             "after_session": published > session,
-                        }, limit=limit)
+                        }
+                        reason = rejection_reason(candidate, ticker)
+                        if reason:
+                            if rejections is not None:
+                                rejections.append({'url': url, 'title': candidate['title'], 'reason': reason})
+                            continue
+                        # A prolific official site must not exhaust the slots before news queries.
+                        if sum(_domain(row['url']) == _domain(url) for row in leads) >= 4:
+                            continue
+                        _append_lead(leads, seen, candidate, limit=limit)
 
     collect(priority)
     covered = (
@@ -671,6 +684,9 @@ def _check_articles(leads, *, limit=ARTICLE_CHECK_LIMIT):
 
 
 def _rank_web(client, ticker, name, moves, leads, *, combined=True):
+    leads, _ = filter_leads(leads, ticker)
+    if not leads:
+        return [], 'no_relevant_sources'
     leads = _cluster_leads(client, ticker, name, leads, moves=moves if combined else None)
     if all("relevant" in lead for lead in leads):
         judged = {lead["url"]: {"relevant": lead["relevant"], "relevance": lead["relevance"]} for lead in leads}
@@ -698,9 +714,14 @@ def find_web_leads(client, ticker, name, windows, moves=None, *, covered_session
             raise
         grounding.add_done_callback(lambda _: _grounding_slots.release())
 
+    raw_rejected = []
     agentcore = search_agentcore_leads(
         ticker, name, windows, moves=moves, covered_sessions=covered_sessions,
+        rejections=raw_rejected,
     )
+    agentcore, rejected = filter_leads(agentcore, ticker)
+    if details is not None:
+        details['quality_rejected'] = raw_rejected + rejected
     primary = _merge_leads(sorted(agentcore, key=lambda row: not is_official(row["url"])))
     # Rank AgentCore leads while Nova is still searching. The soft budget still
     # requires the ranked leads to cover the material sessions.
@@ -739,13 +760,18 @@ def find_web_leads(client, ticker, name, windows, moves=None, *, covered_session
             )
             if not enough:
                 early = None
-        remaining = max(0, GROUNDING_SOFT_BUDGET - (monotonic() - started)) if early is not None else None
+        # Preserve AgentCore results even if they are only partial coverage.
+        # Waiting for Nova's full socket timeout can consume the entire research budget.
+        remaining = max(0, GROUNDING_SOFT_BUDGET - (monotonic() - started)) if primary and not deep else None
         try:
             extra, detail = grounding.result(timeout=remaining)
         except TimeoutError:
             detail = "budget_elapsed"
     if details is not None:
         details["grounding"] = detail
+    extra, rejected_extra = filter_leads(extra, ticker)
+    if details is not None:
+        details['quality_rejected'].extend(rejected_extra)
     leads = _merge_leads(sorted(agentcore + extra, key=lambda row: not is_official(row['url']))) if extra else primary
     if not leads:
         if detail in {"timeout", "unavailable", "not_executed", "invalid_response", "busy", "budget_elapsed"}:

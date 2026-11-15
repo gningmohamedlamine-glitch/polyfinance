@@ -1,0 +1,379 @@
+{
+  "request": {
+    "ticker": "NVDA",
+    "date": "2024-07-17",
+    "profile": "amira",
+    "stream": "1"
+  },
+  "http_status": 200,
+  "elapsed_seconds": 32.8,
+  "final_kind": "result",
+  "error": null,
+  "web_status": "found",
+  "grounding": "invalid_response",
+  "research_note": null,
+  "quality_rejected": [],
+  "lead_count": 8,
+  "verified_excerpts": 0,
+  "multi_domain_stories": 0,
+  "temporally_eligible": 4,
+  "leads": [
+    {
+      "title": "EDGAR Filing Documents for 0001045810-24-000221",
+      "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000221/0001045810-24-000221-index.htm",
+      "published_date": "2024-07-15",
+      "published_at": "2024-07-15 00:00:00+00:00",
+      "session": "2024-07-17",
+      "relevance": "Fichier SEC déposé par NVIDIA, peut contenir des informations financières ou opérationnelles importantes.",
+      "excerpt_status": "no_excerpt",
+      "source_origin": "official",
+      "page_status": "unavailable",
+      "temporal_status": "before_close",
+      "eligible_for_explanation": true,
+      "corroboration": 1
+    },
+    {
+      "title": "Article",
+      "url": "https://www.sec.gov/Archives/edgar/data/1045810/000192109424000916/xsl144X01/primary_doc.xml",
+      "published_date": "2024-07-12",
+      "published_at": "2024-07-12 00:00:00+00:00",
+      "session": "2024-07-17",
+      "relevance": "Fichier SEC lié à NVIDIA, potentiellement des informations sur les actions ou les transactions.",
+      "excerpt_status": "no_excerpt",
+      "source_origin": "official",
+      "page_status": "unavailable",
+      "temporal_status": "before_close",
+      "eligible_for_explanation": true,
+      "corroboration": 1
+    },
+    {
+      "title": "EDGAR Filing Documents for 0001921094-24-000916",
+      "url": "https://www.sec.gov/Archives/edgar/data/1045810/000192109424000916/0001921094-24-000916-index.html",
+      "published_date": "2024-07-12",
+      "published_at": "2024-07-12 00:00:00+00:00",
+      "session": "2024-07-17",
+      "relevance": "Fichier SEC déposé par NVIDIA, peut contenir des informations importantes sur l'entreprise.",
+      "excerpt_status": "no_excerpt",
+      "source_origin": "official",
+      "page_status": "unavailable",
+      "temporal_status": "before_close",
+      "eligible_for_explanation": true,
+      "corroboration": 1
+    },
+    {
+      "title": "SEC FORM 4",
+      "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000234/xslF345X05/wk-form4_1721421178.xml",
+      "published_date": "2024-07-19",
+      "published_at": "2024-07-19 00:00:00+00:00",
+      "session": "2024-07-17",
+      "relevance": "Formulaire SEC Form 4 de NVIDIA, peut indiquer des changements dans la possession des actions par des dirigeants.",
+      "excerpt_status": "no_excerpt",
+      "source_origin": "official",
+      "page_status": "unavailable",
+      "temporal_status": "after_close",
+      "eligible_for_explanation": false,
+      "corroboration": 1
+    },
+    {
+      "title": "Document",
+      "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000230/nvidia-serv13g.htm",
+      "published_date": "2024-07-18",
+      "published_at": "2024-07-18 00:00:00+00:00",
+      "session": "2024-07-17",
+      "relevance": "Fichier SC 13G de NVIDIA, peut contenir des informations sur les participations importantes en actions.",
+      "excerpt_status": "no_excerpt",
+      "source_origin": "official",
+      "page_status": "not_checked",
+      "temporal_status": "after_close",
+      "eligible_for_explanation": false,
+      "corroboration": 1
+    },
+    {
+      "title": "Monetary Policy: Monetary Policy Report (Branch)",
+      "url": "https://www.federalreserve.gov/monetarypolicy/2024-07-mpr-part2-accessible.htm",
+      "published_date": "2024-07-22",
+      "published_at": "2024-07-22 00:00:00+00:00",
+      "session": "2024-07-17",
+      "relevance": "Rapport de politique monétaire qui peut influencer les conditions de marché affectant NVIDIA.",
+      "excerpt_status": "no_excerpt",
+      "source_origin": "official",
+      "page_status": "not_checked",
+      "temporal_status": "after_close",
+      "eligible_for_explanation": false,
+      "corroboration": 1
+    },
+    {
+      "title": "Monetary Policy: Beige Book (Branch)",
+      "url": "https://www.federalreserve.gov/monetarypolicy/beigebook202407-boston.htm",
+      "published_date": "2024-07-17",
+      "published_at": "2024-07-17 00:00:00+00:00",
+      "session": "2024-07-17",
+      "relevance": "Beige Book de la Réserve Fédérale, fournissant des informations économiques régionales qui peuvent affecter le secteur de NVIDIA.",
+      "excerpt_status": "mismatch",
+      "source_origin": "official",
+      "page_status": "retrieved",
+      "temporal_status": "before_close",
+      "eligible_for_explanation": true,
+      "corroboration": 1
+    },
+    {
+      "title": "Closed Board Meeting -- July 22, 2024",
+      "url": "https://www.federalreserve.gov/aboutthefed/boardmeetings/20240722closed.htm",
+      "published_date": "2024-07-22",
+      "published_at": "2024-07-22 00:00:00+00:00",
+      "session": "2024-07-17",
+      "relevance": "Réunion du Conseil des gouverneurs de la Réserve Fédérale, pouvant influencer les politiques monétaires et les conditions de marché.",
+      "excerpt_status": "no_excerpt",
+      "source_origin": "official",
+      "page_status": "not_checked",
+      "temporal_status": "after_close",
+      "eligible_for_explanation": false,
+      "corroboration": 1
+    }
+  ],
+  "event_text": "- NVIDIA baisse surtout dans le sillage du Nasdaq-100 selon le modèle ; la composante propre au titre reste faible.\n- Piste Beige Book : résumé non confirmé ; source_origin=official, excerpt_status=mismatch, temporal_status=before_close.\n- Cette piste économique ne suffit pas à expliquer l’écart : sa cause reste indéterminée.",
+  "impact_text": "- L’achat envisagé entre en conflit avec l’objectif de diversification d’Amira : la concentration technologique dépasserait la limite retenue.\n- Sur les 12 derniers mois, volatilité et pire baisse restent dans les limites du profil, sans garantir les risques futurs.\n- Le poids direct atteindrait le plafond individuel, tandis que l’exposition indirecte via les FNB reste non mesurée.",
+  "coherence": {
+    "profile": "amira",
+    "ticker": "NVDA",
+    "limits": {
+      "annual_volatility": 0.6,
+      "max_drawdown": -0.6,
+      "max_weight": 0.15,
+      "horizon_years": 15,
+      "max_sector_weight": 0.5
+    },
+    "risk": {
+      "status": "ok",
+      "start_date": "2023-07-17",
+      "end_date": "2024-07-17",
+      "sessions": 252,
+      "annual_volatility": 0.4597762995558636,
+      "max_drawdown": -0.19791156894595574
+    },
+    "sector": {
+      "sector": "Information Technology",
+      "is_tech": true,
+      "before": 0.47,
+      "after": 0.52,
+      "assumption": "Portefeuille fictif : 47% en technologie avant l’achat (hypothèse du scénario)."
+    },
+    "conflicts": [
+      "Part de technologie de 52% après l’achat, au-delà des 50% retenus pour garder une diversification hors technologies."
+    ],
+    "coherent": false,
+    "missing": [],
+    "notice": "Simulation : analyse de cohérence, pas un conseil financier."
+  },
+  "esg": null,
+  "controls": {
+    "verdict": "warn",
+    "controls": [
+      {
+        "id": "profile",
+        "label": "Contraintes du profil",
+        "status": "warn",
+        "detail": "1 limite(s) dépassée(s), signalée(s) à l’utilisateur."
+      },
+      {
+        "id": "no_advice",
+        "label": "Aucun conseil d’achat ou de vente",
+        "status": "ok",
+        "detail": "Aucune formulation de transaction."
+      },
+      {
+        "id": "numbers",
+        "label": "Repérage des chiffres (contrôle partiel)",
+        "status": "info",
+        "detail": "Aucun chiffre cité dans les textes."
+      },
+      {
+        "id": "sources",
+        "label": "Sources datées",
+        "status": "info",
+        "detail": "Aucune source datée : la cause doit rester indéterminée."
+      },
+      {
+        "id": "web",
+        "label": "Vérification des pistes web",
+        "status": "warn",
+        "detail": "8 piste(s), 0 extrait(s) retrouvé(s), 1 non concordant(s). 0 histoire(s) rapportée(s) sur plusieurs domaines, sans garantie d’indépendance. La vérification textuelle ne certifie ni le résumé ni la causalité."
+      },
+      {
+        "id": "claim_evidence",
+        "label": "Références par affirmation",
+        "status": "info",
+        "detail": "6/6 affirmation(s) avec références valides. Le lien sémantique reste à apprécier ; une référence seule ne valide pas la conclusion."
+      },
+      {
+        "id": "claim_numbers",
+        "label": "Chiffres et calculs explicitement cités",
+        "status": "info",
+        "detail": "0 affirmation(s) à revoir pour signe, unité ou valeur. Contrôle limité aux chiffres avec unité et aux champs de calcul cités ; la formulation peut demander une interprétation."
+      },
+      {
+        "id": "no_future",
+        "label": "Aucune donnée postérieure à la séance",
+        "status": "ok",
+        "detail": "Risque, bêta et comparaisons calculés uniquement avec des données antérieures."
+      },
+      {
+        "id": "tools",
+        "label": "Appels d’outils validés par le code",
+        "status": "info",
+        "detail": "1 décision(s) des agents, 0 refusée(s) par les garde-fous."
+      },
+      {
+        "id": "sensitivity",
+        "label": "Conclusions mises à l’épreuve",
+        "status": "warn",
+        "detail": "Dépend d’une hypothèse : Le mouvement est-il propre au titre ou porté par le marché ? ; L’achat pousse-t-il la part de technologie au-delà de la limite ?"
+      },
+      {
+        "id": "missing",
+        "label": "Informations manquantes déclarées",
+        "status": "ok",
+        "detail": "Aucune information manquante signalée."
+      }
+    ],
+    "notice": "Contrôles automatiques en code, sans modèle : ils vérifient, ils ne décident pas."
+  },
+  "execution_budget": {
+    "model_calls": 6,
+    "network_calls": 11,
+    "input_tokens": 17970,
+    "output_tokens": 4874,
+    "reserved_output_tokens": 11400,
+    "input_bytes": 106129,
+    "elapsed_ms": 31727,
+    "limits": {
+      "seconds": 90,
+      "model_calls": 20,
+      "output_tokens": 50000,
+      "input_bytes": 1000000,
+      "network_calls": 40
+    }
+  },
+  "progress": [
+    {
+      "agent": "event",
+      "action": "stage",
+      "status": "running",
+      "duration_ms": null
+    },
+    {
+      "agent": "event",
+      "action": "compare_market",
+      "status": "running",
+      "duration_ms": null
+    },
+    {
+      "agent": "event",
+      "action": "compare_market",
+      "status": "done",
+      "duration_ms": 2
+    },
+    {
+      "agent": "event",
+      "action": "search_publications",
+      "status": "running",
+      "duration_ms": null
+    },
+    {
+      "agent": "event",
+      "action": "search_publications",
+      "status": "done",
+      "duration_ms": 6
+    },
+    {
+      "agent": "event",
+      "action": "investigate",
+      "status": "running",
+      "duration_ms": null
+    },
+    {
+      "agent": "event",
+      "action": "web_search",
+      "status": "running",
+      "duration_ms": null
+    },
+    {
+      "agent": "event",
+      "action": "web_search",
+      "status": "done",
+      "duration_ms": 19610
+    },
+    {
+      "agent": "event",
+      "action": "investigate",
+      "status": "done",
+      "duration_ms": 27909
+    },
+    {
+      "agent": "event",
+      "action": "validate_dossier",
+      "status": "running",
+      "duration_ms": null
+    },
+    {
+      "agent": "event",
+      "action": "validate_dossier",
+      "status": "done",
+      "duration_ms": 0
+    },
+    {
+      "agent": "event",
+      "action": "stage",
+      "status": "done",
+      "duration_ms": 27935
+    },
+    {
+      "agent": "impact",
+      "action": "stage",
+      "status": "running",
+      "duration_ms": null
+    },
+    {
+      "agent": "impact",
+      "action": "advise",
+      "status": "running",
+      "duration_ms": null
+    },
+    {
+      "agent": "impact",
+      "action": "advise",
+      "status": "done",
+      "duration_ms": 3777
+    },
+    {
+      "agent": "impact",
+      "action": "verify_profile_coherence",
+      "status": "running",
+      "duration_ms": null
+    },
+    {
+      "agent": "impact",
+      "action": "verify_profile_coherence",
+      "status": "done",
+      "duration_ms": 0
+    },
+    {
+      "agent": "impact",
+      "action": "stage",
+      "status": "done",
+      "duration_ms": 3777
+    },
+    {
+      "agent": "governance",
+      "action": "stage",
+      "status": "running",
+      "duration_ms": null
+    },
+    {
+      "agent": "governance",
+      "action": "stage",
+      "status": "done",
+      "duration_ms": 1
+    }
+  ]
+}

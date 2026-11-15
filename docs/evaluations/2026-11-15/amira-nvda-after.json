@@ -1,0 +1,447 @@
+{
+  "request": {
+    "ticker": "NVDA",
+    "date": "2024-07-17",
+    "profile": "amira",
+    "stream": "1"
+  },
+  "http_status": 200,
+  "elapsed_seconds": 28.15,
+  "final_kind": "result",
+  "error": null,
+  "web_status": "found",
+  "grounding": "budget_elapsed",
+  "research_note": "Recherche partielle : pistes AgentCore conservées ; complément Nova indisponible ou interrompu.",
+  "quality_rejected": [
+    {
+      "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000221/0001045810-24-000221-index.htm",
+      "title": "EDGAR Filing Documents for 0001045810-24-000221",
+      "reason": "filing_index_without_document"
+    },
+    {
+      "url": "https://www.sec.gov/Archives/edgar/data/1045810/000192109424000916/xsl144X01/primary_doc.xml",
+      "title": "Article",
+      "reason": "generic_title"
+    },
+    {
+      "url": "https://www.sec.gov/Archives/edgar/data/1045810/000192109424000916/0001921094-24-000916-index.html",
+      "title": "EDGAR Filing Documents for 0001921094-24-000916",
+      "reason": "filing_index_without_document"
+    },
+    {
+      "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000234/xslF345X05/wk-form4_1721421178.xml",
+      "title": "SEC FORM 4",
+      "reason": "generic_title"
+    },
+    {
+      "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581021000010/R1.htm",
+      "title": "Article",
+      "reason": "generic_title"
+    },
+    {
+      "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000232/xslF345X03/wk-form4_1721337595.xml",
+      "title": "SEC FORM 4",
+      "reason": "generic_title"
+    },
+    {
+      "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000230/nvidia-serv13g.htm",
+      "title": "Document",
+      "reason": "generic_title"
+    },
+    {
+      "url": "https://www.sec.gov/Archives/edgar/data/1624512/000162828024032613/boxl-20240722.htm",
+      "title": "boxl-20240722",
+      "reason": "other_issuer_filing"
+    },
+    {
+      "url": "https://www.sec.gov/Archives/edgar/data/814549/000119312524182728/d815775dex9912.htm",
+      "title": "EX-99.12",
+      "reason": "other_issuer_filing"
+    },
+    {
+      "url": "https://www.sec.gov/Archives/edgar/data/1872090/000119312524178534/d196858dex1012.htm",
+      "title": "EX-10.12",
+      "reason": "other_issuer_filing"
+    },
+    {
+      "url": "https://www.federalreserve.gov/releases/h8/20240712/",
+      "title": "Assets and Liabilities of Commercial Banks in the United States",
+      "reason": "routine_banking_statistics"
+    },
+    {
+      "url": "https://www.federalreserve.gov/aboutthefed/boardmeetings/20240722closed.htm",
+      "title": "Closed Board Meeting -- July 22, 2024",
+      "reason": "routine_meeting_notice"
+    }
+  ],
+  "lead_count": 5,
+  "verified_excerpts": 0,
+  "multi_domain_stories": 0,
+  "temporally_eligible": 0,
+  "leads": [
+    {
+      "title": "Nvidia developing flagship AI chip for Chinese market- Reuters By Investing.com",
+      "url": "https://www.investing.com/news/stock-market-news/nvidia-developing-flagship-ai-chip-for-chinese-market-reuters-3528120",
+      "published_date": "2024-07-22",
+      "published_at": null,
+      "session": "2024-07-17",
+      "relevance": "Développement de puces AI pour le marché chinois, impact potentiel sur les résultats de NVIDIA.",
+      "excerpt_status": "no_excerpt",
+      "source_origin": "other",
+      "page_status": "not_checked",
+      "temporal_status": "after_close",
+      "eligible_for_explanation": false,
+      "corroboration": 1
+    },
+    {
+      "title": "Nvidia, Semiconductor Stocks Dip Amid Reports of New Export Curbs",
+      "url": "https://www.investing.com/analysis/nvidia-semiconductor-stocks-dip-amid-reports-of-new-export-curbs-200650101",
+      "published_date": "2024-07-18",
+      "published_at": null,
+      "session": "2024-07-17",
+      "relevance": "Rapports sur de nouvelles restrictions d'exportation affectant NVIDIA et le secteur des semi-conducteurs.",
+      "excerpt_status": "no_excerpt",
+      "source_origin": "other",
+      "page_status": "not_checked",
+      "temporal_status": "after_close",
+      "eligible_for_explanation": false,
+      "corroboration": 1
+    },
+    {
+      "title": "U.S. mulls stricter export controls on Nvidia",
+      "url": "https://www.devx.com/daily-news/u-s-mulls-stricter-export-controls-on-nvidia/",
+      "published_date": "2024-07-22",
+      "published_at": null,
+      "session": "2024-07-17",
+      "relevance": "Contrôles d'exportation plus stricts potentiels sur NVIDIA, impact significatif sur ses activités en Chine.",
+      "excerpt_status": "no_excerpt",
+      "source_origin": "other",
+      "page_status": "not_checked",
+      "temporal_status": "after_close",
+      "eligible_for_explanation": false,
+      "corroboration": 1
+    },
+    {
+      "title": "Nvidia develops China-specific AI chips amid tightening US export controls",
+      "url": "https://dig.watch/updates/nvidia-develops-china-specific-ai-chips-amid-tightening-us-export-controls",
+      "published_date": "2024-07-22",
+      "published_at": null,
+      "session": "2024-07-17",
+      "relevance": "Développement de puces AI spécifiques à la Chine par NVIDIA face aux contrôles d'exportation américains.",
+      "excerpt_status": "no_excerpt",
+      "source_origin": "other",
+      "page_status": "not_checked",
+      "temporal_status": "after_close",
+      "eligible_for_explanation": false,
+      "corroboration": 1
+    },
+    {
+      "title": "US Considers Tougher Trade Rules Against Companies in Chip Crackdown on China",
+      "url": "https://www.bloomberg.com/news/articles/2024-07-17/us-considers-tougher-trade-rules-against-companies-in-chip-crackdown-on-china",
+      "published_date": "2024-07-17",
+      "published_at": null,
+      "session": "2024-07-17",
+      "relevance": "Mesures commerciales plus strictes des États-Unis contre les entreprises de puces, y compris NVIDIA.",
+      "excerpt_status": "no_excerpt",
+      "source_origin": "other",
+      "page_status": "not_checked",
+      "temporal_status": "same_day_time_unknown",
+      "eligible_for_explanation": false,
+      "corroboration": 1
+    }
+  ],
+  "event_text": "- La baisse de NVIDIA est largement compatible avec son exposition au Nasdaq-100, selon le modèle.\n- Recherche incomplète : « Recherche partielle : pistes AgentCore conservées ; complément Nova indisponible ou interrompu. » Aucune publication vérifiable n’a été récupérée.\n- La cause du faible écart résiduel reste indéterminée, faute de source exploitable.",
+  "impact_text": "- L’achat envisagé entre en conflit avec le profil d’Amira : il dépasse la limite de concentration technologique retenue.\n- La diversification globale reste non validée : la composition des FNB et les positions crypto sont inconnues.\n- La recherche partielle ne fournit pas d’éléments suffisants pour apprécier les critères ESG.",
+  "coherence": {
+    "profile": "amira",
+    "ticker": "NVDA",
+    "limits": {
+      "annual_volatility": 0.6,
+      "max_drawdown": -0.6,
+      "max_weight": 0.15,
+      "horizon_years": 15,
+      "max_sector_weight": 0.5
+    },
+    "risk": {
+      "status": "ok",
+      "start_date": "2023-07-17",
+      "end_date": "2024-07-17",
+      "sessions": 252,
+      "annual_volatility": 0.4597762995558636,
+      "max_drawdown": -0.19791156894595574
+    },
+    "sector": {
+      "sector": "Information Technology",
+      "is_tech": true,
+      "before": 0.47,
+      "after": 0.52,
+      "assumption": "Portefeuille fictif : 47% en technologie avant l’achat (hypothèse du scénario)."
+    },
+    "conflicts": [
+      "Part de technologie de 52% après l’achat, au-delà des 50% retenus pour garder une diversification hors technologies."
+    ],
+    "coherent": false,
+    "missing": [],
+    "notice": "Simulation : analyse de cohérence, pas un conseil financier.",
+    "crypto_context": {
+      "references": [
+        {
+          "symbol": "BTC-USD",
+          "name": "Bitcoin",
+          "status": "ok",
+          "start_date": "2023-07-18",
+          "end_date": "2024-07-17",
+          "sessions": 365,
+          "annual_volatility": 0.4825356823177662,
+          "max_drawdown": -0.23581780600272295,
+          "annualization_days": 365,
+          "source": "data/prices_daily.csv",
+          "role": "reference_only",
+          "period_return": 1.1475611255984344,
+          "coverage": "full"
+        },
+        {
+          "symbol": "ETH-USD",
+          "name": "Ethereum",
+          "status": "ok",
+          "start_date": "2023-07-18",
+          "end_date": "2024-07-17",
+          "sessions": 365,
+          "annual_volatility": 0.5461745298854405,
+          "max_drawdown": -0.2914799263679614,
+          "annualization_days": 365,
+          "source": "data/prices_daily.csv",
+          "role": "reference_only",
+          "period_return": 0.7858103883107421,
+          "coverage": "full"
+        }
+      ],
+      "portfolio_exposure": null,
+      "notice": "BTC et ETH : repères de risque historiques, sans recommandation ni achat simulé. Marché quotidien : annualisation sur 365 jours. Les montants crypto du portefeuille sont inconnus.",
+      "missing": [
+        "Exposition crypto et corrélations du portefeuille non mesurées faute de positions détaillées."
+      ]
+    },
+    "portfolio_assessment": "partial",
+    "portfolio_limitations": [
+      "Composition des FNB et positions crypto inconnues : la diversification globale n’est pas validée."
+    ]
+  },
+  "esg": null,
+  "controls": {
+    "verdict": "warn",
+    "controls": [
+      {
+        "id": "profile",
+        "label": "Contraintes du profil",
+        "status": "warn",
+        "detail": "1 limite(s) dépassée(s), signalée(s) à l’utilisateur."
+      },
+      {
+        "id": "no_advice",
+        "label": "Aucun conseil d’achat ou de vente",
+        "status": "ok",
+        "detail": "Aucune formulation de transaction."
+      },
+      {
+        "id": "numbers",
+        "label": "Repérage des chiffres (contrôle partiel)",
+        "status": "info",
+        "detail": "Aucun chiffre cité dans les textes."
+      },
+      {
+        "id": "sources",
+        "label": "Sources datées",
+        "status": "info",
+        "detail": "Aucune source datée : la cause doit rester indéterminée."
+      },
+      {
+        "id": "web",
+        "label": "Vérification des pistes web",
+        "status": "warn",
+        "detail": "5 piste(s), 0 extrait(s) retrouvé(s), 0 non concordant(s). 0 histoire(s) rapportée(s) sur plusieurs domaines, sans garantie d’indépendance. La vérification textuelle ne certifie ni le résumé ni la causalité."
+      },
+      {
+        "id": "claim_evidence",
+        "label": "Références par affirmation",
+        "status": "info",
+        "detail": "6/6 affirmation(s) avec références valides. Le lien sémantique reste à apprécier ; une référence seule ne valide pas la conclusion."
+      },
+      {
+        "id": "claim_numbers",
+        "label": "Chiffres et calculs explicitement cités",
+        "status": "info",
+        "detail": "0 affirmation(s) à revoir pour signe, unité ou valeur. Contrôle limité aux chiffres avec unité et aux champs de calcul cités ; la formulation peut demander une interprétation."
+      },
+      {
+        "id": "no_future",
+        "label": "Aucune donnée postérieure à la séance",
+        "status": "ok",
+        "detail": "Risque, bêta et comparaisons calculés uniquement avec des données antérieures."
+      },
+      {
+        "id": "tools",
+        "label": "Appels d’outils validés par le code",
+        "status": "info",
+        "detail": "2 décision(s) des agents, 1 refusée(s) par les garde-fous."
+      },
+      {
+        "id": "sensitivity",
+        "label": "Conclusions mises à l’épreuve",
+        "status": "warn",
+        "detail": "Dépend d’une hypothèse : Le mouvement est-il propre au titre ou porté par le marché ? ; L’achat pousse-t-il la part de technologie au-delà de la limite ?"
+      },
+      {
+        "id": "missing",
+        "label": "Informations manquantes déclarées",
+        "status": "ok",
+        "detail": "Aucune information manquante signalée."
+      }
+    ],
+    "notice": "Contrôles automatiques en code, sans modèle : ils vérifient, ils ne décident pas."
+  },
+  "execution_budget": {
+    "model_calls": 7,
+    "network_calls": 10,
+    "input_tokens": 13998,
+    "output_tokens": 2835,
+    "reserved_output_tokens": 13900,
+    "input_bytes": 104480,
+    "elapsed_ms": 27146,
+    "limits": {
+      "seconds": 90,
+      "model_calls": 20,
+      "output_tokens": 50000,
+      "input_bytes": 1000000,
+      "network_calls": 40
+    }
+  },
+  "progress": [
+    {
+      "agent": "event",
+      "action": "stage",
+      "status": "running",
+      "duration_ms": null
+    },
+    {
+      "agent": "event",
+      "action": "compare_market",
+      "status": "running",
+      "duration_ms": null
+    },
+    {
+      "agent": "event",
+      "action": "compare_market",
+      "status": "done",
+      "duration_ms": 3
+    },
+    {
+      "agent": "event",
+      "action": "search_publications",
+      "status": "running",
+      "duration_ms": null
+    },
+    {
+      "agent": "event",
+      "action": "search_publications",
+      "status": "done",
+      "duration_ms": 6
+    },
+    {
+      "agent": "event",
+      "action": "investigate",
+      "status": "running",
+      "duration_ms": null
+    },
+    {
+      "agent": "event",
+      "action": "web_search",
+      "status": "running",
+      "duration_ms": null
+    },
+    {
+      "agent": "event",
+      "action": "web_search",
+      "status": "done",
+      "duration_ms": 15011
+    },
+    {
+      "agent": "event",
+      "action": "search_web",
+      "status": "unavailable",
+      "duration_ms": null
+    },
+    {
+      "agent": "event",
+      "action": "investigate",
+      "status": "done",
+      "duration_ms": 23469
+    },
+    {
+      "agent": "event",
+      "action": "validate_dossier",
+      "status": "running",
+      "duration_ms": null
+    },
+    {
+      "agent": "event",
+      "action": "validate_dossier",
+      "status": "done",
+      "duration_ms": 0
+    },
+    {
+      "agent": "event",
+      "action": "stage",
+      "status": "done",
+      "duration_ms": 23499
+    },
+    {
+      "agent": "impact",
+      "action": "stage",
+      "status": "running",
+      "duration_ms": null
+    },
+    {
+      "agent": "impact",
+      "action": "advise",
+      "status": "running",
+      "duration_ms": null
+    },
+    {
+      "agent": "impact",
+      "action": "advise",
+      "status": "done",
+      "duration_ms": 3623
+    },
+    {
+      "agent": "impact",
+      "action": "verify_profile_coherence",
+      "status": "running",
+      "duration_ms": null
+    },
+    {
+      "agent": "impact",
+      "action": "verify_profile_coherence",
+      "status": "done",
+      "duration_ms": 0
+    },
+    {
+      "agent": "impact",
+      "action": "stage",
+      "status": "done",
+      "duration_ms": 3624
+    },
+    {
+      "agent": "governance",
+      "action": "stage",
+      "status": "running",
+      "duration_ms": null
+    },
+    {
+      "agent": "governance",
+      "action": "stage",
+      "status": "done",
+      "duration_ms": 0
+    }
+  ]
+}

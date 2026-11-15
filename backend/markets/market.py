@@ -24,6 +24,7 @@ SECTORS = {"XLK": "Technologie (XLK)", "XLE": "Énergie (XLE)", "XLF": "Finance 
 STOCK_SECTOR = {"NVDA": "XLK", "AAPL": "XLK", "MSFT": "XLK", "GOOGL": None, "AMZN": None, "TSLA": None}
 # FNB filtré ESG du jeu de départ : référence de comparaison pour le profil de Mateo.
 ESG_REFERENCE = {"ESGV": "Vanguard ESG U.S. Stock ETF"}
+CRYPTO_REFERENCE = {'BTC-USD': 'Bitcoin', 'ETH-USD': 'Ethereum'}
 REFERENCE_NAMES = BENCHMARKS | SECTORS | ESG_REFERENCE
 
 
@@ -40,7 +41,7 @@ class Price:
 
 @lru_cache(maxsize=1)
 def load_prices():
-    tables = {ticker: {} for ticker in STOCKS | BENCHMARKS | SECTORS | ESG_REFERENCE}
+    tables = {ticker: {} for ticker in STOCKS | BENCHMARKS | SECTORS | ESG_REFERENCE | CRYPTO_REFERENCE}
     files = [DATA / "prices_daily.csv"]
     if (DATA / "sector_etfs_daily.csv").exists():
         files.append(DATA / "sector_etfs_daily.csv")
@@ -50,7 +51,7 @@ def load_prices():
     return {
         ticker: tuple(table[key] for key in sorted(table))
         for ticker, table in tables.items()
-        if table or ticker not in SECTORS
+        if table or ticker not in (SECTORS | CRYPTO_REFERENCE)
     }
 
 

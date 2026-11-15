@@ -202,7 +202,7 @@ def period_return(ticker: str, end_date: str, sessions: int = RISK_WINDOW_SESSIO
     return rows[-1].adj_close / rows[0].adj_close - 1
 
 
-def risk_indicators(ticker: str, end_date: str, sessions: int = RISK_WINDOW_SESSIONS) -> dict:
+def risk_indicators(ticker: str, end_date: str, sessions: int = RISK_WINDOW_SESSIONS, *, annualization: int = 252) -> dict:
     """Volatilité annualisée et pire baisse sur l'année qui précède end_date (incluse)."""
     rows = [row for row in _rows_any(ticker) if row.date <= end_date][-(sessions + 1):]
     if len(rows) < 30:
@@ -219,7 +219,7 @@ def risk_indicators(ticker: str, end_date: str, sessions: int = RISK_WINDOW_SESS
         "start_date": rows[0].date,
         "end_date": rows[-1].date,
         "sessions": len(returns),
-        "annual_volatility": (variance ** 0.5) * (252 ** 0.5),
+        "annual_volatility": (variance ** 0.5) * (annualization ** 0.5),
         "max_drawdown": drawdown,
     }
 

@@ -11,6 +11,7 @@ from .events import _normalize
 from .temporal import annotate
 
 OFFICIAL_HOSTS = {
+    'cdn-dynmedia-1.microsoft.com',
     'sustainability.google', 'images.apple.com', 'institutional.vanguard.com',
     'advisors.vanguard.com', 'investor.vanguard.com', 'www.vanguard.com',
     'sec.gov', 'www.sec.gov', 'www.federalreserve.gov', 'www.bls.gov',

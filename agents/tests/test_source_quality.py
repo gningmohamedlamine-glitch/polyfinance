@@ -43,8 +43,8 @@ class SourceQualityTests(unittest.TestCase):
             if searchQuery == 'slow':
                 raise ReadTimeoutError(endpoint_url='https://agentcore.example')
             return {'results': [
-                {'url': f'https://example.com/{searchQuery}', 'publishedAt': '2022-05-09'},
-                {'url': 'https://example.com/shared', 'publishedAt': '2022-05-09'},
+                {'url': f'https://example.com/{searchQuery}', 'title': 'Company earnings report', 'publishedAt': '2022-05-09'},
+                {'url': 'https://example.com/shared', 'title': 'Company earnings outlook', 'publishedAt': '2022-05-09'},
             ]}
 
         search = factory.return_value.invoke_web_search

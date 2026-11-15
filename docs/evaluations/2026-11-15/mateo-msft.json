@@ -1,0 +1,599 @@
+{
+  "request": {
+    "ticker": "MSFT",
+    "date": "2025-05-30",
+    "profile": "mateo",
+    "stream": "1"
+  },
+  "http_status": 200,
+  "elapsed_seconds": 37.95,
+  "final_kind": "result",
+  "error": null,
+  "web_status": "found",
+  "grounding": "invalid_response",
+  "research_note": "Recherche partielle : pistes AgentCore conservées ; complément Nova indisponible ou interrompu.",
+  "quality_rejected": [
+    {
+      "url": "https://www.sec.gov/Archives/edgar/data/19617/000121390022029563/s137558_424b2.htm",
+      "title": "Article",
+      "reason": "generic_title"
+    },
+    {
+      "url": "https://www.sec.gov/Archives/edgar/data/19617/000182912622010859/jpm_424b2.htm",
+      "title": "Article",
+      "reason": "generic_title"
+    },
+    {
+      "url": "https://www.sec.gov/Archives/edgar/data/19617/000182912622012263/jpm_424b2.htm",
+      "title": "Article",
+      "reason": "generic_title"
+    },
+    {
+      "url": "https://www.sec.gov/Archives/edgar/data/830744/000119312524126768/d830870d497.htm",
+      "title": "Wilmington Funds",
+      "reason": "other_issuer_filing"
+    },
+    {
+      "url": "https://www.sec.gov/Archives/edgar/data/1388390/0001137789-25-000098-index.html",
+      "title": "EDGAR Filing Documents for 0001137789-25-000098",
+      "reason": "other_issuer_filing"
+    },
+    {
+      "url": "https://sec.gov/Archives/edgar/data/0001404655/000095017025081620/0000950170-25-081620-index.htm",
+      "title": "EDGAR Filing Documents for 0000950170-25-081620",
+      "reason": "ownership_filing"
+    },
+    {
+      "url": "https://www.sec.gov/Archives/edgar/data/1045450/000104545025000100/0001045450-25-000100-index.htm",
+      "title": "EDGAR Filing Documents for 0001045450-25-000100",
+      "reason": "other_issuer_filing"
+    },
+    {
+      "url": "https://www.sec.gov/Archives/edgar/data/1507648/000104545025000104/0001045450-25-000104-index.htm",
+      "title": "EDGAR Filing Documents for 0001045450-25-000104",
+      "reason": "other_issuer_filing"
+    },
+    {
+      "url": "https://www.sec.gov/Archives/edgar/data/1095168/000104545025000101/0001045450-25-000101-index.htm",
+      "title": "EDGAR Filing Documents for 0001045450-25-000101",
+      "reason": "other_issuer_filing"
+    },
+    {
+      "url": "https://www.sec.gov/Archives/edgar/data/106040/000119312525134928/0001193125-25-134928.txt",
+      "title": "S-8 POS",
+      "reason": "other_issuer_filing"
+    }
+  ],
+  "lead_count": 7,
+  "verified_excerpts": 0,
+  "multi_domain_stories": 0,
+  "temporally_eligible": 4,
+  "leads": [
+    {
+      "title": "Monetary Policy: Beige Book (Branch)",
+      "url": "https://www.federalreserve.gov/monetarypolicy/beigebook202505-new-york.htm",
+      "published_date": "2025-06-04",
+      "published_at": null,
+      "session": "2025-05-30",
+      "relevance": "Rapport sur l'activité économique qui peut influencer les politiques monétaires et les performances du secteur technologique.",
+      "excerpt_status": "mismatch",
+      "source_origin": "official",
+      "page_status": "retrieved",
+      "temporal_status": "after_close",
+      "eligible_for_explanation": false,
+      "corroboration": 1
+    },
+    {
+      "title": "Federal Reserve Board",
+      "url": "https://www.federalreserve.gov/releases/h6/20250527/",
+      "published_date": "2025-05-27",
+      "published_at": null,
+      "session": "2025-05-30",
+      "relevance": "Données sur les agrégats monétaires qui peuvent affecter les conditions financières et les performances des actions.",
+      "excerpt_status": "mismatch",
+      "source_origin": "official",
+      "page_status": "retrieved",
+      "temporal_status": "date_only_prior",
+      "eligible_for_explanation": true,
+      "corroboration": 1
+    },
+    {
+      "title": "Accessible Version",
+      "url": "https://www.federalreserve.gov/monetarypolicy/May-2025-Federal-Reserve-Balance-Sheet-Developments-Accessible-Version.htm",
+      "published_date": "2025-05-29",
+      "published_at": null,
+      "session": "2025-05-30",
+      "relevance": "Évolution du bilan de la Fed, influençant potentiellement les marchés actions via les conditions monétaires.",
+      "excerpt_status": "mismatch",
+      "source_origin": "official",
+      "page_status": "retrieved",
+      "temporal_status": "date_only_prior",
+      "eligible_for_explanation": true,
+      "corroboration": 1
+    },
+    {
+      "title": "Employment Situation News Release",
+      "url": "https://www.bls.gov/news.release/archives/empsit_05022025.htm",
+      "published_date": "2025-06-03",
+      "published_at": null,
+      "session": "2025-05-30",
+      "relevance": "Données sur l'emploi qui peuvent influencer les perspectives économiques et les performances boursières.",
+      "excerpt_status": "no_excerpt",
+      "source_origin": "official",
+      "page_status": "not_checked",
+      "temporal_status": "after_close",
+      "eligible_for_explanation": false,
+      "corroboration": 1
+    },
+    {
+      "title": "Metropolitan Area Employment and Unemployment (Monthly) News Release",
+      "url": "https://www.bls.gov/news.release/archives/metro_05282025.htm",
+      "published_date": "2025-05-28",
+      "published_at": null,
+      "session": "2025-05-30",
+      "relevance": "Données régionales sur l'emploi qui peuvent avoir un impact sur les perspectives économiques locales.",
+      "excerpt_status": "no_excerpt",
+      "source_origin": "official",
+      "page_status": "unavailable",
+      "temporal_status": "date_only_prior",
+      "eligible_for_explanation": true,
+      "corroboration": 1
+    },
+    {
+      "title": "Job Openings and Labor Turnover Survey News Release",
+      "url": "https://www.bls.gov/news.release/archives/jolts_06032025.htm",
+      "published_date": "2025-06-03",
+      "published_at": null,
+      "session": "2025-05-30",
+      "relevance": "Données sur les offres d'emploi et les turnover qui influencent les perspectives du marché du travail.",
+      "excerpt_status": "no_excerpt",
+      "source_origin": "official",
+      "page_status": "not_checked",
+      "temporal_status": "after_close",
+      "eligible_for_explanation": false,
+      "corroboration": 1
+    },
+    {
+      "title": "Washington Area Employment — April 2025",
+      "url": "https://www.bls.gov/regions/mid-atlantic/news-release/areaemployment_washingtondc.htm",
+      "published_date": "2025-05-28",
+      "published_at": null,
+      "session": "2025-05-30",
+      "relevance": "Données locales sur l'emploi qui peuvent refléter les tendances économiques régionales influençant les marchés.",
+      "excerpt_status": "no_excerpt",
+      "source_origin": "official",
+      "page_status": "unavailable",
+      "temporal_status": "date_only_prior",
+      "eligible_for_explanation": true,
+      "corroboration": 1
+    }
+  ],
+  "event_text": "- Microsoft progresse malgré le recul du Nasdaq-100 ; le modèle indique une composante propre au titre positive.\n- Pistes macroéconomiques Fed/BLS : source_origin=official, excerpt_status=mismatch/no_excerpt, temporal_status=date_only_prior ; aucune preuve causale établie.\n- Recherche incomplète : un complément a été interrompu ou indisponible ; la cause de l’écart reste indéterminée.",
+  "impact_text": "- Pour Mateo, l’information ESG reste insuffisante : aucune controverse retrouvée, sans garantie d’absence ; résumé du rapport officiel non validé.\n- Sur les 12 derniers mois, MSFT a été moins performant et plus volatil qu’ESGV, référence filtrée ESG.",
+  "coherence": {
+    "profile": "mateo",
+    "ticker": "MSFT",
+    "limits": {
+      "annual_volatility": 0.3,
+      "max_drawdown": -0.35,
+      "max_weight": 0.1,
+      "horizon_years": 10
+    },
+    "risk": {
+      "status": "ok",
+      "start_date": "2024-05-28",
+      "end_date": "2025-05-30",
+      "sessions": 252,
+      "annual_volatility": 0.25745008354913795,
+      "max_drawdown": -0.23726647276005386
+    },
+    "sector": null,
+    "conflicts": [],
+    "coherent": true,
+    "missing": [],
+    "notice": "Simulation : analyse de cohérence, pas un conseil financier."
+  },
+  "esg": {
+    "ticker": "MSFT",
+    "sector": "Information Technology",
+    "sector_flag": null,
+    "membership": {
+      "status": "unavailable",
+      "member": null
+    },
+    "comparison": {
+      "stock": {
+        "symbol": "MSFT",
+        "return_12m": 0.07801065550387487,
+        "annual_volatility": 0.25745008354913795,
+        "max_drawdown": -0.23726647276005386,
+        "start_date": "2024-05-28",
+        "end_date": "2025-05-30"
+      },
+      "reference": {
+        "symbol": "ESGV",
+        "return_12m": 0.12171341930787527,
+        "annual_volatility": 0.2098509930080395,
+        "max_drawdown": -0.2040532551944496,
+        "start_date": "2024-05-28",
+        "end_date": "2025-05-30"
+      }
+    },
+    "controversies": [],
+    "disclosures": [
+      {
+        "ticker": "MSFT",
+        "published_date": "2025-05-29",
+        "topic": "environnement",
+        "title": "Rapport environnemental Microsoft 2025",
+        "publisher": "Microsoft",
+        "url": "https://blogs.microsoft.com/on-the-issues/2025/05/29/environmental-sustainability-report/",
+        "summary": "Publication du rapport et de données couvrant les exercices 2020 à 2024. Les inventaires GHGP et les indicateurs avec critères de gestion ont des périmètres distincts ; ne pas mélanger leurs totaux.",
+        "evidence_type": "company_disclosure",
+        "kind": "publication officielle cataloguée",
+        "source_origin": "official",
+        "excerpt_status": "not_checked",
+        "temporal_status": "date_only_prior",
+        "eligible_for_explanation": true,
+        "after_session": false
+      }
+    ],
+    "emissions": [
+      {
+        "ticker": "MSFT",
+        "period_end": "2020-06-30",
+        "published_date": "2025-05-29",
+        "metric": "gross_carbon_footprint",
+        "value": 12370000.0,
+        "unit": "tCO2e",
+        "scope": "Scope 1+2+3; market-based scope 2; GHGP inventory",
+        "methodology": "Microsoft 2025 Data Fact Sheet Table 1A; historical values restated; rounded thousands",
+        "publisher": "Microsoft",
+        "url": "https://cdn-dynmedia-1.microsoft.com/is/content/microsoftcorp/microsoft/msc/documents/presentations/CSR/2025-Microsoft-Environmental-Data-Fact-Sheet-PDF.pdf",
+        "source_page": "3",
+        "reporting_year": "2020",
+        "source_origin": "official",
+        "evidence_type": "company_disclosure",
+        "excerpt_status": "not_checked"
+      },
+      {
+        "ticker": "MSFT",
+        "period_end": "2021-06-30",
+        "published_date": "2025-05-29",
+        "metric": "gross_carbon_footprint",
+        "value": 14129000.0,
+        "unit": "tCO2e",
+        "scope": "Scope 1+2+3; market-based scope 2; GHGP inventory",
+        "methodology": "Microsoft 2025 Data Fact Sheet Table 1A; historical values restated; rounded thousands",
+        "publisher": "Microsoft",
+        "url": "https://cdn-dynmedia-1.microsoft.com/is/content/microsoftcorp/microsoft/msc/documents/presentations/CSR/2025-Microsoft-Environmental-Data-Fact-Sheet-PDF.pdf",
+        "source_page": "3",
+        "reporting_year": "2021",
+        "source_origin": "official",
+        "evidence_type": "company_disclosure",
+        "excerpt_status": "not_checked"
+      },
+      {
+        "ticker": "MSFT",
+        "period_end": "2022-06-30",
+        "published_date": "2025-05-29",
+        "metric": "gross_carbon_footprint",
+        "value": 16343000.0,
+        "unit": "tCO2e",
+        "scope": "Scope 1+2+3; market-based scope 2; GHGP inventory",
+        "methodology": "Microsoft 2025 Data Fact Sheet Table 1A; historical values restated; rounded thousands",
+        "publisher": "Microsoft",
+        "url": "https://cdn-dynmedia-1.microsoft.com/is/content/microsoftcorp/microsoft/msc/documents/presentations/CSR/2025-Microsoft-Environmental-Data-Fact-Sheet-PDF.pdf",
+        "source_page": "3",
+        "reporting_year": "2022",
+        "source_origin": "official",
+        "evidence_type": "company_disclosure",
+        "excerpt_status": "not_checked"
+      },
+      {
+        "ticker": "MSFT",
+        "period_end": "2023-06-30",
+        "published_date": "2025-05-29",
+        "metric": "gross_carbon_footprint",
+        "value": 16935000.0,
+        "unit": "tCO2e",
+        "scope": "Scope 1+2+3; market-based scope 2; GHGP inventory",
+        "methodology": "Microsoft 2025 Data Fact Sheet Table 1A; historical values restated; rounded thousands",
+        "publisher": "Microsoft",
+        "url": "https://cdn-dynmedia-1.microsoft.com/is/content/microsoftcorp/microsoft/msc/documents/presentations/CSR/2025-Microsoft-Environmental-Data-Fact-Sheet-PDF.pdf",
+        "source_page": "3",
+        "reporting_year": "2023",
+        "source_origin": "official",
+        "evidence_type": "company_disclosure",
+        "excerpt_status": "not_checked"
+      },
+      {
+        "ticker": "MSFT",
+        "period_end": "2024-06-30",
+        "published_date": "2025-05-29",
+        "metric": "gross_carbon_footprint",
+        "value": 15543000.0,
+        "unit": "tCO2e",
+        "scope": "Scope 1+2+3; market-based scope 2; GHGP inventory",
+        "methodology": "Microsoft 2025 Data Fact Sheet Table 1A; historical values restated; rounded thousands",
+        "publisher": "Microsoft",
+        "url": "https://cdn-dynmedia-1.microsoft.com/is/content/microsoftcorp/microsoft/msc/documents/presentations/CSR/2025-Microsoft-Environmental-Data-Fact-Sheet-PDF.pdf",
+        "source_page": "3",
+        "reporting_year": "2024",
+        "source_origin": "official",
+        "evidence_type": "company_disclosure",
+        "excerpt_status": "not_checked"
+      }
+    ],
+    "coverage": {
+      "controversy_reports": 0,
+      "company_disclosures": 1,
+      "emission_observations": 5,
+      "independent_score_available": false,
+      "holdings_status": "unavailable",
+      "assessment": "partial"
+    },
+    "web_status": "invalid_response",
+    "attention": [],
+    "missing": [
+      "Aucune notation ESG globale indépendante dans les données.",
+      "Émissions déclarées par l’entreprise : couverture limitée aux périodes et périmètres cités.",
+      "Composition historique d’ESGV indisponible à cette date : appartenance non vérifiée.",
+      "Aucune controverse datée trouvée dans les sources consultées : absence de preuve, pas preuve d’absence."
+    ],
+    "conclusion": "insuffisant",
+    "notice": "Vérification indicative à partir de données publiques ; ce n’est pas une notation ESG."
+  },
+  "controls": {
+    "verdict": "warn",
+    "controls": [
+      {
+        "id": "profile",
+        "label": "Contraintes du profil",
+        "status": "ok",
+        "detail": "Le risque observé respecte les limites du profil."
+      },
+      {
+        "id": "no_advice",
+        "label": "Aucun conseil d’achat ou de vente",
+        "status": "ok",
+        "detail": "Aucune formulation de transaction."
+      },
+      {
+        "id": "numbers",
+        "label": "Repérage des chiffres (contrôle partiel)",
+        "status": "info",
+        "detail": "Aucun chiffre cité dans les textes."
+      },
+      {
+        "id": "sources",
+        "label": "Sources datées",
+        "status": "info",
+        "detail": "Aucune source datée : la cause doit rester indéterminée."
+      },
+      {
+        "id": "web",
+        "label": "Vérification des pistes web",
+        "status": "warn",
+        "detail": "7 piste(s), 0 extrait(s) retrouvé(s), 3 non concordant(s). 0 histoire(s) rapportée(s) sur plusieurs domaines, sans garantie d’indépendance. La vérification textuelle ne certifie ni le résumé ni la causalité."
+      },
+      {
+        "id": "claim_evidence",
+        "label": "Références par affirmation",
+        "status": "info",
+        "detail": "5/5 affirmation(s) avec références valides. Le lien sémantique reste à apprécier ; une référence seule ne valide pas la conclusion."
+      },
+      {
+        "id": "claim_numbers",
+        "label": "Chiffres et calculs explicitement cités",
+        "status": "info",
+        "detail": "0 affirmation(s) à revoir pour signe, unité ou valeur. Contrôle limité aux chiffres avec unité et aux champs de calcul cités ; la formulation peut demander une interprétation."
+      },
+      {
+        "id": "no_future",
+        "label": "Aucune donnée postérieure à la séance",
+        "status": "ok",
+        "detail": "Risque, bêta et comparaisons calculés uniquement avec des données antérieures."
+      },
+      {
+        "id": "tools",
+        "label": "Appels d’outils validés par le code",
+        "status": "info",
+        "detail": "2 décision(s) des agents, 1 refusée(s) par les garde-fous."
+      },
+      {
+        "id": "sensitivity",
+        "label": "Conclusions mises à l’épreuve",
+        "status": "warn",
+        "detail": "Dépend d’une hypothèse : Le risque du titre respecte-t-il les limites du profil ?"
+      },
+      {
+        "id": "missing",
+        "label": "Informations manquantes déclarées",
+        "status": "info",
+        "detail": "Aucune notation ESG globale indépendante dans les données. Émissions déclarées par l’entreprise : couverture limitée aux périodes et périmètres cités. Composition historique d’ESGV indisponible à cette date : appartenance non vérifiée. Aucune controverse datée trouvée dans les sources consultées : absence de preuve, pas preuve d’absence."
+      }
+    ],
+    "notice": "Contrôles automatiques en code, sans modèle : ils vérifient, ils ne décident pas."
+  },
+  "execution_budget": {
+    "model_calls": 8,
+    "network_calls": 12,
+    "input_tokens": 17750,
+    "output_tokens": 4464,
+    "reserved_output_tokens": 14100,
+    "input_bytes": 128502,
+    "elapsed_ms": 36722,
+    "limits": {
+      "seconds": 90,
+      "model_calls": 20,
+      "output_tokens": 50000,
+      "input_bytes": 1000000,
+      "network_calls": 40
+    }
+  },
+  "progress": [
+    {
+      "agent": "event",
+      "action": "stage",
+      "status": "running",
+      "duration_ms": null
+    },
+    {
+      "agent": "event",
+      "action": "compare_market",
+      "status": "running",
+      "duration_ms": null
+    },
+    {
+      "agent": "event",
+      "action": "compare_market",
+      "status": "done",
+      "duration_ms": 2
+    },
+    {
+      "agent": "event",
+      "action": "search_publications",
+      "status": "running",
+      "duration_ms": null
+    },
+    {
+      "agent": "event",
+      "action": "search_publications",
+      "status": "done",
+      "duration_ms": 6
+    },
+    {
+      "agent": "event",
+      "action": "investigate",
+      "status": "running",
+      "duration_ms": null
+    },
+    {
+      "agent": "event",
+      "action": "sec_edgar",
+      "status": "running",
+      "duration_ms": null
+    },
+    {
+      "agent": "event",
+      "action": "web_search",
+      "status": "running",
+      "duration_ms": null
+    },
+    {
+      "agent": "event",
+      "action": "web_search",
+      "status": "done",
+      "duration_ms": 15594
+    },
+    {
+      "agent": "event",
+      "action": "sec_edgar",
+      "status": "done",
+      "duration_ms": 15595
+    },
+    {
+      "agent": "event",
+      "action": "search_sec_filings",
+      "status": "unavailable",
+      "duration_ms": null
+    },
+    {
+      "agent": "event",
+      "action": "investigate",
+      "status": "done",
+      "duration_ms": 23972
+    },
+    {
+      "agent": "event",
+      "action": "validate_dossier",
+      "status": "running",
+      "duration_ms": null
+    },
+    {
+      "agent": "event",
+      "action": "validate_dossier",
+      "status": "done",
+      "duration_ms": 0
+    },
+    {
+      "agent": "event",
+      "action": "stage",
+      "status": "done",
+      "duration_ms": 24005
+    },
+    {
+      "agent": "impact",
+      "action": "stage",
+      "status": "running",
+      "duration_ms": null
+    },
+    {
+      "agent": "impact",
+      "action": "advise",
+      "status": "running",
+      "duration_ms": null
+    },
+    {
+      "agent": "impact",
+      "action": "advise",
+      "status": "done",
+      "duration_ms": 4859
+    },
+    {
+      "agent": "impact",
+      "action": "verify_profile_coherence",
+      "status": "running",
+      "duration_ms": null
+    },
+    {
+      "agent": "impact",
+      "action": "verify_profile_coherence",
+      "status": "done",
+      "duration_ms": 0
+    },
+    {
+      "agent": "impact",
+      "action": "esg_screen",
+      "status": "running",
+      "duration_ms": null
+    },
+    {
+      "agent": "impact",
+      "action": "esg_screen",
+      "status": "done",
+      "duration_ms": 6
+    },
+    {
+      "agent": "impact",
+      "action": "synthesize",
+      "status": "running",
+      "duration_ms": null
+    },
+    {
+      "agent": "impact",
+      "action": "synthesize",
+      "status": "done",
+      "duration_ms": 7834
+    },
+    {
+      "agent": "impact",
+      "action": "stage",
+      "status": "done",
+      "duration_ms": 12700
+    },
+    {
+      "agent": "governance",
+      "action": "stage",
+      "status": "running",
+      "duration_ms": null
+    },
+    {
+      "agent": "governance",
+      "action": "stage",
+      "status": "done",
+      "duration_ms": 1
+    }
+  ]
+}

@@ -151,6 +151,9 @@ def run_controls(dossier: dict, event: dict, impact: dict, selection_end: str, s
     risk = coherence.get("risk") or {}
     if risk.get("end_date") and risk["end_date"] > selection_end:
         late.append("mesure du risque")
+    for reference in (coherence.get('crypto_context') or {}).get('references', []):
+        if reference.get('end_date', '') > selection_end:
+            late.append('comparaison crypto')
     esg = impact.get("esg") or {}
     for snap in (esg.get("comparison") or {}).values():
         if snap and snap.get("end_date", "") > selection_end:

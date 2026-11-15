@@ -13,10 +13,11 @@ from .dossier import selection_payload
 from .esg import asset_sector, esg_screen, web_controversies
 from .model_text import bedrock_client, synthesize
 from .temporal import contemporaneous
+from .crypto_context import crypto_context
 
 PROFILES = {
     "amira": ("Amira envisage un achat. Profil de risque élevé, horizon de 15 ans ou plus : elle accepte une forte "
-              "volatilité et s’intéresse à l’IA, mais veut garder une diversification et éviter de miser "
+              "volatilité et s’intéresse à l’IA et aux cryptoactifs, mais veut garder une diversification et éviter de miser "
               "exclusivement sur les technologies. Risque élevé ne veut pas dire que tout est acceptable."),
     "robert": (
         "Robert s’intéresse à ce titre très médiatisé. Il préserve son capital et doit financer un retrait ; "
@@ -96,6 +97,9 @@ def profile_coherence(profile: str, ticker: str, end_date: str, weight_after: fl
         "coherent": False if conflicts else (True if risk.get("status") == "ok" else None),
         "missing": [] if risk.get("status") == "ok" else ["historique insuffisant pour mesurer le risque"],
         "notice": "Simulation : analyse de cohérence, pas un conseil financier.",
+        **({'crypto_context': crypto_context(end_date), 'portfolio_assessment': 'partial',
+            'portfolio_limitations': ['Composition des FNB et positions crypto inconnues : la diversification globale n’est pas validée.']}
+           if profile == 'amira' else {}),
     }
 
 
@@ -298,6 +302,8 @@ def _fallback_text(profile: str, metrics: list[dict], assumptions: str, coherenc
 ADVISOR = (
     "Tu es le Conseiller de profil d’AlphaForge. Tu reçois le dossier de l’Enquêteur (calculs et sources aux statuts explicites) "
     "et le profil fictif d’un investisseur. Les calculs déjà faits en Python sont dans profile_calculations : "
+    "Pour Amira, crypto_context fournit des repères BTC/ETH datés : ce ne sont ni ses positions ni des achats proposés. "
+    "Ne déduis jamais que tout le portefeuille est diversifié des seules limites respectées par l’action. "
     "cite-les et rédige la synthèse sans outil quand ils suffisent. "
     "Appelle un outil seulement s’il manque un chiffre, "
     f"avec au plus {MAX_DECISIONS} appels ; avant chaque appel, écris une seule phrase qui justifie ton choix. "

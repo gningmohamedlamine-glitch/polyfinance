@@ -174,6 +174,10 @@ def run_web_search(context: ToolContext, notify, dates, mode=None, *, deep=False
                     'Ne pas interpréter cette interruption comme une absence de publications.')
             if details:
                 context.coverage["nova_grounding"] = details["grounding"]
+                context.coverage['quality_rejected'] = details.get('quality_rejected', [])
+                if details['grounding'] in WEB_FAILURES and leads:
+                    context.coverage['web_search_note'] = (
+                        'Recherche partielle : pistes AgentCore conservées ; complément Nova indisponible ou interrompu.')
         if web_status in WEB_FAILURES:
             notify("event", "web_search", "unavailable", mode=mode, reason=web_status)
             context.coverage["web_search_reason"] = web_status
