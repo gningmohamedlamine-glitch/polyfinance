@@ -326,7 +326,10 @@ export class Explorer {
     this.profile = profile;
     this.persistSelection();
     // Autre profil : l'analyse attend le bouton, comme toute autre modification.
-    if (this.busy()) { this.cancelAnalysis(); this.busy.set(false); }
+    // Le résultat dépend du profil : on ne laisse jamais l'analyse de Robert sous le nom d'Amira.
+    this.cancelAnalysis();
+    this.busy.set(false);
+    this.result.set(null);
     this.stale.set(this.canAnalyze());
   }
 
