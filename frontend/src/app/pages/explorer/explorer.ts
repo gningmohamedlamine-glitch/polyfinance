@@ -2,7 +2,7 @@ import { ControlsPanel } from '../../components/controls-panel/controls-panel';
 import { SensitivityPanel } from '../../components/sensitivity-panel/sensitivity-panel';
 import { HttpErrorResponse } from '@angular/common/http';
 import { afterNextRender, Component, DestroyRef, ElementRef, inject, Injector, signal } from '@angular/core';
-import { DatePipe, NgTemplateOutlet } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { Subscription } from 'rxjs';
 import { AgentTimeline } from '../../components/agent-timeline/agent-timeline';
 import { DossierView } from '../../components/dossier-view/dossier-view';
@@ -16,7 +16,6 @@ import { ChartSelection, ChartStyle, HORIZONS, Horizon, PriceChart } from '../..
 import { LucideDynamicIcon } from '@lucide/angular';
 import { ICONS } from '../../icons';
 import { PERSONAS, personaOf } from '../../personas';
-import { ReportReveal } from '../../report-reveal';
 import { AgentProgress, Analysis, AnalysisPreview, EvidencePreview, MarketApi, Price, Profile, Stock } from '../../services/market-api';
 
 function clipTitle(text: string, max = 72): string {
@@ -25,7 +24,7 @@ function clipTitle(text: string, max = 72): string {
 }
 
 type SelectionMode = 'session' | 'range';
-type Chapter = 'analyse' | 'resultat' | 'dossier' | 'controles' | 'traces';
+type Chapter = 'analyse' | 'resultat' | 'agents';
 
 /** Sélection gardée pour l'onglet (idée d'Adam) : un rechargement ne perd ni le profil ni les dates. */
 const STORAGE_KEY = 'alphaforge.explorer.v2';
@@ -38,7 +37,7 @@ import { InfoTip } from '../../components/info-tip/info-tip';
 
 @Component({
   selector: 'app-explorer',
-  imports: [InfoTip, DatePipe, NgTemplateOutlet, LucideDynamicIcon, PriceChart, MovementAnalysis, MarketChange, StockLogo, AgentTimeline, DossierView, TracesView, Welcome, Logo, ControlsPanel, SensitivityPanel, ReportReveal],
+  imports: [InfoTip, DatePipe, LucideDynamicIcon, PriceChart, MovementAnalysis, MarketChange, StockLogo, AgentTimeline, DossierView, TracesView, Welcome, Logo, ControlsPanel, SensitivityPanel],
   templateUrl: './explorer.html',
   styleUrls: ['./explorer.css', './chapters.css'],
 })
@@ -46,7 +45,6 @@ export class Explorer {
   private api = inject(MarketApi);
   private host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   private injector = inject(Injector);
-  private scrollFrame = 0;
   private historyRequest?: Subscription;
   private analysisRequest?: Subscription;
   stocks = signal<Stock[]>([]);
@@ -94,16 +92,23 @@ export class Explorer {
   persona() { return personaOf(this.profile); }
 
   readonly pages = [
-    { id: 'analyse', label: 'Configurer l’analyse', icon: this.icons.analyse },
+    { id: 'analyse', label: 'Graphique et sélection', icon: this.icons.analyse },
     { id: 'resultat', label: 'Résultat', icon: this.icons.doc },
-    { id: 'dossier', label: 'Dossier de preuves', icon: this.icons.dossier },
-    { id: 'controles', label: 'Contrôles et sensibilité', icon: this.icons.shield },
-    { id: 'traces', label: 'Traces des agents', icon: this.icons.traces },
+    { id: 'agents', label: 'Travail des agents', icon: this.icons.traces },
   ] as const;
   readonly activeChapter = signal<Chapter>('analyse');
+  readonly agentsOpen = signal(false);
+  private agentTrigger: HTMLElement | null = null;
+  readonly agentTab = signal<'traces' | 'dossier' | 'calculs' | 'controles'>('traces');
+  readonly agentTabs = [
+    { id: 'traces', label: 'Exécution', icon: this.icons.traces },
+    { id: 'dossier', label: 'Sources', icon: this.icons.dossier },
+    { id: 'calculs', label: 'Calculs et hypothèses', icon: this.icons.analyse },
+    { id: 'controles', label: 'Contrôles', icon: this.icons.shield },
+  ] as const;
 
   pageTitle() {
-    return this.pages.find(page => page.id === this.activeChapter())?.label;
+    return 'Analyse de marché';
   }
 
   private chapter(id: Chapter) {
@@ -111,29 +116,62 @@ export class Explorer {
   }
 
   openChapter(id: Chapter) {
-    const target = this.chapter(id);
-    if (!target) return;
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const indexOf = (chapter: Chapter) => this.pages.findIndex(page => page.id === chapter);
-    const skipsChapter = Math.abs(indexOf(id) - indexOf(this.activeChapter())) > 1;
-    target.querySelector<HTMLElement>('[data-chapter-title]')?.focus({ preventScroll: true });
-    // Direct jumps avoid expanding intervening deferred panels mid-scroll.
-    target.scrollIntoView({ block: 'start', behavior: reducedMotion || skipsChapter ? 'instant' : 'smooth' });
+    if (id !== 'analyse' && !this.result() && !(id === 'agents' && this.busy())) return;
+    if (id === 'agents') {
+      this.agentTrigger = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      this.agentsOpen.set(true);
+      afterNextRender(() => {
+        if (this.agentsOpen()) this.host.querySelector<HTMLDialogElement>('.agent-drawer')?.showModal();
+      }, { injector: this.injector });
+      return;
+    }
+    this.activeChapter.set(id);
+    if (window.location.hash !== `#${id}`) history.pushState(null, '', `#${id}`);
+    afterNextRender(() => {
+      if (this.agentsOpen()) return;
+      const target = this.chapter(id);
+      target?.querySelector<HTMLElement>('[data-chapter-title]')?.focus({ preventScroll: true });
+      target?.scrollIntoView({ block: 'start', behavior: 'instant' });
+    }, { injector: this.injector });
   }
 
-  private readonly trackChapter = () => {
-    if (this.scrollFrame || !this.result()) return;
-    this.scrollFrame = requestAnimationFrame(() => {
-      this.scrollFrame = 0;
-      const offset = (this.host.querySelector('.topbar')?.getBoundingClientRect().bottom ?? 0) + 32;
-      let active: Chapter = 'analyse';
-      for (const { id } of this.pages) {
-        const section = this.chapter(id);
-        if (!section || section.getBoundingClientRect().top > offset) break;
-        active = id;
-      }
-      this.activeChapter.set(active);
-    });
+  closeAgents() {
+    this.host.querySelector<HTMLDialogElement>('.agent-drawer')?.close();
+  }
+
+  onAgentsClosed() {
+    this.agentsOpen.set(false);
+    const trigger = this.agentTrigger?.isConnected ? this.agentTrigger : this.chapter(this.activeChapter())?.querySelector<HTMLElement>('[data-chapter-title]');
+    trigger?.focus({ preventScroll: true });
+    this.agentTrigger = null;
+  }
+
+  onDrawerBackdrop(event: MouseEvent) {
+    const dialog = event.currentTarget as HTMLDialogElement;
+    const bounds = dialog.getBoundingClientRect();
+    if (event.target === dialog && (event.clientX < bounds.left || event.clientX > bounds.right ||
+        event.clientY < bounds.top || event.clientY > bounds.bottom)) this.closeAgents();
+  }
+
+  onDrawerKeydown(event: KeyboardEvent) {
+    if (event.key !== 'Tab') return;
+    const dialog = event.currentTarget as HTMLDialogElement;
+    const items = Array.from(dialog.querySelectorAll<HTMLElement>(
+      'button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), summary, [tabindex]:not([tabindex="-1"])',
+    )).filter(item => item.getClientRects().length > 0);
+    const first = items[0], last = items.at(-1);
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault(); last?.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault(); first?.focus();
+    }
+  }
+
+  private readonly restorePage = () => {
+    this.closeAgents();
+    const id = window.location.hash.slice(1);
+    this.activeChapter.set(id === 'resultat' && this.result() ? 'resultat' : 'analyse');
+    this.chapter(this.activeChapter())?.scrollIntoView({ block: 'start', behavior: 'instant' });
   };
   /** Sélection modifiée sans analyse : on invite à cliquer sur « Exécuter l'analyse ». */
   stale = signal(false);
@@ -169,6 +207,7 @@ export class Explorer {
   }
 
   leave() {
+    this.closeAgents();
     this.writeSaved({ entered: false });
     this.switcherOpen.set(false);
     this.clearPendingAnalysis();
@@ -195,12 +234,9 @@ export class Explorer {
   }
 
   constructor() {
-    window.addEventListener('scroll', this.trackChapter, { passive: true });
-    window.addEventListener('resize', this.trackChapter, { passive: true });
+    window.addEventListener('popstate', this.restorePage);
     inject(DestroyRef).onDestroy(() => {
-      window.removeEventListener('scroll', this.trackChapter);
-      window.removeEventListener('resize', this.trackChapter);
-      cancelAnimationFrame(this.scrollFrame);
+      window.removeEventListener('popstate', this.restorePage);
     });
     this.api.stocks().subscribe({
       next: ({ stocks }) => {
@@ -346,6 +382,7 @@ export class Explorer {
   }
 
   selectProfile(profile: Profile) {
+    this.closeAgents();
     this.profile = profile;
     this.activeChapter.set('analyse');
     this.persistSelection();

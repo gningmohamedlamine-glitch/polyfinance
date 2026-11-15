@@ -1,5 +1,6 @@
 @let result = analysis();
 @let d = decomposition();
+@if (view() === 'result') {
 <section class="acts">
   <!-- ACTE 2 : l'Enquêteur -->
   <article class="panel act" id="acte2" reportReveal>
@@ -44,7 +45,7 @@
       </div>
     }
 
-    <h3>Synthèse de l’Enquêteur</h3>
+    <h3>Ce qu’il faut retenir</h3>
     <ul class="points">
       @for (line of bulletLines(result.event.text); track $index) {
         <li>@for (part of line.parts; track $index) {<ng-container *ngTemplateOutlet="rich; context: { $implicit: part }" />}</li>
@@ -66,6 +67,30 @@
       <div><strong>{{ persona().name }}, {{ persona().age }} ans</strong><small>{{ persona().risk }} · horizon {{ persona().horizon }}</small></div>
     </div>
 
+    @if (result.impact.coherence; as coherence) {
+      @if (coherence.conflicts.length) {
+        <div class="alert ko" role="alert">
+          <strong><svg class="ico" [lucideIcon]="icons.alert" aria-hidden="true"></svg> Ce titre ne correspond pas à ton profil</strong>
+          <ul>@for (conflict of coherence.conflicts; track conflict) { <li>{{ conflict }}</li> }</ul>
+        </div>
+      } @else if (coherence.risk.status === 'ok') {
+        <div class="alert ok"><strong><svg class="ico" [lucideIcon]="icons.check" aria-hidden="true"></svg> Le risque observé reste dans les limites de ton profil</strong></div>
+      }
+    }
+
+    <h3>Ce que cela signifie pour toi</h3>
+    <ul class="points">
+      @for (line of bulletLines(result.impact.text); track $index) {
+        <li>@for (part of line.parts; track $index) {<ng-container *ngTemplateOutlet="rich; context: { $implicit: part }" />}</li>
+      }
+    </ul>
+    <p class="note">Simulation : analyse de cohérence, pas un conseil financier. Les limites des profils sont des hypothèses fictives.</p>
+  </article>
+</section>
+
+}
+@else {
+<section class="panel act"><span class="eyebrow">Méthode</span><h2>Périodes et hypothèses</h2>
     @if (windows(); as w) {
       <div class="windows" aria-label="Fenêtres de calcul du Conseiller">
         <div class="window selection">
@@ -84,25 +109,10 @@
       </div>
     }
 
-    @if (result.impact.coherence; as coherence) {
-      @if (coherence.conflicts.length) {
-        <div class="alert ko" role="alert">
-          <strong><svg class="ico" [lucideIcon]="icons.alert" aria-hidden="true"></svg> Ce titre ne correspond pas à ton profil</strong>
-          <ul>@for (conflict of coherence.conflicts; track conflict) { <li>{{ conflict }}</li> }</ul>
-        </div>
-      } @else if (coherence.risk.status === 'ok') {
-        <div class="alert ok"><strong><svg class="ico" [lucideIcon]="icons.check" aria-hidden="true"></svg> Le risque observé reste dans les limites de ton profil</strong></div>
-      }
-    }
 
-    <h3>Analyse du Conseiller</h3>
-    <ul class="points">
-      @for (line of bulletLines(result.impact.text); track $index) {
-        <li>@for (part of line.parts; track $index) {<ng-container *ngTemplateOutlet="rich; context: { $implicit: part }" />}</li>
-      }
-    </ul>
-    <details class="disclosure">
-      <summary>Calculs et limites du profil</summary>
+@if (result.impact.assumptions) { <p>{{ result.impact.assumptions }}</p> }
+</section>
+<section class="panel act"><h2>Calculs et limites du profil</h2>
       <div class="disclosure-body">
         @if (rules().length) {
           @if (windows()?.risk; as r) {
@@ -145,10 +155,9 @@
         }
 
       </div>
-    </details>
-    <p class="note">Simulation : analyse de cohérence, pas un conseil financier. Les limites des profils sont des hypothèses fictives.</p>
-  </article>
 </section>
+
+}
 
 <ng-template #rich let-part>
   @switch (part.kind) {

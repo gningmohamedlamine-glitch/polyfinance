@@ -10,10 +10,10 @@
     <nav aria-label="Chapitres de l’analyse">
       @for (page of pages; track page.id) {
         <button type="button" class="nav-item" [class.active]="activeChapter() === page.id" [attr.aria-current]="activeChapter() === page.id ? 'location' : null"
-                [disabled]="page.id !== 'analyse' && !result()" (click)="openChapter(page.id)">
+                [attr.aria-haspopup]="page.id === 'agents' ? 'dialog' : null"
+                [disabled]="page.id !== 'analyse' && !result() && !(page.id === 'agents' && busy())" (click)="openChapter(page.id)">
           <svg class="ico" [lucideIcon]="page.icon" aria-hidden="true"></svg><span class="nav-label">{{ page.label }}</span>
-          @if (page.id === 'dossier' && result()) { <span class="badge" [attr.aria-label]="sourceCount() + ' source(s)'">{{ sourceCount() }}</span> }
-          @if (page.id === 'traces' && result()) { <span class="dot-ok" aria-label="Traces disponibles"></span> }
+          @if (page.id === 'agents' && busy()) { <span class="dot-ok" aria-label="En cours"></span> }
         </button>
       }
     </nav>
@@ -31,14 +31,7 @@
   <header class="topbar">
     <div class="chapter-position">
       <h1>{{ pageTitle() }}</h1>
-      @if (result()) {
-        <nav class="chapter-rail" aria-label="Progression dans l’analyse">
-          @for (page of pages; track page.id; let step = $index) {
-            <button type="button" [attr.aria-label]="(step + 1) + ' sur ' + pages.length + ' : ' + page.label" [title]="page.label"
-                    [attr.aria-current]="activeChapter() === page.id ? 'location' : null" (click)="openChapter(page.id)"></button>
-          }
-        </nav>
-      }
+
     </div>
     <div class="who">
       <button type="button" class="profile-chip" (click)="switcherOpen.set(!switcherOpen())"
@@ -62,6 +55,15 @@
     </div>
   </header>
 
+  <nav class="mobile-pages" aria-label="Navigation de l’analyse">
+    @for (page of pages; track page.id) {
+      <button type="button" [attr.aria-current]="activeChapter() === page.id ? 'page' : null"
+        [attr.aria-haspopup]="page.id === 'agents' ? 'dialog' : null"
+                [disabled]="page.id !== 'analyse' && !result() && !(page.id === 'agents' && busy())" (click)="openChapter(page.id)">
+        <svg class="ico" [lucideIcon]="page.icon" aria-hidden="true"></svg>{{ page.label }}
+      </button>
+    }
+  </nav>
   <main class="page">
   <section class="chapter" id="chapter-analyse" aria-labelledby="stock-picker-title">
     <section class="panel stock-picker" id="stock-picker" aria-labelledby="stock-picker-title">
@@ -152,113 +154,80 @@
           <div class="kpi"><small>Limites du profil<app-info term="limits" label="limites du profil" /></small><strong>{{ early.coherence.conflicts.length ? 'Limite dépassée' : (early.coherence.risk.status === 'ok' ? 'Dans les limites' : 'Données insuffisantes') }}</strong><span>Recherche de sources et synthèses en cours</span></div>
         </div>
       }
-      @if (kpis(); as k) {
-        <div class="kpi-row">
-          <div class="kpi" [class.neg]="k.move < 0" [class.pos]="k.move > 0">
-            <small>Variation constatée<app-info term="variation" label="variation constatée" align="left" /></small><strong><app-market-change [value]="k.move" [showIcon]="true" /></strong><span>en USD sur la sélection</span></div>
-          <div class="kpi"><small>Part propre au titre<app-info term="residual" label="part propre au titre" /></small>
-            <strong>@if (k.residual !== null) { <app-market-change [value]="k.residual" unit="pts" /> } @else { — }</strong><span>{{ k.residual !== null ? 'après l’effet du marché (bêta)' : 'bêta indisponible : il faut un an d’historique avant le début' }}</span></div>
-          <div class="kpi"><small>Publications retenues<app-info term="sources" label="publications retenues" /></small><strong class="num">{{ k.sources }}</strong><span>dont {{ k.verified }} extrait(s) vérifié(s)</span></div>
-          <div class="kpi"><small>Pistes web<app-info term="web" label="pistes web" align="right" /></small><strong class="num">{{ k.leads }}</strong><span>dont {{ k.corroborated }} corroborée(s) par plusieurs sites</span></div>
-        </div>
-      }
+
     </section>
 
     @if (busy()) {
-      @if (evidencePreview(); as evidence) {
-        @if (liveBrief(evidence); as brief) {
-          @if (brief.length) {
-            <div class="panel live-sources" aria-label="Sources recueillies">
-              <div class="live-head">
-                <h3>Sources en cours</h3>
-                <small class="muted">Le détail arrive dans le dossier.</small>
-              </div>
-              <ul>
-                @for (line of brief; track line.label + line.detail) {
-                  <li><span>{{ line.label }}</span>{{ line.detail }}</li>
-                }
-              </ul>
-            </div>
-          }
-        }
-      }
-      <app-agent-timeline
-        [steps]="progress()" [busy]="busy()" [hasResult]="false"
-        [selectionLabel]="ticker + ' · ' + fromDate() + ' → ' + toDate()"
-        [profileLabel]="persona().name"
-      />
+      <div class="running-card" role="status">
+        <span class="spinner" aria-hidden="true"></span>
+        <div><strong>Les agents préparent ton analyse</strong><p>Recherche des sources et vérification du profil en cours.</p></div>
+        <button type="button" (click)="openChapter('agents')">Suivre leur travail <span aria-hidden="true">↗</span></button>
+      </div>
     }
     @if (error()) { <p class="status" role="alert">{{ error() }}</p> }
 
-    @if (result()) {
-      <ng-container *ngTemplateOutlet="chapterNext; context: { $implicit: pages[1] }" />
-    }
   </section>
 
   @if (result(); as analysis) {
-    <section class="chapter report-chapter" id="chapter-resultat" aria-labelledby="results-title">
-      <header class="chapter-header" reportReveal>
-        <h2 id="results-title" tabindex="-1" data-chapter-title>Mouvement et impact sur le profil</h2>
-        <div class="stock-heading result-context">
-          @if (analysis.dossier?.selection; as selection) {
-            @if (selection.ticker; as symbol) { <app-stock-logo [ticker]="symbol" [compact]="true" /> }
-            @if (selection.name) { <strong>{{ selection.name }}</strong> }
-          }
-          <span class="muted">{{ resultLabel() }} · {{ persona().name }}</span>
-        </div>
-        @if (stale() || busy() || error()) { <small class="previous-result">Dernière analyse exécutée</small> }
+    <section class="chapter" id="chapter-resultat" aria-labelledby="results-title">
+      <header class="view-heading">
+        <div><span class="eyebrow">Ton analyse</span><h2 id="results-title" tabindex="-1" data-chapter-title>L’essentiel pour décider.</h2>
+          <p>{{ resultLabel() }} · {{ persona().name }}</p></div>
+        <button type="button" class="work-link" aria-haspopup="dialog" (click)="openChapter('agents')"><svg class="ico" [lucideIcon]="icons.traces" aria-hidden="true"></svg> Voir le travail des agents <span aria-hidden="true">↗</span></button>
       </header>
+      @if (stale() || busy() || error()) {
+        <div class="previous-result" role="status">Dernière analyse exécutée. Ta sélection a changé ou une nouvelle analyse est en cours.</div>
+      }
       <app-movement-analysis [analysis]="analysis" [persona]="persona()" />
-      <ng-container *ngTemplateOutlet="chapterNext; context: { $implicit: pages[2] }" />
-    </section>
-
-    <section class="chapter report-chapter" id="chapter-dossier" aria-labelledby="dossier-title">
-      <header class="chapter-header" #dossierHeader reportReveal>
-        <h2 id="dossier-title" tabindex="-1" data-chapter-title>Dossier de preuves</h2>
-      </header>
-      @defer (on viewport(dossierHeader); prefetch on idle) {
-        <app-dossier-view [analysis]="analysis" />
-      } @placeholder {
-        <p class="chapter-placeholder" role="status">Chargement du dossier…</p>
-      } @error {
-        <p class="status" role="alert">Impossible de charger le dossier de preuves.</p>
-      }
-      <ng-container *ngTemplateOutlet="chapterNext; context: { $implicit: pages[3] }" />
-    </section>
-
-    <section class="chapter report-chapter" id="chapter-controles" aria-labelledby="controls-title">
-      <header class="chapter-header" reportReveal>
-        <h2 id="controls-title" tabindex="-1" data-chapter-title>Contrôles et sensibilité</h2>
-      </header>
-      @if (analysis.controls; as controls) { <app-controls-panel [controls]="controls" /> }
-      @if (analysis.sensitivity; as sensitivity) { <app-sensitivity-panel [sensitivity]="sensitivity" /> }
-      @if (!analysis.controls && !analysis.sensitivity) {
-        <p class="panel muted" reportReveal>Aucun contrôle ni test de sensibilité pour cette analyse.</p>
-      }
-      <ng-container *ngTemplateOutlet="chapterNext; context: { $implicit: pages[4] }" />
-    </section>
-
-    <section class="chapter report-chapter" id="chapter-traces" aria-labelledby="traces-title">
-      <header class="chapter-header" #tracesHeader reportReveal>
-        <h2 id="traces-title" tabindex="-1" data-chapter-title>Traces des agents</h2>
-      </header>
-      @defer (on viewport(tracesHeader); prefetch on idle) {
-        <app-traces-view [analysis]="analysis" [steps]="progress()" />
-      } @placeholder {
-        <p class="chapter-placeholder" role="status">Chargement des traces…</p>
-      } @error {
-        <p class="status" role="alert">Impossible de charger les traces des agents.</p>
-      }
-      <ng-container *ngTemplateOutlet="chapterNext; context: { $implicit: pages[0] }" />
+      <aside class="evidence-door">
+        <span class="door-icon"><svg class="ico" [lucideIcon]="icons.dossier" aria-hidden="true"></svg></span>
+        <div><strong>Une conclusion, des éléments à vérifier.</strong><p>Retrouve les sources, les calculs et les contrôles qui soutiennent ce résultat.</p></div>
+        <button type="button" (click)="agentTab.set('dossier'); openChapter('agents')">Consulter les sources <span aria-hidden="true">→</span></button>
+      </aside>
     </section>
   }
 
-    <ng-template #chapterNext let-page>
-      <button type="button" class="chapter-next" [class.back-to-top]="page.id === 'analyse'" (click)="openChapter(page.id)">
-        <span><small>{{ page.id === 'analyse' ? 'Retour au début' : 'Chapitre suivant' }}</small><strong>{{ page.label }}</strong></span>
-        <span class="chapter-arrow"><svg class="ico" [lucideIcon]="icons.arrow" aria-hidden="true"></svg></span>
-      </button>
-    </ng-template>
+  <dialog class="agent-drawer" aria-labelledby="agents-title" aria-modal="true"
+    (cancel)="$event.preventDefault(); closeAgents()" (close)="onAgentsClosed()" (click)="onDrawerBackdrop($event)" (keydown)="onDrawerKeydown($event)">
+    @if (agentsOpen()) {
+      <header class="work-heading drawer-heading">
+        <div><span class="eyebrow">Dans les coulisses</span><h2 id="agents-title" tabindex="-1">Le travail des agents</h2>
+          <p>{{ busy() ? ticker + ' · Analyse en cours' : resultLabel() }} · {{ persona().name }}</p></div>
+        <button type="button" class="drawer-close" autofocus aria-label="Fermer le travail des agents" (click)="closeAgents()"><span aria-hidden="true">×</span></button>
+      </header>
+      <div class="drawer-body">
+      @if (busy()) {
+        <app-agent-timeline [steps]="progress()" [busy]="true" [hasResult]="false"
+          [selectionLabel]="ticker + ' · ' + fromDate() + ' → ' + toDate()" [profileLabel]="persona().name" />
+      } @else if (error()) {
+        <p class="status" role="alert">{{ error() }}</p>
+        <button type="button" (click)="closeAgents(); openChapter('analyse')">Revenir à la configuration</button>
+      }
+      @if (!busy() && result(); as analysis) {
+        <nav class="work-tabs" aria-label="Détails du travail des agents">
+          @for (tab of agentTabs; track tab.id) {
+            <button type="button" [attr.aria-pressed]="agentTab() === tab.id" (click)="agentTab.set(tab.id)">
+              <svg class="ico" [lucideIcon]="tab.icon" aria-hidden="true"></svg>{{ tab.label }}
+            </button>
+          }
+        </nav>
+        <div class="work-content">
+          @switch (agentTab()) {
+            @case ('traces') { <app-traces-view [analysis]="analysis" [steps]="progress()" /> }
+            @case ('dossier') { <app-dossier-view [analysis]="analysis" /> }
+            @case ('calculs') { <app-movement-analysis [analysis]="analysis" [persona]="persona()" view="details" /> }
+            @case ('controles') {
+              @if (analysis.controls; as controls) { <app-controls-panel [controls]="controls" /> }
+              @if (analysis.sensitivity; as sensitivity) { <app-sensitivity-panel [sensitivity]="sensitivity" /> }
+              @if (!analysis.controls && !analysis.sensitivity) { <p class="panel muted">Aucun contrôle disponible pour cette analyse.</p> }
+            }
+          }
+        </div>
+      }
+      </div>
+      <footer class="drawer-footer"><span>Sources, outils et contrôles de cette analyse</span><button type="button" (click)="closeAgents()">Fermer le panneau</button></footer>
+    }
+  </dialog>
 
     <footer class="disclaimer">Simulation : analyse de cohérence, pas un conseil financier. Profils fictifs.</footer>
   </main>

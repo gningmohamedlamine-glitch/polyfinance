@@ -19,6 +19,7 @@ export type TextPart = { text: string; kind?: 'link' | 'code' | 'strong' | 'em';
 })
 export class MovementAnalysis {
   analysis = input.required<Analysis>();
+  view = input<'result' | 'details'>('result');
   persona = input.required<Persona>();
   readonly icons = ICONS;
 

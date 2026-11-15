@@ -20,7 +20,7 @@
   --mono: 'Geist Mono', ui-monospace, Consolas, monospace;
 }
 html:has(app-explorer .shell) { scroll-padding-top: 84px; }
-html:has(app-explorer .report-ready) { scroll-snap-type: y proximity; }
+
 @media (prefers-reduced-motion: reduce) {
   html:has(app-explorer .report-ready) { scroll-snap-type: none; }
 }
@@ -50,3 +50,4 @@ a { color: var(--accent); }
 .num { font-variant-numeric: tabular-nums; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 svg.ico { width: 1.1em; height: 1.1em; flex: none; vertical-align: -0.18em; stroke-width: 2; }
+html:has(dialog.agent-drawer[open]) { overflow: hidden; }

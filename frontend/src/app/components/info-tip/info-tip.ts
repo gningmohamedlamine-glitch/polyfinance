@@ -23,7 +23,7 @@ let nextId = 0;
     .trigger svg { width: 14px; height: 14px; }
     .trigger:hover, .trigger:focus-visible { color: var(--accent); outline: none; }
     .trigger:focus-visible { box-shadow: 0 0 0 2px var(--accent-soft); }
-    .bubble { position: absolute; z-index: 50; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+    .bubble { display: none; position: absolute; z-index: 50; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
       width: max-content; max-width: 280px; padding: 9px 12px; border-radius: 10px; background: #101828; color: #fff;
       font-size: .78rem; font-weight: 400; line-height: 1.45; letter-spacing: normal; text-transform: none;
       text-align: left; white-space: normal; box-shadow: 0 8px 24px rgb(16 24 40 / .2);
@@ -32,7 +32,12 @@ let nextId = 0;
       border: 6px solid transparent; border-top-color: #101828; }
     .left .bubble { left: -8px; transform: none; } .left .bubble::after { left: 16px; }
     .right .bubble { left: auto; right: -8px; transform: none; } .right .bubble::after { left: auto; right: 10px; }
-    .tip:hover .bubble, .tip:focus-within .bubble { opacity: 1; visibility: visible; }
+    .tip:hover .bubble, .tip:focus-within .bubble { display: block; opacity: 1; visibility: visible; }
+    @media (max-width: 540px) {
+      .tip .bubble { position: fixed; left: 16px; right: 16px; bottom: 24px; transform: none;
+        width: auto; max-width: none; }
+      .bubble::after { display: none; }
+    }
   `,
 })
 export class InfoTip {
