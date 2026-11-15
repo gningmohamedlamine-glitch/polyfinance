@@ -17,6 +17,13 @@ import { AgentProgress, Analysis, MarketApi, Price, Profile, Stock } from '../..
 
 type SelectionMode = 'session' | 'range';
 
+/** Sélection gardée pour l'onglet (idée d'Adam) : un rechargement ne perd ni le profil ni les dates. */
+const STORAGE_KEY = 'alphaforge.explorer.v2';
+type SavedExplorer = {
+  entered: boolean; ticker: string; profile: Profile; mode: 'session' | 'range';
+  sessionDate?: string; rangeStart?: string; rangeEnd?: string;
+};
+
 @Component({
   selector: 'app-explorer',
   imports: [FormsModule, DatePipe, DecimalPipe, PercentPipe, LucideDynamicIcon, PriceChart, MovementAnalysis, AgentTimeline, DossierView, TracesView, Welcome, Logo],
@@ -135,6 +142,7 @@ export class Explorer {
   enter(profile: Profile) {
     this.profile = profile;
     this.entered.set(true);
+    this.persistSelection();
     // Rien ne part tout seul : seul le bouton « Exécuter l'analyse » lance les agents.
     this.stale.set(this.canAnalyze());
   }
@@ -146,6 +154,7 @@ export class Explorer {
   }
 
   leave() {
+    this.writeSaved({ entered: false });
     this.switcherOpen.set(false);
     this.clearPendingAnalysis();
     this.entered.set(false);
@@ -171,12 +180,20 @@ export class Explorer {
 
   constructor() {
     this.api.stocks().subscribe({
-      next: ({ stocks }) => { this.stocks.set(stocks); this.load('NVDA', '2024-08-29'); },
+      next: ({ stocks }) => {
+        this.stocks.set(stocks);
+        const saved = this.readSaved();
+        if (saved) {
+          this.profile = saved.profile;
+          this.entered.set(saved.entered);
+        }
+        this.load(saved?.ticker ?? 'NVDA', saved ? undefined : '2024-08-29', false, !!saved);
+      },
       error: (error) => this.showError(error),
     });
   }
 
-  load(ticker: string, date?: string, run = false) {
+  load(ticker: string, date?: string, run = false, restore = false) {
     // Les scénarios préparent la sélection ; l'analyse attend le bouton.
     this.autoRun = false;
     void run;
@@ -193,8 +210,14 @@ export class Explorer {
     this.historyRequest = this.api.history(ticker).subscribe({
       next: ({ rows }) => {
         this.rows.set(rows);
-        const session = this.pickSessionDate(rows, date);
-        this.applySession(session, true);
+        const saved = restore ? this.readSaved() : null;
+        if (saved?.ticker === ticker && saved.mode === 'range' && saved.rangeStart && saved.rangeEnd) {
+          this.mode.set('range');
+          this.applyRange(saved.rangeStart, saved.rangeEnd);
+          return;
+        }
+        const preferred = date ?? (saved?.ticker === ticker ? saved.sessionDate : undefined);
+        this.applySession(this.pickSessionDate(rows, preferred), true);
       },
       error: (error) => this.showError(error),
     });
@@ -301,6 +324,7 @@ export class Explorer {
 
   selectProfile(profile: Profile) {
     this.profile = profile;
+    this.persistSelection();
     // Autre profil : l'analyse attend le bouton, comme toute autre modification.
     if (this.busy()) { this.cancelAnalysis(); this.busy.set(false); }
     this.stale.set(this.canAnalyze());
@@ -319,6 +343,7 @@ export class Explorer {
   private applySession(date: string, run = false) {
     this.sessionDate = date;
     this.selection.set({ kind: 'session', date });
+    this.persistSelection();
     this.clearPendingAnalysis();
     if (!run) return;
     if (date === this.rows()[0]?.date) {
@@ -337,6 +362,7 @@ export class Explorer {
     const [lo, hi] = start <= end ? [startDate, endDate] : [endDate, startDate];
     this.rangeStart = startDate;
     this.rangeEnd = endDate;
+    this.persistSelection();
     this.clearPendingAnalysis();
     if (lo === hi) {
       this.mode.set('session');
@@ -422,5 +448,28 @@ export class Explorer {
   private showError(error: HttpErrorResponse) {
     this.busy.set(false);
     this.error.set(error.error?.error ?? 'Le service est indisponible. Réessaie dans un instant.');
+  }
+
+  private persistSelection() {
+    if (!this.rows().length) return;
+    this.writeSaved({
+      entered: this.entered(), ticker: this.ticker, profile: this.profile, mode: this.mode(),
+      sessionDate: this.sessionDate, rangeStart: this.rangeStart, rangeEnd: this.rangeEnd,
+    });
+  }
+
+  private writeSaved(patch: Partial<SavedExplorer>) {
+    try {
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ ...this.readSaved(), ...patch }));
+    } catch { /* navigation privée */ }
+  }
+
+  private readSaved(): SavedExplorer | null {
+    try {
+      const raw = sessionStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) as SavedExplorer : null;
+    } catch {
+      return null;
+    }
   }
 }

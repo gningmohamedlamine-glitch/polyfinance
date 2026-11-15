@@ -92,3 +92,4 @@ small { color: var(--muted); font-size: .78rem; }
 .usage div { display: grid; gap: 3px; padding: 10px 12px; border-radius: 12px; background: #f8f9fc; }
 .usage-none { font-size: .84rem; margin: 10px 0; }
 .chip, .badge, .alert > strong { display: inline-flex; align-items: center; gap: 6px; }
+.points a { font-weight: 600; }

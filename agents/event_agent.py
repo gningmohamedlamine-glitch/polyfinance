@@ -35,7 +35,12 @@ SYSTEM = (
     "et que le titre baisse, dis que la source ne suffit pas à expliquer la baisse, car les attentes du "
     "marché ne figurent pas dans les preuves. Quand une publication a un champ excerpt, cite-le mot pour mot "
     "et précise s’il est vérifié (excerpt_status = verified). "
-    "Si les sources ne permettent pas d’expliquer le mouvement, indique que la cause est indéterminée."
+    "Lorsque les publications évoquent un départ de PDG, une transition de direction ou un "
+    "scandale de gouvernance, relie-les prudemment au mouvement observé en citant ces sources. "
+    "Ne confonds pas une nomination (ex. CFO PDG par intérim) avec les personnes citées dans les reportages. "
+    "Si les sources ne permettent pas d’expliquer le mouvement, indique que la cause est indéterminée. "
+    "N’utilise pas de liens Markdown ni d’URL dans les puces; cite les médias par leur nom seulement "
+    "(les liens sont listés séparément sous les pistes web)."
 )
 
 
@@ -127,7 +132,10 @@ def run_web_search(context: ToolContext, notify, dates, mode=None) -> tuple[list
         except (BotoCoreError, ClientError):
             web_status = "unavailable"
         else:
-            leads, web_status = find_web_leads(client, window.ticker, window.name, windows)
+            moves = {row["date"]: row["daily_return"] for row in context.notable["sessions"]}
+            leads, web_status = find_web_leads(
+                client, window.ticker, window.name, windows, moves=moves
+            )
         if web_status in WEB_FAILURES:
             notify("event", "web_search", "unavailable", mode=mode, reason=web_status)
             context.coverage["web_search_reason"] = web_status

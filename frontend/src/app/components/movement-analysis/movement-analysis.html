@@ -46,7 +46,9 @@
 
     <h3>Synthèse de l’Enquêteur</h3>
     <ul class="points">
-      @for (bullet of bullets(result.event.text); track $index) { <li>{{ bullet }}</li> }
+      @for (line of bulletLines(result.event.text); track $index) {
+        <li>@for (part of line.parts; track $index) {@if (part.href) {<a [href]="part.href" target="_blank" rel="noopener">{{ part.text }}</a>} @else {{{ part.text }}}}</li>
+      }
     </ul>
 
     <h3>Preuves <small class="count">{{ verifiedCount() }} extrait(s) vérifié(s) · {{ sourceCount() }} source(s) · {{ webLeads().length }} piste(s) web</small></h3>
@@ -75,9 +77,12 @@
           <a [href]="lead.url" target="_blank" rel="noopener">{{ lead.title }}</a>
           <span class="badge warn">Piste web non vérifiée</span>
         </div>
-        <small>Publié le {{ lead.published_date }}@if (lead.after_session) { · après la séance : ne peut pas l’expliquer }</small>
-        <p class="summary">{{ lead.summary }}</p>
+        <small>Publié le {{ lead.published_date }}@if (lead.source_type) { · {{ lead.source_type }} }@if (lead.related_count && lead.related_count > 1) { · {{ lead.related_count }} articles regroupés }@if (lead.after_session) { · après la séance : ne peut pas l’expliquer }</small>
+        <p class="summary">{{ leadLine(lead) }}</p>
       </div>
+    }
+    @if (!webLeads().length && result.dossier?.coverage?.web_search === 'no_relevant_sources') {
+      <p class="empty">Des articles datés ont été trouvés sur le web, mais aucun ne paraît pertinent pour ce mouvement.</p>
     }
   </article>
 
@@ -144,7 +149,9 @@
 
     <h3>Analyse du Conseiller</h3>
     <ul class="points">
-      @for (bullet of bullets(result.impact.text); track $index) { <li>{{ bullet }}</li> }
+      @for (line of bulletLines(result.impact.text); track $index) {
+        <li>@for (part of line.parts; track $index) {@if (part.href) {<a [href]="part.href" target="_blank" rel="noopener">{{ part.text }}</a>} @else {{{ part.text }}}}</li>
+      }
     </ul>
     <p class="note">Simulation : analyse de cohérence, pas un conseil financier. Les limites des profils sont des hypothèses fictives.</p>
   </article>

@@ -79,10 +79,20 @@ export class PriceChart {
     const horizon = this.horizon();
     const counts: Record<string, number> = { '5J': 6, '1M': 22, '6M': 127, '1A': 253, '5A': 1261 };
     const count = horizon === 'YTD' || horizon === 'Max' ? rows.length : counts[horizon];
-    const end = horizon === 'Max' || selected < 0 ? rows.length - 1
+    let end = horizon === 'Max' || selected < 0 ? rows.length - 1
       : Math.min(rows.length - 1, selected + (horizon === '1M' ? 8 : 0));
     const yearStart = rows.findIndex(row => row.date.startsWith(rows[end]?.date.slice(0, 4) ?? ''));
-    const start = horizon === 'YTD' ? Math.max(0, yearStart) : Math.max(0, end - count + 1);
+    let start = horizon === 'YTD' ? Math.max(0, yearStart) : Math.max(0, end - count + 1);
+    if (this.rangeMode() && sel.kind === 'range') {
+      const startIndex = rows.findIndex(row => row.date === sel.startDate);
+      const endIndex = rows.findIndex(row => row.date === sel.endDate);
+      if (startIndex >= 0 && endIndex >= 0) {
+        const lo = Math.min(startIndex, endIndex);
+        const hi = Math.max(startIndex, endIndex);
+        start = Math.min(start, lo);
+        end = Math.max(end, hi);
+      }
+    }
     return rows.slice(start, end + 1);
   });
 
@@ -144,9 +154,14 @@ export class PriceChart {
     const start = pts.find(point => point.date === range.startDate);
     const end = pts.find(point => point.date === range.endDate);
     if (!pts.length || range.endDate < pts[0].date || range.startDate > pts.at(-1)!.date) return null;
-    const x1 = start?.x ?? pts[0].x;
-    const x2 = end?.x ?? pts.at(-1)!.x;
-    return { x1, x2, startDate: range.startDate, endDate: range.endDate };
+    const raw1 = start?.x ?? pts[0].x;
+    const raw2 = end?.x ?? pts.at(-1)!.x;
+    return {
+      x1: Math.min(raw1, raw2),
+      x2: Math.max(raw1, raw2),
+      startDate: range.startDate,
+      endDate: range.endDate,
+    };
   });
 
   caption = computed(() => {
