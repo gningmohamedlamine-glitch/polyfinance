@@ -3,12 +3,13 @@
 name: CI
 
 on:
+  workflow_call:
   push:
     branches: [main]
   pull_request:
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -32,6 +33,12 @@ jobs:
           cache: pip
           cache-dependency-path: backend/requirements.txt
       - run: pip install -r backend/requirements.txt
+      - name: Valider les templates CloudFormation et les scripts
+        run: |
+          pip install 'cfn-lint>=1.40,<2'
+          cfn-lint deploy/registry.yml deploy/service.yml deploy/github-oidc.yml
+          bash -n deploy/deploy.sh
+          python -m unittest discover -s deploy/tests -v
       - name: Tests des agents (garde-fous, ESG, Contrôleur)
         run: python -m unittest discover -s agents/tests -t . -v
       - name: Tests du backend Django

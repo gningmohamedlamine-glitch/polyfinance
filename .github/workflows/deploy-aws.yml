@@ -5,18 +5,35 @@ on:
 
 permissions:
   contents: read
-  id-token: write
 
 concurrency:
   group: alphaforge-workshop-deploy
   cancel-in-progress: false
 
 jobs:
+  verify:
+    uses: ./.github/workflows/ci.yml
+
   deploy:
+    needs: verify
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+      STACK_PREFIX: ${{ vars.STACK_PREFIX || 'alphaforge' }}
     steps:
       - uses: actions/checkout@v4
+      - name: Vérifier la configuration
+        env:
+          AWS_DEPLOY_ROLE_ARN: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          BEDROCK_MODEL_ID: ${{ vars.BEDROCK_MODEL_ID }}
+        run: |
+          : "${AWS_DEPLOY_ROLE_ARN:?Définir la variable GitHub AWS_DEPLOY_ROLE_ARN}"
+          : "${BEDROCK_MODEL_ID:?Définir la variable GitHub BEDROCK_MODEL_ID}"
       # deploy.sh vérifie la réponse finale avec python.
       - uses: actions/setup-python@v5
         with:
@@ -24,16 +41,11 @@ jobs:
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
-          aws-region: us-east-1
-      # Textes des sources du catalogue (BLS, Fed, SEC) pour vérifier les extraits cités.
-      # La SEC exige un User-Agent avec un nom et un courriel : variable GitHub SEC_USER_AGENT.
-      - name: Télécharger les sources du catalogue
-        if: vars.SEC_USER_AGENT != ''
-        env:
-          SEC_USER_AGENT: ${{ vars.SEC_USER_AGENT }}
-        run: python scripts/fetch_sources.py || echo "::warning::Sources non téléchargées : extraits non vérifiés"
+          aws-region: ${{ env.AWS_REGION }}
+      # Les sources sont versionnées : déployer les mêmes données que celles testées.
       - name: Construire, publier et vérifier
         env:
           BEDROCK_MODEL_ID: ${{ vars.BEDROCK_MODEL_ID }}
+          SEC_USER_AGENT: ${{ vars.SEC_USER_AGENT }}
           IMAGE_TAG: ${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
         run: bash deploy/deploy.sh

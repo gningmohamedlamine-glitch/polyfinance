@@ -4,6 +4,10 @@ Parameters:
   BedrockModelId:
     Type: String
     MinLength: 1
+  SecUserAgent:
+    Type: String
+    Default: ''
+    Description: Nom et courriel de contact pour les téléchargements SEC
 
 Resources:
   Cluster:
@@ -58,12 +62,17 @@ Resources:
               - Effect: Allow
                 Action: bedrock:InvokeTool
                 Resource: !Sub arn:${AWS::Partition}:bedrock::${AWS::AccountId}:system-tool/amazon.nova_grounding
+              - Effect: Allow
+                Action: bedrock-agentcore:InvokeWebSearch
+                Resource: !Sub arn:${AWS::Partition}:bedrock-agentcore:${AWS::Region}:aws:tool/web-search.v1
 
   Dashboard:
     Type: AWS::ECS::ExpressGatewayService
     Properties:
       Cluster: !Ref Cluster
       ServiceName: alphaforge
+      Cpu: '1024'
+      Memory: '2048'
       ExecutionRoleArn: !GetAtt ExecutionRole.Arn
       InfrastructureRoleArn: !GetAtt InfrastructureRole.Arn
       TaskRoleArn: !GetAtt TaskRole.Arn
@@ -81,6 +90,12 @@ Resources:
             Value: !Ref BedrockModelId
           - Name: MARKET_WEB_SEARCH
             Value: '1'
+          - Name: MARKET_WEB_SEARCH_AGENTCORE
+            Value: '1'
+          - Name: MARKET_ALLOW_LOCAL
+            Value: '0'
+          - Name: SEC_USER_AGENT
+            Value: !Ref SecUserAgent
 
 Outputs:
   Endpoint:

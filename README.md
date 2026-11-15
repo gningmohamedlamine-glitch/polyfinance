@@ -45,6 +45,10 @@ Le mode local fonctionne avec le catalogue seul. Pour utiliser un profil créé 
 
 ## Déploiement AWS
 
+Voir **[le guide de la pipeline](deploy/README.md)** pour le bootstrap OIDC, les variables
+GitHub, le lancement, les contrôles et le retour à une image précédente. Le workflow de
+déploiement exécute d'abord toute la CI sur le même commit.
+
 Le compte de l’atelier doit autoriser CloudFormation, ECR, ECS Express Mode et les opérations IAM nécessaires à la création et à l’utilisation des rôles du service. Le modèle Bedrock ou profil d’inférence doit être invocable depuis `us-east-1`. Le modèle choisi et les permissions du compte se vérifient avec les identifiants temporaires de l’atelier.
 
 - **Depuis GitHub Actions** — Configurer le fournisseur OIDC GitHub et un rôle de déploiement AWS avec une condition de confiance ciblant ce dépôt et la branche autorisée. Définir ensuite les variables du dépôt `AWS_DEPLOY_ROLE_ARN` et `BEDROCK_MODEL_ID`, puis lancer **Déployer AlphaForge sur AWS**. [Guide officiel OIDC](https://docs.github.com/en/actions/how-tos/secure-your-work/security-harden-deployments/oidc-in-aws).
