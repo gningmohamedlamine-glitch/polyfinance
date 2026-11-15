@@ -1,0 +1,26 @@
+@let c = controls();
+<section class="panel controls" id="controles" aria-label="Contrôles du Contrôleur">
+  <header>
+    <div>
+      <span class="eyebrow">Contrôleur · gouvernance</span>
+      <h2><svg class="ico" [lucideIcon]="icons.shield" aria-hidden="true"></svg> Contrôles avant affichage</h2>
+    </div>
+    <span class="verdict" [attr.data-status]="c.verdict">
+      <svg class="ico" [lucideIcon]="statusIcon[c.verdict]" aria-hidden="true"></svg>
+      {{ verdictLabel[c.verdict] }} · {{ counts().ok }}/{{ counts().total }}
+    </span>
+  </header>
+  <ul>
+    @for (control of c.controls; track control.id) {
+      <li [attr.data-status]="control.status">
+        <svg class="ico" [lucideIcon]="statusIcon[control.status]" aria-hidden="true"></svg>
+        <div>
+          <strong>{{ control.label }}</strong>
+          <span>{{ control.detail }}</span>
+        </div>
+        <small>{{ statusLabel[control.status] }}</small>
+      </li>
+    }
+  </ul>
+  <p class="notice">{{ c.notice }}</p>
+</section>

@@ -6,6 +6,7 @@ from threading import Lock
 from time import perf_counter
 
 from agents.dossier import SCHEMA, selection_payload
+from agents.governance import run_controls
 from agents.events import catalog_fingerprint, publication_coverage, session_window
 from agents.main import event_agent, impact_agent
 
@@ -95,7 +96,11 @@ def run_analysis(window, profile, scenario, progress=None):
     notify("impact", "stage", "running")
     impact = impact_agent(dossier, profile, scenario, notify)
     notify("impact", "stage", "done", mode=impact["mode"])
+    notify("governance", "stage", "running")
+    controls = run_controls(dossier, event, impact, window.end_close_date)
+    notify("governance", "stage", "done", mode="local")
     return {
+        "controls": controls,
         "movement": movement_legacy(window, returns),
         "dossier": dossier,
         "event": event,

@@ -3,6 +3,7 @@ import { Component, computed, input, output } from '@angular/core';
 import { LucideDynamicIcon } from '@lucide/angular';
 import { ICONS } from '../../icons';
 import { EsgPanel } from '../esg-panel/esg-panel';
+import { ControlsPanel } from '../controls-panel/controls-panel';
 import { Persona } from '../../personas';
 import { AgentDecision, Analysis } from '../../services/market-api';
 
@@ -18,7 +19,7 @@ const TOOL_LABELS: Record<string, string> = {
 
 @Component({
   selector: 'app-movement-analysis',
-  imports: [CurrencyPipe, DecimalPipe, PercentPipe, LucideDynamicIcon, EsgPanel],
+  imports: [CurrencyPipe, DecimalPipe, PercentPipe, LucideDynamicIcon, EsgPanel, ControlsPanel],
   templateUrl: './movement-analysis.html',
   styleUrl: './movement-analysis.css',
 })

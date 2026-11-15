@@ -47,6 +47,12 @@
           ? 'Rendements, événements et sources prêts pour l’agent d’impact.'
           : 'En attente des rendements, événements et sources.' }}</span>
       }
+      @case ('governance') {
+        <strong>Contrôleur</strong>
+        <span>{{ nodeStates().governance === 'done'
+          ? 'Contrôles en code, sans modèle : contraintes du profil, aucun conseil de transaction, chiffres cités, sources, données futures.'
+          : 'En attente du résultat des deux agents.' }}</span>
+      }
       @case ('output') {
         <strong>Résultat</strong>
         <span>{{ hasResult() ? 'Analyse et impact disponibles ci-dessous.' : 'Résultat en attente.' }}</span>

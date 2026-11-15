@@ -22,7 +22,7 @@ export interface MarketModel {
   residual_pp?: number;
 }
 export interface AgentDecision {
-  agent: 'event' | 'impact';
+  agent: 'event' | 'impact' | 'governance';
   tool: string;
   arguments: Record<string, unknown>;
   accepted: boolean;
@@ -48,7 +48,7 @@ export interface ToolTrace {
 }
 export interface AgentProgress {
   kind: 'progress';
-  agent: 'event' | 'impact';
+  agent: 'event' | 'impact' | 'governance';
   action: string;
   status: 'running' | 'done' | 'unavailable';
   count?: number | null;
@@ -116,8 +116,12 @@ export interface Analysis {
     scenario?: Partial<Record<'position_cad' | 'purchase_cad' | 'portfolio_cad' | 'withdrawal_cad', number>>;
   };
   trace?: ToolTrace[];
+  controls?: Controls;
 }
 export type Profile = 'amira' | 'robert' | 'mateo';
+
+export interface Control { id: string; label: string; status: 'ok' | 'warn' | 'fail' | 'info'; detail: string }
+export interface Controls { verdict: 'ok' | 'warn' | 'fail'; controls: Control[]; notice: string }
 
 export interface EsgSnapshot {
   symbol: string; return_12m: number | null; annual_volatility: number; max_drawdown: number;

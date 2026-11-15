@@ -150,6 +150,8 @@
   </article>
 </section>
 
+@if (analysis().controls; as controls) { <app-controls-panel [controls]="controls" /> }
+
 @if (decisions().length) {
   <section class="panel decisions" id="decisions">
     <header class="act-title">

@@ -2,7 +2,7 @@ import { Component, computed, input, signal } from '@angular/core';
 import {
   LucideCalendarRange, LucideChartNoAxesCombined, LucideFileSearch, LucideUserRound,
   LucideCircleCheck, LucideSearch, LucideGlobe, LucideCalculator, LucideDatabase,
-  LucideTrendingDown, LucideScale, LucideCheck, LucideCircleAlert, LucideDynamicIcon, LucideLoaderCircle,
+  LucideTrendingDown, LucideScale, LucideCheck, LucideCircleAlert, LucideDynamicIcon, LucideLoaderCircle, LucideShieldCheck,
 } from '@lucide/angular';
 import { AgentProgress } from '../../services/market-api';
 
@@ -22,7 +22,7 @@ export class AgentTimeline {
   hasResult = input.required<boolean>();
   icons = {
     selection: LucideCalendarRange.icon, event: LucideChartNoAxesCombined.icon, dossier: LucideFileSearch.icon,
-    impact: LucideUserRound.icon, output: LucideCircleCheck.icon, check: LucideCheck.icon,
+    impact: LucideUserRound.icon, governance: LucideShieldCheck.icon, output: LucideCircleCheck.icon, check: LucideCheck.icon,
     warning: LucideCircleAlert.icon, tool: LucideCalculator.icon, spinner: LucideLoaderCircle.icon,
   };
 
@@ -64,18 +64,21 @@ export class AgentTimeline {
     { id: 'event', label: 'Enquêteur' },
     { id: 'dossier', label: 'Dossier' },
     { id: 'impact', label: 'Conseiller' },
+    { id: 'governance', label: 'Contrôleur' },
     { id: 'output', label: 'Résultat' },
   ] as const;
 
   readonly expanded = signal<(typeof this.nodes)[number]['id'] | null>(null);
   readonly market = computed(() => this.stage('event'));
   readonly impact = computed(() => this.stage('impact'));
+  readonly governance = computed(() => this.stage('governance'));
 
   readonly nodeStates = computed<Record<(typeof this.nodes)[number]['id'], PipelineState>>(() => ({
     selection: 'done',
     event: this.state(this.market()),
     dossier: this.market()?.status === 'done' ? 'done' : 'waiting',
     impact: this.state(this.impact()),
+    governance: this.state(this.governance()),
     output: this.hasResult() ? 'done' : 'waiting',
   }));
 
@@ -87,6 +90,7 @@ export class AgentTimeline {
     const runningTool = this.actions(agent).find(step => step.status === 'running');
     if (runningTool) return this.labels[runningTool.action] ?? runningTool.action;
     if (this.impact()?.status === 'running') return 'Le Conseiller analyse ton profil';
+    if (this.governance()?.status === 'running') return 'Le Contrôleur vérifie le résultat';
     if (this.market()?.status === 'running') return 'L’Enquêteur cherche la cause du mouvement';
     return 'Analyse en cours';
   });
