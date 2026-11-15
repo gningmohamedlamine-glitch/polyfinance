@@ -66,6 +66,24 @@
       <div><strong>{{ persona().name }}, {{ persona().age }} ans</strong><small>{{ persona().risk }} · horizon {{ persona().horizon }}</small></div>
     </div>
 
+    @if (windows(); as w) {
+      <div class="windows" aria-label="Fenêtres de calcul du Conseiller">
+        <div class="window selection">
+          <span class="window-tag">Ta sélection</span>
+          <strong>{{ w.selection.start | date:'d MMM y':'UTC' }} → {{ w.selection.end | date:'d MMM y':'UTC' }}</strong>
+          <small>Sert à : la simulation de position</small>
+        </div>
+        @if (w.risk) {
+          <div class="window risk">
+            <span class="window-tag">12 mois avant la fin</span>
+            <strong>{{ w.risk.start | date:'d MMM y':'UTC' }} → {{ w.risk.end | date:'d MMM y':'UTC' }}</strong>
+            <small>Sert à : risque et limites du profil{{ result.impact.esg ? ', ESG' : '' }}</small>
+          </div>
+        }
+        <p class="window-note">Le Conseiller juge le titre <strong>au {{ w.selection.end | date:'d MMM y':'UTC' }}</strong>, avec l’année qui précède ; seule la simulation dépend du début de ta sélection.<app-info term="windows" label="fenêtres de calcul" align="right" /></p>
+      </div>
+    }
+
     @if (result.impact.coherence; as coherence) {
       @if (coherence.conflicts.length) {
         <div class="alert ko" role="alert">
@@ -87,6 +105,9 @@
       <summary>Calculs et limites du profil</summary>
       <div class="disclosure-body">
         @if (rules().length) {
+          @if (windows()?.risk; as r) {
+            <h3>Risque du titre <span class="window-chip risk">du {{ r.start | date:'d MMM y':'UTC' }} au {{ r.end | date:'d MMM y':'UTC' }}</span></h3>
+          }
           <div class="rules">
             @for (rule of rules(); track rule.title) {
               <div class="rule" [class.breach]="rule.breach">
@@ -103,7 +124,7 @@
         @if (result.impact.esg; as esg) { <app-esg-panel [esg]="esg" /> }
 
         @if (exposures().length) {
-          <h3>Variation simulée d’une position sur la sélection</h3>
+          <h3>Variation simulée d’une position <span class="window-chip selection">sur ta sélection</span></h3>
           <div class="exposures">
             @for (e of exposures(); track e.amount) {
               <div><small>Position de <span class="num">{{ e.amount | number:'1.0-0' }} $</span></small>

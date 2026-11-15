@@ -1,4 +1,4 @@
-import { CurrencyPipe, DecimalPipe, PercentPipe } from '@angular/common';
+import { CurrencyPipe, DatePipe, DecimalPipe, PercentPipe } from '@angular/common';
 import { Component, computed, input } from '@angular/core';
 import { ReportReveal } from '../../report-reveal';
 import { LucideDynamicIcon } from '@lucide/angular';
@@ -14,7 +14,7 @@ import { InfoTip } from '../info-tip/info-tip';
 
 @Component({
   selector: 'app-movement-analysis',
-  imports: [InfoTip, CurrencyPipe, DecimalPipe, PercentPipe, LucideDynamicIcon, EsgPanel, MarketChange, ReportReveal],
+  imports: [InfoTip, CurrencyPipe, DatePipe, DecimalPipe, PercentPipe, LucideDynamicIcon, EsgPanel, MarketChange, ReportReveal],
   templateUrl: './movement-analysis.html',
   styleUrl: './movement-analysis.css',
 })
@@ -65,6 +65,17 @@ export class MovementAnalysis {
         breach: coherence.sector.after > coherence.limits.max_sector_weight, fill: coherence.sector.after,
         mark: coherence.limits.max_sector_weight }] : []),
     ];
+  });
+
+  /** Deux fenêtres distinctes : la sélection (simulation) et les 12 mois avant sa fin (risque, ESG). */
+  windows = computed(() => {
+    const selection = this.analysis().dossier?.selection;
+    if (!selection) return null;
+    const risk = this.analysis().impact.coherence?.risk;
+    return {
+      selection: { start: selection.start_close_date, end: selection.end_close_date },
+      risk: risk?.status === 'ok' && risk.start_date && risk.end_date ? { start: risk.start_date, end: risk.end_date } : null,
+    };
   });
 
   /** Même rendement en CAD appliqué à trois tailles de position fictives (aucune recommandation). */

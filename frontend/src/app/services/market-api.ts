@@ -37,7 +37,7 @@ export interface Coherence {
   conflicts: string[];
   limits: { annual_volatility: number; max_drawdown: number; max_weight: number; horizon_years: number; max_sector_weight?: number };
   sector?: { sector: string | null; is_tech: boolean; before: number; after: number; assumption: string } | null;
-  risk: { status: string; annual_volatility?: number; max_drawdown?: number };
+  risk: { status: string; annual_volatility?: number; max_drawdown?: number; start_date?: string; end_date?: string };
   notice: string;
 }
 export interface ToolTrace {

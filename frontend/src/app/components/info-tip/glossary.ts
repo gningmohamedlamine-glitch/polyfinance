@@ -16,6 +16,7 @@ export const GLOSSARY = {
   controls: 'Vérifications automatiques en code, sans IA, avant l’affichage : limites du profil, aucun conseil d’achat ou de vente, chiffres conformes aux données, sources, aucune donnée future.',
   prudence: 'Si aucune source datée n’explique le mouvement, l’Enquêteur écrit « cause indéterminée » plutôt que d’inventer une explication.',
   tokens: 'Volume de texte lu (entrée) et écrit (sortie) par le modèle, tel que renvoyé par Amazon Bedrock. Aucun coût n’est estimé.',
+  windows: 'Deux fenêtres différentes. Ta sélection sert à simuler le gain ou la perte d’une position. Le risque (volatilité, pire baisse) et l’ESG se mesurent toujours sur les 12 mois avant la fin de la sélection, sans aucune donnée future, pour juger le titre à cette date.',
   decisions: 'Chaque appel d’outil choisi par un agent, avec sa justification. Le code accepte ou refuse chaque appel avant de l’exécuter.',
 } as const;
 

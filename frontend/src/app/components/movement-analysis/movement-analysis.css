@@ -99,3 +99,17 @@ small { color: var(--muted); font-size: .78rem; }
 .disclosure summary small { display: inline-block; margin-left: 4px; }
 .disclosure-body { display: grid; gap: 12px; margin-top: 12px; }
 .disclosure.technical { border-top: 1px solid var(--border); padding-top: 16px; }
+
+/* Fenêtres de calcul du Conseiller */
+.windows { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.window { display: grid; gap: 3px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border); border-left-width: 4px; }
+.window.selection { border-left-color: var(--accent); background: var(--accent-soft); }
+.window.risk { border-left-color: #b45309; background: #fffbeb; }
+.window-tag { font-size: .68rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.window strong { font-size: .92rem; font-variant-numeric: tabular-nums; }
+.window small { font-size: .76rem; color: var(--muted); }
+.window-note { grid-column: 1 / -1; margin: 0; font-size: .8rem; line-height: 1.5; color: var(--muted); }
+.window-chip { display: inline-block; margin-left: 6px; padding: 2px 8px; border-radius: 999px; font-size: .72rem; font-weight: 600; vertical-align: middle; }
+.window-chip.selection { background: var(--accent-soft); color: var(--accent); }
+.window-chip.risk { background: #fef3c7; color: #92400e; }
+@media (max-width: 720px) { .windows { grid-template-columns: 1fr; } }
