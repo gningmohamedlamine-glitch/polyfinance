@@ -102,68 +102,42 @@
         <div>
           <span class="eyebrow">Acte 1 · La séance</span>
           <h2>{{ stockName() }} <span class="muted">({{ ticker }})</span></h2>
-          <p class="muted">{{ mode() === 'session'
-            ? 'Choisis une journée de bourse dans la liste ou clique sur le graphique, puis exécute l’analyse.'
-            : 'Choisis le début et la fin, ou glisse sur le graphique, puis exécute l’analyse.' }}</p>
+          <p class="muted">Clique sur un jour du graphique pour l’analyser (de la veille à ce jour), glisse pour une période, ou choisis les dates.</p>
         </div>
         <div class="controls">
-          <div class="field">
-            <span class="field-label">J’analyse</span>
-            <fieldset class="mode" role="radiogroup" aria-label="Ce que j’analyse">
-              <legend class="sr-only">Ce que j’analyse</legend>
-              <label [class.on]="mode() === 'session'"><input type="radio" name="selection-mode" [value]="'session'"
-                [checked]="mode() === 'session'" (change)="setMode('session')">
-                <svg class="ico" [lucideIcon]="icons.day" aria-hidden="true"></svg> Une journée</label>
-              <label [class.on]="mode() === 'range'"><input type="radio" name="selection-mode" [value]="'range'"
-                [checked]="mode() === 'range'" (change)="setMode('range')">
-                <svg class="ico" [lucideIcon]="icons.range" aria-hidden="true"></svg> Une période</label>
-            </fieldset>
-          </div>
-          @if (mode() === 'session') {
-            <label class="field"><span class="field-label">Date</span>
-              <select [ngModel]="sessionDate" (ngModelChange)="onSessionDateChange($event)" [disabled]="!rows().length">
-                @for (row of rows(); track row.date; let first = $first) {
-                  @if (!first) { <option [value]="row.date">{{ row.date | date:'EEE d MMM y':'UTC' }}</option> }
-                }
-              </select>
-            </label>
-          } @else {
-            <label class="field"><span class="field-label">Du</span>
-              <select [ngModel]="rangeStart" (ngModelChange)="onRangeStartChange($event)" [disabled]="!rows().length">
-                @for (row of rows(); track row.date) { <option [value]="row.date">{{ row.date | date:'d MMM y':'UTC' }}</option> }
-              </select>
-            </label>
-            <label class="field"><span class="field-label">Au</span>
-              <select [ngModel]="rangeEnd" (ngModelChange)="onRangeEndChange($event)" [disabled]="!rows().length">
-                @for (row of rows(); track row.date) { <option [value]="row.date">{{ row.date | date:'d MMM y':'UTC' }}</option> }
-              </select>
-            </label>
-          }
+          <label class="field"><span class="field-label">Du</span>
+            <input type="date" [value]="fromDate()" [min]="minDate()" [max]="maxDate()"
+              (change)="onFromChange($any($event.target).value)" [disabled]="!rows().length">
+          </label>
+          <label class="field"><span class="field-label">Au</span>
+            <input type="date" [value]="toDate()" [min]="minDate()" [max]="maxDate()"
+              (change)="onToChange($any($event.target).value)" [disabled]="!rows().length">
+          </label>
         </div>
       </div>
       <app-price-chart
         [rows]="rows()"
-        [rangeMode]="mode() === 'range'"
         [selection]="selection()"
         (selectionChange)="onChartSelection($event)"
       />
-      @if (mode() === 'range' && !rangeInvalid()) {
-        <p class="range-note">Comparaison&nbsp;: clôture du {{ rangeStart }} → clôture du {{ rangeEnd }}.</p>
+      @if (fromDate() && toDate() && !rangeInvalid()) {
+        <p class="range-note">Comparaison&nbsp;: clôture du {{ fromDate() | date:'d MMM y':'UTC' }} → clôture du {{ toDate() | date:'d MMM y':'UTC' }}
+          ({{ mode() === 'session' ? 'une journée' : 'une période' }}).</p>
       }
     </section>
 
     @if (busy() || progress().length) {
       <app-agent-timeline
         [steps]="progress()" [busy]="busy()" [hasResult]="result() !== null"
-        [selectionLabel]="ticker + ' · ' + (mode() === 'range' ? rangeStart + ' → ' + rangeEnd : sessionDate)"
+        [selectionLabel]="ticker + ' · ' + fromDate() + ' → ' + toDate()"
         [profileLabel]="persona().name"
       />
     }
     @if (error()) { <p class="status" role="alert">{{ error() }}</p> }
     @if (stale() && !busy() && !error()) {
       <div class="panel pending">
-        <strong>Sélection prête : {{ ticker }} · {{ mode() === 'range' ? rangeStart + ' → ' + rangeEnd : sessionDate }}</strong>
-        <span class="muted">Les deux agents analyseront cette séance pour {{ persona().name }}.</span>
+        <strong>Sélection prête : {{ ticker }} · {{ (fromDate() | date:'d MMM y':'UTC') + ' → ' + (toDate() | date:'d MMM y':'UTC') }}</strong>
+        <span class="muted">Les deux agents analyseront ce mouvement pour {{ persona().name }}.</span>
         <button type="button" class="primary" (click)="run()"><svg class="ico" [lucideIcon]="icons.play" aria-hidden="true"></svg> Exécuter l’analyse</button>
       </div>
     }

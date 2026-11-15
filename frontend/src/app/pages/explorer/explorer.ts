@@ -194,6 +194,58 @@ export class Explorer {
     this.applyRange(this.rangeStart, this.rangeEnd);
   }
 
+  /** Bornes affichées dans les calendriers : une séance s'affiche « de la veille à ce jour ». */
+  fromDate() {
+    if (this.mode() === 'range') return this.rangeStart;
+    const rows = this.rows();
+    const i = rows.findIndex(row => row.date === this.sessionDate);
+    return i > 0 ? rows[i - 1].date : '';
+  }
+
+  toDate() {
+    return this.mode() === 'range' ? this.rangeEnd : this.sessionDate;
+  }
+
+  minDate() { return this.rows()[0]?.date ?? ''; }
+  maxDate() { return this.rows().at(-1)?.date ?? ''; }
+
+  /** Ramène une date de calendrier (week-end, férié) à la dernière séance connue. */
+  private snapIndex(date: string) {
+    const rows = this.rows();
+    let index = 0;
+    for (let i = 0; i < rows.length; i++) if (rows[i].date <= date) index = i;
+    return index;
+  }
+
+  onFromChange(value: string) {
+    if (!value || !this.rows().length) return;
+    const from = this.snapIndex(value);
+    let to = this.snapIndex(this.toDate() || this.maxDate());
+    if (from >= to) to = Math.min(from + 1, this.rows().length - 1);
+    this.setBounds(Math.min(from, to - 1), to);
+  }
+
+  onToChange(value: string) {
+    if (!value || !this.rows().length) return;
+    const to = Math.max(this.snapIndex(value), 1);
+    let from = this.snapIndex(this.fromDate() || this.minDate());
+    if (from >= to) from = to - 1;
+    this.setBounds(from, to);
+  }
+
+  /** Une seule séance d'écart = analyse d'une journée ; sinon, une période. */
+  private setBounds(from: number, to: number) {
+    const rows = this.rows();
+    this.error.set('');
+    if (to - from === 1) {
+      this.mode.set('session');
+      this.applySession(rows[to].date, true);
+      return;
+    }
+    this.mode.set('range');
+    this.applyRange(rows[from].date, rows[to].date);
+  }
+
   onSessionDateChange(date: string) {
     this.applySession(date, true);
   }
@@ -214,8 +266,11 @@ export class Explorer {
       this.applySession(selection.date, true);
       return;
     }
-    this.mode.set('range');
-    this.applyRange(selection.startDate, selection.endDate);
+    const rows = this.rows();
+    const from = rows.findIndex(row => row.date === selection.startDate);
+    const to = rows.findIndex(row => row.date === selection.endDate);
+    if (from < 0 || to <= from) return;
+    this.setBounds(from, to);
   }
 
   selectProfile(profile: Profile) {

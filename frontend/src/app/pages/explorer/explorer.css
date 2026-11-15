@@ -69,6 +69,8 @@
 .controls { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
 .mode { display: flex; gap: 2px; border: 1px solid var(--border); border-radius: 10px; margin: 0; padding: 3px; }
 .field { display: grid; gap: 6px; }
+.field input[type="date"] { font: inherit; padding: 9px 12px; border: 1px solid var(--border); border-radius: 10px; background: #fff; color: var(--text); min-width: 168px; font-variant-numeric: tabular-nums; }
+.field input[type="date"]:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
 .field-label { font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
 .mode label { display: flex; gap: 6px; align-items: center; padding: 5px 10px; border-radius: 8px; color: var(--muted); cursor: pointer; }
 .mode label.on { background: var(--accent-soft); color: var(--accent-strong); font-weight: 600; }
