@@ -12,8 +12,6 @@ svg.interactive { touch-action: none; cursor: crosshair; }
 .area { fill: url(#chart-fill); }
 
 .chart-toolbar { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px 16px; color:var(--muted); font-size:.82rem; }
-.group { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
-.group-label { font-size:.72rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
 .horizons { display:flex; gap:4px; flex-wrap:wrap; }
 .horizons button { display:inline-flex; align-items:center; gap:6px; padding:6px 11px; border:0; border-radius:8px; font-weight:600; color:var(--muted); background:transparent; cursor:pointer; white-space:nowrap; }
 .horizons button:hover { color:var(--text); }
@@ -24,5 +22,3 @@ svg.interactive { touch-action: none; cursor: crosshair; }
 .candle.down { color: var(--negative); }
 .candle line { stroke: currentColor; stroke-width: .8; }
 .candle rect { fill: currentColor; }
-.horizon-select { font: inherit; font-weight: 600; color: var(--text); padding: 7px 34px 7px 12px; border: 1px solid var(--border); border-radius: 10px; background: #fff; cursor: pointer; }
-.horizon-select:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }

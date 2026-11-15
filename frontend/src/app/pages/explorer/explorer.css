@@ -69,6 +69,7 @@
 .segmented { display: inline-flex; gap: 2px; padding: 3px; border: 1px solid var(--border); border-radius: 12px; background: #fff; }
 .segmented button { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 0; border-radius: 9px; background: transparent; color: var(--muted); font-weight: 600; cursor: pointer; }
 .segmented button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); }
+.segmented.horizons button { padding: 6px 9px; font-variant-numeric: tabular-nums; }
 
 .risk { display: inline-block; margin-top: 2px; padding: 1px 8px; border-radius: 999px; font-size: .72rem; font-weight: 600; background: var(--accent-soft); color: var(--accent); }
 .risk[data-profile="amira"] { background: var(--danger-soft); color: var(--negative); }

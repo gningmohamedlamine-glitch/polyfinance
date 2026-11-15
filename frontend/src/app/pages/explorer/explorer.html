@@ -101,11 +101,12 @@
         </div>
         <div class="controls">
           <div class="control-row">
-            <label class="pill-field"><span class="field-label">Afficher</span>
-              <select [ngModel]="chartHorizon()" (ngModelChange)="chartHorizon.set($event)">
-                @for (option of horizons; track option.key) { <option [value]="option.key">{{ option.label }}</option> }
-              </select>
-            </label>
+            <div class="segmented horizons" role="group" aria-label="Période affichée">
+              @for (option of horizons; track option.key) {
+                <button type="button" [attr.aria-pressed]="chartHorizon() === option.key" [title]="option.label"
+                  (click)="chartHorizon.set(option.key)">{{ option.short }}</button>
+              }
+            </div>
             <div class="date-range">
               <label class="pill-field"><span class="field-label">Du</span>
                 <input type="date" [value]="fromDate()" [min]="minDate()" [max]="maxDate()"

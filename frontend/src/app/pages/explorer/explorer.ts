@@ -2,7 +2,6 @@ import { ControlsPanel } from '../../components/controls-panel/controls-panel';
 import { SensitivityPanel } from '../../components/sensitivity-panel/sensitivity-panel';
 import { HttpErrorResponse } from '@angular/common/http';
 import { afterNextRender, Component, DestroyRef, ElementRef, inject, Injector, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import { Subscription } from 'rxjs';
 import { AgentTimeline } from '../../components/agent-timeline/agent-timeline';
@@ -32,7 +31,7 @@ type SavedExplorer = {
 
 @Component({
   selector: 'app-explorer',
-  imports: [FormsModule, DatePipe, NgTemplateOutlet, LucideDynamicIcon, PriceChart, MovementAnalysis, MarketChange, StockLogo, AgentTimeline, DossierView, TracesView, Welcome, Logo, ControlsPanel, SensitivityPanel, ReportReveal],
+  imports: [DatePipe, NgTemplateOutlet, LucideDynamicIcon, PriceChart, MovementAnalysis, MarketChange, StockLogo, AgentTimeline, DossierView, TracesView, Welcome, Logo, ControlsPanel, SensitivityPanel, ReportReveal],
   templateUrl: './explorer.html',
   styleUrls: ['./explorer.css', './chapters.css'],
 })

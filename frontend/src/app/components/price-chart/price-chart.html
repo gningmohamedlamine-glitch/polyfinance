@@ -1,14 +1,12 @@
 <div class="chart">
   @if (showToolbar()) {
   <div class="chart-toolbar">
-    <label class="group">
-      <span class="group-label">Afficher</span>
-      <select class="horizon-select" [value]="horizon()" (change)="setHorizon($any($event.target).value)">
-        @for (option of horizons; track option.key) {
-          <option [value]="option.key" [selected]="horizon() === option.key">{{ option.label }}</option>
-        }
-      </select>
-    </label>
+    <div class="horizons" role="group" aria-label="Période affichée">
+      @for (option of horizons; track option.key) {
+        <button type="button" [attr.aria-pressed]="horizon() === option.key" [title]="option.label"
+          (click)="setHorizon(option.key)">{{ option.short }}</button>
+      }
+    </div>
     <div class="horizons chart-style" role="group" aria-label="Type de graphique">
       <button type="button" [attr.aria-pressed]="chartStyle() === 'line'" (click)="chartStyle.set('line')"
         title="Prix de clôture de chaque séance">

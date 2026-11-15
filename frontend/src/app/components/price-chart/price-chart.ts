@@ -21,15 +21,15 @@ export type ChartSelection =
 
 export type Horizon = '5J' | '1M' | '6M' | 'YTD' | '1A' | '5A' | 'Max';
 export type ChartStyle = 'line' | 'candles';
-/** Fenêtre affichée autour de la séance choisie : libellés en clair. */
-export const HORIZONS: { key: Horizon; label: string }[] = [
-  { key: '5J', label: '1 semaine' },
-  { key: '1M', label: '1 mois' },
-  { key: '6M', label: '6 mois' },
-  { key: 'YTD', label: 'Depuis janvier' },
-  { key: '1A', label: '1 an' },
-  { key: '5A', label: '5 ans' },
-  { key: 'Max', label: 'Tout' },
+/** Fenêtre affichée autour de la séance choisie. `short` tient sur un bouton. */
+export const HORIZONS: { key: Horizon; label: string; short: string }[] = [
+  { key: '5J', label: '1 semaine', short: '1S' },
+  { key: '1M', label: '1 mois', short: '1M' },
+  { key: '6M', label: '6 mois', short: '6M' },
+  { key: 'YTD', label: 'Depuis janvier', short: 'YTD' },
+  { key: '1A', label: '1 an', short: '1A' },
+  { key: '5A', label: '5 ans', short: '5A' },
+  { key: 'Max', label: 'Tout', short: 'Max' },
 ];
 
 const DRAG_THRESHOLD = 8;
