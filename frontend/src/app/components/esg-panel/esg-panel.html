@@ -1,7 +1,7 @@
 @let e = esg();
 <section class="esg" aria-label="Vérification ESG">
   <header>
-    <h3><svg class="ico" [lucideIcon]="icons.leaf" aria-hidden="true"></svg> Vérification ESG</h3>
+    <h3><svg class="ico" [lucideIcon]="icons.leaf" aria-hidden="true"></svg> Vérification ESG<app-info term="esg" label="vérification ESG" align="left" /></h3>
     <span class="status" [class.warn]="e.conclusion === 'points_attention'">
       {{ e.conclusion === 'points_attention' ? 'Points d’attention' : 'Information insuffisante pour conclure' }}
     </span>
@@ -18,7 +18,7 @@
   @if (e.comparison.stock && e.comparison.reference; as _) {
     <table>
       <caption>12 mois avant la séance ({{ e.comparison.stock!.start_date }} → {{ e.comparison.stock!.end_date }})</caption>
-      <thead><tr><th></th><th>{{ e.ticker }}</th><th>ESGV <small>FNB filtré ESG</small></th></tr></thead>
+      <thead><tr><th></th><th>{{ e.ticker }}</th><th>ESGV<app-info term="esgv" label="ESGV" align="right" /> <small>FNB filtré ESG</small></th></tr></thead>
       <tbody>
         <tr><th>Rendement</th><td class="num">{{ e.comparison.stock!.return_12m | percent:'1.0-0' }}</td><td class="num">{{ e.comparison.reference!.return_12m | percent:'1.0-0' }}</td></tr>
         <tr><th>Volatilité</th><td class="num">{{ e.comparison.stock!.annual_volatility | percent:'1.0-0' }}</td><td class="num">{{ e.comparison.reference!.annual_volatility | percent:'1.0-0' }}</td></tr>

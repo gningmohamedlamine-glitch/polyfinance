@@ -11,8 +11,8 @@
 <section class="kpis" reportReveal>
   <div class="panel kpi"><small>Durée totale</small><strong class="num">@if (total() < 1000) { {{ total() | number:'1.0-0' }} ms } @else { {{ total() / 1000 | number:'1.1-1' }} s }</strong><small>des deux agents</small></div>
   <div class="panel kpi"><small>Appels au modèle</small><strong class="num">{{ u.calls }}</strong><small>{{ u.model ?? 'aucun modèle configuré' }}</small></div>
-  <div class="panel kpi"><small>Jetons consommés</small><strong class="num">{{ u.input + u.output | number:'1.0-0' }}</strong><small>{{ u.input | number:'1.0-0' }} en entrée · {{ u.output | number:'1.0-0' }} en sortie</small></div>
-  <div class="panel kpi"><small>Décisions des agents</small><strong class="num">{{ journal().length }}</strong><small>au plus 4 par agent, validées par le code</small></div>
+  <div class="panel kpi"><small>Jetons consommés<app-info term="tokens" label="jetons consommés" /></small><strong class="num">{{ u.input + u.output | number:'1.0-0' }}</strong><small>{{ u.input | number:'1.0-0' }} en entrée · {{ u.output | number:'1.0-0' }} en sortie</small></div>
+  <div class="panel kpi"><small>Décisions des agents<app-info term="decisions" label="décisions des agents" /></small><strong class="num">{{ journal().length }}</strong><small>au plus 4 par agent, validées par le code</small></div>
 </section>
 
 @if (timed().length) {

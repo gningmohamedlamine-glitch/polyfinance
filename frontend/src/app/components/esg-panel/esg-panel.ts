@@ -5,9 +5,11 @@ import { ICONS } from '../../icons';
 import { Esg } from '../../services/market-api';
 
 /** Vérification ESG (profil de Mateo) : points d'attention et informations manquantes, jamais une note. */
+import { InfoTip } from '../info-tip/info-tip';
+
 @Component({
   selector: 'app-esg-panel',
-  imports: [PercentPipe, LucideDynamicIcon],
+  imports: [InfoTip, PercentPipe, LucideDynamicIcon],
   templateUrl: './esg-panel.html',
   styleUrl: './esg-panel.css',
 })

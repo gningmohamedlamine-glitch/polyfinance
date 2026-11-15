@@ -29,9 +29,11 @@ type SavedExplorer = {
   sessionDate?: string; rangeStart?: string; rangeEnd?: string;
 };
 
+import { InfoTip } from '../../components/info-tip/info-tip';
+
 @Component({
   selector: 'app-explorer',
-  imports: [DatePipe, NgTemplateOutlet, LucideDynamicIcon, PriceChart, MovementAnalysis, MarketChange, StockLogo, AgentTimeline, DossierView, TracesView, Welcome, Logo, ControlsPanel, SensitivityPanel, ReportReveal],
+  imports: [InfoTip, DatePipe, NgTemplateOutlet, LucideDynamicIcon, PriceChart, MovementAnalysis, MarketChange, StockLogo, AgentTimeline, DossierView, TracesView, Welcome, Logo, ControlsPanel, SensitivityPanel, ReportReveal],
   templateUrl: './explorer.html',
   styleUrls: ['./explorer.css', './chapters.css'],
 })

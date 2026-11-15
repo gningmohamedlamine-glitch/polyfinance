@@ -5,9 +5,11 @@ import { ICONS } from '../../icons';
 import { Controls } from '../../services/market-api';
 
 /** Panneau du Contrôleur : les vérifications automatiques, visibles par l'utilisateur. */
+import { InfoTip } from '../info-tip/info-tip';
+
 @Component({
   selector: 'app-controls-panel',
-  imports: [LucideDynamicIcon, ReportReveal],
+  imports: [InfoTip, LucideDynamicIcon, ReportReveal],
   templateUrl: './controls-panel.html',
   styleUrl: './controls-panel.css',
 })

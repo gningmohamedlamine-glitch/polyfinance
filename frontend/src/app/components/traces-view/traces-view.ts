@@ -19,9 +19,11 @@ const LABELS: Record<string, string> = {
 };
 
 /** Traces des agents : durées mesurées, appels au modèle, entrées et sorties de chaque outil. */
+import { InfoTip } from '../info-tip/info-tip';
+
 @Component({
   selector: 'app-traces-view',
-  imports: [DecimalPipe, JsonPipe, ReportReveal],
+  imports: [InfoTip, DecimalPipe, JsonPipe, ReportReveal],
   templateUrl: './traces-view.html',
   styleUrl: './traces-view.css',
 })

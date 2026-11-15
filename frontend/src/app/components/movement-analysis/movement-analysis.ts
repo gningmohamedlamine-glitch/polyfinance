@@ -10,9 +10,11 @@ import { Analysis } from '../../services/market-api';
 
 export type TextPart = { text: string; href?: string };
 
+import { InfoTip } from '../info-tip/info-tip';
+
 @Component({
   selector: 'app-movement-analysis',
-  imports: [CurrencyPipe, DecimalPipe, PercentPipe, LucideDynamicIcon, EsgPanel, MarketChange, ReportReveal],
+  imports: [InfoTip, CurrencyPipe, DecimalPipe, PercentPipe, LucideDynamicIcon, EsgPanel, MarketChange, ReportReveal],
   templateUrl: './movement-analysis.html',
   styleUrl: './movement-analysis.css',
 })
@@ -51,15 +53,15 @@ export class MovementAnalysis {
     const vol = coherence.risk.annual_volatility ?? 0;
     const drawdown = coherence.risk.max_drawdown ?? 0;
     return [
-      { title: 'Volatilité sur 12 mois', value: vol, limit: coherence.limits.annual_volatility,
+      { title: 'Volatilité sur 12 mois', info: 'volatility' as const, value: vol, limit: coherence.limits.annual_volatility,
         breach: vol > coherence.limits.annual_volatility, fill: Math.min(vol / Math.max(coherence.limits.annual_volatility * 2, vol), 1),
         mark: Math.min(coherence.limits.annual_volatility / Math.max(coherence.limits.annual_volatility * 2, vol), 1) },
-      { title: 'Pire baisse sur 12 mois', value: drawdown, limit: coherence.limits.max_drawdown,
+      { title: 'Pire baisse sur 12 mois', info: 'drawdown' as const, value: drawdown, limit: coherence.limits.max_drawdown,
         breach: drawdown < coherence.limits.max_drawdown, fill: Math.min(Math.abs(drawdown) / Math.max(Math.abs(coherence.limits.max_drawdown) * 2, Math.abs(drawdown)), 1),
         mark: Math.min(Math.abs(coherence.limits.max_drawdown) / Math.max(Math.abs(coherence.limits.max_drawdown) * 2, Math.abs(drawdown)), 1) },
       // Amira : part de technologie du portefeuille fictif après l'achat (énoncé : ne pas miser que sur la tech).
       ...(coherence.sector && coherence.limits.max_sector_weight ? [{
-        title: 'Part techno après l’achat', value: coherence.sector.after, limit: coherence.limits.max_sector_weight,
+        title: 'Part techno après l’achat', info: 'tech' as const, value: coherence.sector.after, limit: coherence.limits.max_sector_weight,
         breach: coherence.sector.after > coherence.limits.max_sector_weight, fill: coherence.sector.after,
         mark: coherence.limits.max_sector_weight }] : []),
     ];

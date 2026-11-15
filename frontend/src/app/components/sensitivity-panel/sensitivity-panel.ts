@@ -6,9 +6,11 @@ import { ICONS } from '../../icons';
 import { Sensitivity, SensitivityChart } from '../../services/market-api';
 
 /** Mise à l'épreuve : chaque conclusion recalculée avec une autre hypothèse (énoncé : sensibilité). */
+import { InfoTip } from '../info-tip/info-tip';
+
 @Component({
   selector: 'app-sensitivity-panel',
-  imports: [DecimalPipe, LucideDynamicIcon, ReportReveal],
+  imports: [InfoTip, DecimalPipe, LucideDynamicIcon, ReportReveal],
   templateUrl: './sensitivity-panel.html',
   styleUrl: './sensitivity-panel.css',
 })

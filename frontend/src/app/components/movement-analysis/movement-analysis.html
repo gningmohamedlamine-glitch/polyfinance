@@ -26,15 +26,15 @@
     @if (d) {
       <div class="decomp">
         <div class="decomp-head">
-          <strong>D’où vient le mouvement&nbsp;?</strong>
-          @if (d.beta != null) { <small>Sensibilité au marché (bêta)&nbsp;: <span class="num">{{ d.beta | number:'1.2-2' }}</span></small> }
+          <strong>D’où vient le mouvement&nbsp;?<app-info term="residual" label="part propre au titre" align="left" /></strong>
+          @if (d.beta != null) { <small>Sensibilité au marché (bêta)<app-info term="beta" label="bêta" align="right" />&nbsp;: <span class="num">{{ d.beta | number:'1.2-2' }}</span></small> }
         </div>
         <div class="bar" role="img" [attr.aria-label]="'Effet du marché ' + (d.market | number:'1.1-1') + ' points, propre au titre ' + (d.own | number:'1.1-1') + ' points'">
           <span class="market" [style.flex-grow]="d.marketShare"></span>
           <span class="own" [style.flex-grow]="d.ownShare"></span>
         </div>
         <div class="legend">
-          <span><i class="dot market"></i>Effet du marché attendu <strong class="num">{{ d.market | number:'1.2-2' }} pts</strong></span>
+          <span><i class="dot market"></i>Effet du marché attendu<app-info term="expected" label="effet du marché attendu" align="left" /> <strong class="num">{{ d.market | number:'1.2-2' }} pts</strong></span>
           <span><i class="dot own"></i>Propre au titre <strong class="num">{{ d.own | number:'1.2-2' }} pts</strong></span>
         </div>
         <p class="verdict-line">
@@ -90,7 +90,7 @@
           <div class="rules">
             @for (rule of rules(); track rule.title) {
               <div class="rule" [class.breach]="rule.breach">
-                <small>{{ rule.title }}</small>
+                <small>{{ rule.title }}<app-info [term]="rule.info" [label]="rule.title" /></small>
                 <strong class="num">{{ rule.value | percent:'1.0-0' }}</strong>
                 <div class="gauge"><span [style.width.%]="rule.fill * 100"></span><i [style.left.%]="rule.mark * 100"></i></div>
                 <small>Limite du profil&nbsp;: <span class="num">{{ rule.limit | percent:'1.0-0' }}</span>

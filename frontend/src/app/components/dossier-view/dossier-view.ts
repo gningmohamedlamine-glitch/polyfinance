@@ -7,9 +7,11 @@ import { Analysis } from '../../services/market-api';
 import { MarketChange } from '../market-change/market-change';
 
 /** Dossier de preuves : tout ce que l'Enquêteur a trouvé, vérifié ou écarté, avec ses limites. */
+import { InfoTip } from '../info-tip/info-tip';
+
 @Component({
   selector: 'app-dossier-view',
-  imports: [DatePipe, DecimalPipe, LucideDynamicIcon, MarketChange, ReportReveal],
+  imports: [InfoTip, DatePipe, DecimalPipe, LucideDynamicIcon, MarketChange, ReportReveal],
   templateUrl: './dossier-view.html',
   styleUrl: './dossier-view.css',
 })
