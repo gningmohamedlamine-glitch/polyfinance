@@ -21,6 +21,14 @@ export interface MarketModel {
   expected_return?: number;
   residual_pp?: number;
 }
+export interface AgentDecision {
+  agent: 'event' | 'impact';
+  tool: string;
+  arguments: Record<string, unknown>;
+  accepted: boolean;
+  reason?: string | null;
+  refusal?: string;
+}
 export interface Coherence {
   coherent: boolean;
   conflicts: string[];
@@ -67,6 +75,7 @@ export interface Analysis {
     };
     benchmarks: Record<string, { name?: string; kind?: string; return?: number | null; gap_pp: number | null; status: string }>;
     returns?: { market_model?: MarketModel | null };
+    agent_decisions?: AgentDecision[];
     notable_sessions: {
       concentration: string;
       sessions: { date: string; daily_return: number }[];
@@ -93,6 +102,7 @@ export interface Analysis {
     metrics: { label: string; value: number; unit: string }[];
     assumptions?: string;
     coherence?: Coherence;
+    decisions?: AgentDecision[];
     scenario?: Partial<Record<'position_cad' | 'purchase_cad' | 'portfolio_cad' | 'withdrawal_cad', number>>;
   };
   trace?: ToolTrace[];

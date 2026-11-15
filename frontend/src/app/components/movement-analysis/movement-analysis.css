@@ -27,3 +27,7 @@ summary { font-weight: 600; }
 .coherence.ko { background: #fde0e0; border-left: 4px solid #de161d; }
 .coherence.ok { background: #d9f2dd; border-left: 4px solid #2e7d32; }
 .coherence ul { margin: .25rem 0 0; padding-left: 1.2rem; }
+
+.decision { display: flex; flex-direction: column; gap: .2rem; padding: .5rem 0; border-top: 1px solid var(--border); }
+.decision span { font-style: italic; }
+.decision.refused strong { color: #a5121a; }

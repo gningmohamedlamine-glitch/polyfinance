@@ -113,6 +113,18 @@
     </ul>
   </article>
 </section>
+@if ((result.dossier?.agent_decisions?.length ?? 0) + (result.impact.decisions?.length ?? 0) > 0) {
+  <section class="panel decisions">
+    <h2>Décisions des agents</h2>
+    @for (decision of [...(result.dossier?.agent_decisions ?? []), ...(result.impact.decisions ?? [])]; track $index) {
+      <div class="decision" [class.refused]="!decision.accepted">
+        <strong>{{ decision.agent === 'event' ? 'Enquêteur' : 'Conseiller' }} · {{ decision.tool }}</strong>
+        @if (decision.reason) { <span>« {{ decision.reason }} »</span> }
+        @if (!decision.accepted) { <small>Refusé par le garde-fou : {{ decision.refusal }}</small> }
+      </div>
+    }
+  </section>
+}
 @if (result.trace?.length) {
   <details class="panel trace">
     <summary>Détails de l’analyse</summary>

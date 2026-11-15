@@ -13,6 +13,8 @@ Clique sur une séance pour comprendre le mouvement, puis change le profil pour 
 
 ## Garde-fous et hypothèses
 
+- **Deux agents qui décident, un code qui contrôle.** L’Enquêteur choisit où chercher une explication (catalogue, SEC, web) et quand s’arrêter ; le Conseiller choisit les calculs utiles au profil. Les deux utilisent GPT-6 Astra (`BEDROCK_MODEL_ID`), avec au plus 4 décisions validées en Python chacun. Voir `agents/README.md`.
+
 - **Chiffres en Python, jamais générés par le modèle.** Les agents Bedrock n'écrivent que la synthèse.
 - **Part propre au titre (bêta).** `market_model` estime le bêta du titre face à QQQ sur les 252 séances qui précèdent la fenêtre (aucune donnée future). Rendement attendu = bêta × rendement de QQQ ; la part résiduelle est la seule attribuable au titre. Exemple : le 13 septembre 2022 (IPC américain), NVDA baisse de 9,47 % et QQQ de 5,48 % ; avec un bêta de 1,85, la baisse attendue était d'environ 10,2 %, donc la part propre au titre est quasi nulle (choc de marché amplifié). Le 29 août 2024, la part propre au titre est d'environ −6,1 points.
 - **Secteur.** NVDA, AAPL et MSFT sont aussi comparés à XLK (`data/sector_etfs_daily.csv`, facultatif). GOOGL, AMZN et TSLA ne sont comparés qu'à SPY et QQQ faute de FNB sectoriel téléchargé.

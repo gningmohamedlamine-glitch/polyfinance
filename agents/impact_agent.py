@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from markets.window import ResolvedWindow, max_drawdown_cad, risk_indicators
 
+from .agent_loop import MAX_DECISIONS, model_for, run_tool_loop
 from .model_text import synthesize
 
 PROFILES = {
@@ -234,8 +235,63 @@ def _fallback_text(profile: str, metrics: list[dict], assumptions: str, coherenc
     return " ".join(parts)
 
 
+ADVISOR = (
+    "Tu es le Conseiller de profil d’AlphaForge. Tu reçois le dossier de l’Enquêteur (faits vérifiés) "
+    "et le profil fictif d’un investisseur. Choisis toi-même les calculs utiles à CE profil, "
+    f"avec au plus {MAX_DECISIONS} appels d’outils ; avant chaque appel, écris une phrase qui justifie ton choix. "
+    "Tous les chiffres viennent des outils : n’en invente aucun. "
+    "Réponds ensuite en français, en trois puces courtes au plus. Si verify_profile_coherence signale des "
+    "conflits, la première puce doit le dire clairement, chiffres à l’appui. Ne donne aucun conseil d’achat "
+    "ou de vente : décris ce que le mouvement implique pour ce profil. Qualifie les pistes web de non vérifiées."
+)
+
+PROFILE_TOOLS = {
+    "robert": ("verify_profile_coherence", "position_value_cad"),
+    "amira": ("verify_profile_coherence", "direct_weight", "position_value_cad"),
+    "mateo": ("verify_profile_coherence", "exclusion_evidence"),
+}
+TOOL_DESCRIPTIONS = {
+    "verify_profile_coherence": "Compare la volatilité et la baisse maximale du titre sur 12 mois (et la concentration après achat) aux limites du profil.",
+    "position_value_cad": "Calcule la variation en CAD de la position fictive, l’effet du change et, sur une période, la baisse maximale ; compare au retrait prévu s’il existe.",
+    "direct_weight": "Calcule le poids direct du titre dans le portefeuille avant et après l’achat fictif.",
+    "exclusion_evidence": "Vérifie si les sources contiennent des preuves liées aux exclusions ESG du profil.",
+}
+
+
+def _weight_after(profile, scenario):
+    if profile == "amira" and scenario.get("portfolio_cad"):
+        return (scenario["position_cad"] + scenario["purchase_cad"]) / scenario["portfolio_cad"]
+    return None
+
+
+def _run_profile_tool(name, profile, dossier, scenario):
+    """Renvoie (metrics, assumptions, trace, coherence ou None)."""
+    if name == "verify_profile_coherence":
+        selection = dossier["selection"]
+        weight = _weight_after(profile, scenario)
+        coherence = profile_coherence(profile, selection["ticker"], selection["end_close_date"], weight)
+        metrics = []
+        if coherence["risk"].get("status") == "ok":
+            metrics.append({"label": "Volatilité annuelle (12 mois)",
+                            "value": coherence["risk"]["annual_volatility"], "unit": "%"})
+        trace = [{"agent": "impact", "name": "profile_coherence", "source": "local", "status": "executed",
+                  "arguments": {"profile": profile, "ticker": selection["ticker"],
+                                "end_date": selection["end_close_date"], "weight_after": weight}}]
+        return metrics, "", trace, coherence
+    if name == "position_value_cad":
+        return (*_metrics_robert(dossier, scenario), None)
+    if name == "direct_weight":
+        return (*_metrics_amira(scenario), None)
+    return (*_metrics_mateo(), None)
+
+
 def run_impact_agent(dossier: dict, profile: str, scenario: dict, progress=None) -> dict:
     notify = progress or (lambda *args, **kwargs: None)
+    model = model_for("impact")
+    scenario_out = {key: scenario[key] for key in SCENARIO_FIELDS[profile] if key in scenario}
+    if model:
+        return _run_advisor(model, dossier, profile, scenario, scenario_out, notify)
+
     tool_name = "calculate_profile_impact"
     notify("impact", tool_name, "running")
     metrics, assumptions, calculations, coherence = _compute(profile, dossier, scenario)
@@ -267,7 +323,76 @@ def run_impact_agent(dossier: dict, profile: str, scenario: dict, progress=None)
         "text": synthesis["text"] or _fallback_text(profile, metrics, assumptions, coherence),
         "coherence": coherence,
         "metrics": metrics,
-        "scenario": {key: scenario[key] for key in SCENARIO_FIELDS[profile] if key in scenario},
+        "scenario": scenario_out,
         "assumptions": assumptions,
+        "decisions": [],
         "trace": [*dossier["tools_executed"], *calculations],
+    }
+
+
+def _run_advisor(model, dossier, profile, scenario, scenario_out, notify):
+    """Mode agent : le Conseiller choisit ses calculs ; la cohérence reste garantie par le code."""
+    allowed = PROFILE_TOOLS[profile]
+    results: dict[str, tuple] = {}
+
+    def execute(name, args):
+        if name not in allowed:
+            return False, f"Outil non pertinent pour ce profil. Outils permis : {', '.join(allowed)}."
+        if args:
+            return False, "Cet outil ne prend aucun argument : le scénario est déjà validé."
+        if name in results:
+            return False, "Calcul déjà effectué : utilise le résultat précédent ou conclus."
+        notify("impact", name, "running", mode="model")
+        results[name] = _run_profile_tool(name, profile, dossier, scenario)
+        metrics, assumptions, _, coherence = results[name]
+        notify("impact", name, "done", mode="model")
+        return True, {"metrics": metrics, "assumptions": assumptions, "coherence": coherence}
+
+    specs = [{"toolSpec": {"name": name, "description": TOOL_DESCRIPTIONS[name],
+                           "inputSchema": {"json": {"type": "object", "properties": {}}}}} for name in allowed]
+    payload = {
+        "profile": PROFILES[profile],
+        "scenario": scenario_out,
+        "dossier": {
+            "selection": dossier["selection"],
+            "returns": dossier["returns"],
+            "benchmarks": dossier["benchmarks"],
+            "synthesis": dossier["synthesis"]["text"],
+            "publications": dossier["publications"][:8],
+            "web_leads": dossier["coverage"].get("web_leads", []),
+        },
+    }
+    notify("impact", "advise", "running", mode="bedrock")
+    loop = run_tool_loop("impact", model, ADVISOR, payload, specs, execute, notify, max_tokens=700)
+    notify("impact", "advise", "done" if loop["mode"] == "bedrock" else "unavailable",
+           len(loop["decisions"]), "bedrock", reason=None if loop["mode"] == "bedrock" else loop["mode_reason"])
+
+    # Garde-fou : la cohérence avec le profil est toujours calculée, même si le modèle l’oublie.
+    trace = list(dossier["tools_executed"])
+    if "verify_profile_coherence" not in results:
+        notify("impact", "verify_profile_coherence", "running", mode="guard")
+        results["verify_profile_coherence"] = _run_profile_tool("verify_profile_coherence", profile, dossier, scenario)
+        notify("impact", "verify_profile_coherence", "done", mode="guard")
+        results["verify_profile_coherence"][2][0]["source"] = "guard"
+    coherence = results["verify_profile_coherence"][3]
+    order = ["verify_profile_coherence", *(name for name in results if name != "verify_profile_coherence")]
+    metrics, assumptions = [], []
+    for name in order:
+        tool_metrics, tool_assumptions, tool_trace, _ = results[name]
+        metrics += tool_metrics
+        if tool_assumptions:
+            assumptions.append(tool_assumptions)
+        for entry in tool_trace:
+            trace.append({**entry, "source": entry["source"] if entry["source"] == "guard" else "model"})
+    assumptions_text = " ".join(assumptions)
+    return {
+        "text": loop["text"] or _fallback_text(profile, metrics, assumptions_text, coherence),
+        "mode": loop["mode"],
+        "mode_reason": loop["mode_reason"],
+        "coherence": coherence,
+        "metrics": metrics,
+        "scenario": scenario_out,
+        "assumptions": assumptions_text,
+        "decisions": loop["decisions"],
+        "trace": trace,
     }

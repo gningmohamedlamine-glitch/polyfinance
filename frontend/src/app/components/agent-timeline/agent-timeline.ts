@@ -53,6 +53,9 @@ export class AgentTimeline {
     direct_weight: 'Comparer le poids avant et après l’achat',
     exclusion_evidence: 'Vérifier les preuves liées aux exclusions',
     profile_coherence: 'Vérifier la cohérence avec ton profil',
+    verify_profile_coherence: 'Vérifier la cohérence avec ton profil',
+    investigate: 'L’Enquêteur choisit ses recherches (GPT-6 Astra)',
+    advise: 'Le Conseiller choisit ses calculs (GPT-6 Astra)',
   };
 
   readonly nodes = [
@@ -124,6 +127,7 @@ export class AgentTimeline {
         case 'timeout': return 'Délai dépassé';
         case 'not_executed': return 'Recherche non exécutée';
         case 'invalid_response': return 'Réponse inexploitable';
+        case 'rejected': return 'Refusé par le garde-fou';
         default: return 'Indisponible';
       }
     }
