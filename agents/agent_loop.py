@@ -29,7 +29,7 @@ def model_for(agent: str) -> str | None:
     return os.getenv(f"{agent.upper()}_MODEL_ID") or os.getenv("BEDROCK_MODEL_ID")
 
 
-def run_tool_loop(agent, model, instructions, payload, tool_specs, execute, notify, max_tokens=900):
+def run_tool_loop(agent, model, instructions, payload, tool_specs, execute, notify, max_tokens=2500):
     """Exécute la boucle et renvoie le texte final, le mode et la liste des décisions.
 
     execute(name, args) -> (ok: bool, result: dict | str). Une valeur ok=False est un refus.

@@ -315,7 +315,7 @@ def run_impact_agent(dossier: dict, profile: str, scenario: dict, progress=None)
             "publications": dossier["publications"][:8],
             "web_leads": dossier["coverage"].get("web_leads", []),
         },
-        700,
+        2000,
         notify,
     )
     usage = synthesis.pop("usage", {"input_tokens": 0, "output_tokens": 0, "model_calls": 0})
@@ -365,7 +365,7 @@ def _run_advisor(model, dossier, profile, scenario, scenario_out, notify):
         },
     }
     notify("impact", "advise", "running", mode="bedrock")
-    loop = run_tool_loop("impact", model, ADVISOR, payload, specs, execute, notify, max_tokens=700)
+    loop = run_tool_loop("impact", model, ADVISOR, payload, specs, execute, notify, max_tokens=2500)
     notify("impact", "advise", "done" if loop["mode"] == "bedrock" else "unavailable",
            len(loop["decisions"]), "bedrock", reason=None if loop["mode"] == "bedrock" else loop["mode_reason"])
 

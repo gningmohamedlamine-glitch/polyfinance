@@ -247,7 +247,7 @@ def run_event_agent(window: ResolvedWindow, progress=None) -> dict:
     evidence["web_leads"] = context.coverage.get("web_leads", [])
     # Limit prose context while retaining every checked publication in the API response.
     evidence["publications"] = dossier["publications"][:8]
-    synthesis = synthesize("event", SYSTEM, evidence, 700, notify)
+    synthesis = synthesize("event", SYSTEM, evidence, 2000, notify)
     dossier["usage"] = {**synthesis.pop("usage", {"input_tokens": 0, "output_tokens": 0, "model_calls": 0}),
                         "model": os.getenv("BEDROCK_MODEL_ID")}
     if synthesis["text"]:
