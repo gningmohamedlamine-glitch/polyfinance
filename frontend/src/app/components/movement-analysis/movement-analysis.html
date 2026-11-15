@@ -1,138 +1,182 @@
 @let result = analysis();
-<section class="results">
-  <article class="panel">
-    <h2>Ce qui s’est passé</h2>
-    <dl class="metrics">
-      <div class="lead-metric"><dt>Action · USD</dt><dd>{{ result.movement.usd_return | percent:'1.1-2' }}</dd></div>
-      <div><dt>SPY</dt><dd>{{ result.movement.benchmarks['SPY']?.return | percent:'1.1-2' }}</dd></div>
-      <div><dt>QQQ</dt><dd>{{ result.movement.benchmarks['QQQ']?.return | percent:'1.1-2' }}</dd></div>
-      @if (result.dossier?.benchmarks?.['XLK']?.gap_pp != null) {
-        <div><dt>Écart secteur (XLK)</dt><dd>{{ result.dossier!.benchmarks['XLK'].gap_pp | number:'1.1-2' }} pts</dd></div>
+@let d = decomposition();
+<section class="acts">
+  <!-- ACTE 2 : l'Enquêteur -->
+  <article class="panel act">
+    <header class="act-title">
+      <span class="eyebrow">Acte 2 · Ce qui s’est passé</span>
+      <span class="chip" [class.bedrock]="result.event.mode === 'bedrock'">
+        {{ result.event.mode === 'bedrock' ? 'Enquêteur · GPT-6 Astra' : 'Calcul local' }}
+      </span>
+    </header>
+
+    <div class="headline">
+      <span class="big num" [class.neg]="result.movement.usd_return < 0">{{ result.movement.usd_return | percent:'1.2-2' }}</span>
+      <span class="sub">en USD
+        @if (result.movement.cad_return != null) { · <span class="num">{{ result.movement.cad_return | percent:'1.2-2' }}</span> en CAD }
+      </span>
+    </div>
+
+    <div class="bench">
+      @for (b of benchmarks(); track b.symbol) {
+        <span><small>{{ b.label }}</small><strong class="num">{{ b.ret | percent:'1.2-2' }}</strong></span>
       }
-      @if (result.dossier?.returns?.market_model?.status === 'ok') {
-        <div><dt>Bêta face à QQQ</dt><dd>{{ result.dossier!.returns!.market_model!.beta | number:'1.2-2' }}</dd></div>
-        <div><dt>Part propre au titre</dt><dd>{{ result.dossier!.returns!.market_model!.residual_pp | number:'1.1-2' }} pts</dd></div>
-      }
-    </dl>
-    <ul class="takeaways">
-      @for (benchmark of ['SPY', 'QQQ', 'XLK']; track benchmark) {
-        @if (result.movement.benchmarks[benchmark]?.gap; as gap) {
-          <li [class.negative]="gap < 0"><strong>{{ gap > 0 ? 'Positif' : 'Négatif' }}</strong> · L’action {{ gap > 0 ? 'surperforme' : 'sous-performe' }} {{ benchmark }} de {{ ((gap > 0 ? gap : -gap) * 100) | number:'1.1-2' }} points de pourcentage.</li>
-        }
-      }
+    </div>
+
+    @if (d) {
+      <div class="decomp">
+        <div class="decomp-head">
+          <strong>D’où vient le mouvement&nbsp;?</strong>
+          @if (d.beta != null) { <small>Sensibilité au marché (bêta)&nbsp;: <span class="num">{{ d.beta | number:'1.2-2' }}</span></small> }
+        </div>
+        <div class="bar" role="img" [attr.aria-label]="'Effet du marché ' + (d.market | number:'1.1-1') + ' points, propre au titre ' + (d.own | number:'1.1-1') + ' points'">
+          <span class="market" [style.flex-grow]="d.marketShare"></span>
+          <span class="own" [style.flex-grow]="d.ownShare"></span>
+        </div>
+        <div class="legend">
+          <span><i class="dot market"></i>Effet du marché attendu <strong class="num">{{ d.market | number:'1.2-2' }} pts</strong></span>
+          <span><i class="dot own"></i>Propre au titre <strong class="num">{{ d.own | number:'1.2-2' }} pts</strong></span>
+        </div>
+        <p class="verdict-line">
+          {{ d.ownDominant ? 'L’essentiel du mouvement est propre à l’entreprise : une explication spécifique est à chercher.'
+                           : 'Le mouvement s’explique surtout par le marché, amplifié par la sensibilité du titre.' }}
+        </p>
+      </div>
+    }
+
+    <h3>Synthèse de l’Enquêteur</h3>
+    <ul class="points">
       @for (bullet of bullets(result.event.text); track $index) { <li>{{ bullet }}</li> }
     </ul>
-    @if (result.dossier?.notable_sessions?.sessions?.length) {
-      <details><summary>Séances marquantes</summary>
-        <ul>
-          @for (session of result.dossier!.notable_sessions.sessions; track session.date) {
-            <li>{{ session.date }} · {{ session.daily_return | percent:'1.1-2' }}</li>
-          }
-        </ul>
-      </details>
+
+    <h3>Preuves <small class="count">{{ verifiedCount() }} extrait(s) vérifié(s) · {{ sourceCount() }} source(s) · {{ webLeads().length }} piste(s) web</small></h3>
+    @if (!result.event.sources.length && !webLeads().length) {
+      <p class="empty">Aucune publication trouvée pour cette séance. La cause reste indéterminée : l’agent ne l’invente pas.</p>
     }
     @for (source of result.event.sources; track source.url) {
-      <a [href]="source.url" target="_blank" rel="noopener">{{ source.title }}</a>
-      @if (source.excerpt) {
-        <blockquote class="excerpt">« {{ source.excerpt }} »
+      <div class="source">
+        <div class="source-head">
+          <a [href]="source.url" target="_blank" rel="noopener">{{ source.title }}</a>
           @switch (source.excerpt_status) {
-            @case ('verified') { <span class="badge ok">Extrait vérifié dans la source</span> }
-            @case ('mismatch') { <span class="badge ko">Extrait introuvable dans la source</span> }
-            @default { <span class="badge">Source non téléchargée : extrait non vérifié</span> }
+            @case ('verified') { <span class="badge ok">✓ Extrait vérifié</span> }
+            @case ('mismatch') { <span class="badge ko">✕ Extrait introuvable</span> }
+            @case ('source_missing') { <span class="badge">Source non téléchargée</span> }
+            @default { <span class="badge">Publication datée</span> }
           }
-        </blockquote>
-      }
-      <small>
-        @if (source.session) { Séance {{ source.session }} · }
-        {{ source.publisher }} · {{ source.time_et.replace('T', ' ') }} HE
-      </small>
+        </div>
+        <small>{{ source.publisher }} · {{ source.time_et.replace('T', ' ') }} (heure de l’Est)@if (source.session) { · séance du {{ source.session }} }</small>
+        @if (source.excerpt) { <blockquote>« {{ source.excerpt }} »</blockquote> }
+        @else if (source.summary) { <p class="summary">{{ source.summary }}</p> }
+      </div>
     }
-    @if (result.dossier?.coverage?.web_leads?.length) {
-      <details open>
-        <summary>Pistes trouvées sur le web</summary>
-        @for (lead of result.dossier!.coverage.web_leads; track lead.url) {
+    @for (lead of webLeads(); track lead.url) {
+      <div class="source lead">
+        <div class="source-head">
           <a [href]="lead.url" target="_blank" rel="noopener">{{ lead.title }}</a>
-          <small>
-            {{ lead.published_date }} ·
-            @if (lead.after_session) { Suivi publié après la séance du {{ lead.session }} }
-            @else { Heure à vérifier }
-          </small>
-          <p>{{ lead.summary }}</p>
-        }
-      </details>
-    } @else if (result.dossier?.coverage?.web_search === 'no_dated_sources') {
-      <small>Aucune piste web avec une date et un lien cités dans la fenêtre élargie.</small>
-    } @else if (result.dossier?.coverage?.web_search === 'unavailable') {
-      <small>
-        @switch (result.dossier?.coverage?.web_search_reason) {
-          @case ('timeout') { La recherche web a dépassé son délai d’attente. }
-          @case ('not_executed') { Nova n’a pas lancé la recherche web. }
-          @case ('invalid_response') { Nova a renvoyé une réponse web inexploitable. }
-          @default { La recherche web est indisponible. }
-        }
-      </small>
-      <button class="retry" type="button" (click)="retry.emit()">Relancer l’analyse</button>
+          <span class="badge warn">Piste web non vérifiée</span>
+        </div>
+        <small>Publié le {{ lead.published_date }}@if (lead.after_session) { · après la séance : ne peut pas l’expliquer }</small>
+        <p class="summary">{{ lead.summary }}</p>
+      </div>
     }
   </article>
-  <article class="panel">
-    <h2>Ce que ça change pour toi</h2>
+
+  <!-- ACTE 3 : le Conseiller -->
+  <article class="panel act">
+    <header class="act-title">
+      <span class="eyebrow">Acte 3 · Ce que ça change pour toi</span>
+      <span class="chip" [class.bedrock]="result.impact.mode === 'bedrock'">
+        {{ result.impact.mode === 'bedrock' ? 'Conseiller · GPT-6 Astra' : 'Calcul local' }}
+      </span>
+    </header>
+    <div class="who-line">
+      <span class="avatar" [attr.data-profile]="persona().id">{{ persona().initial }}</span>
+      <div><strong>{{ persona().name }}, {{ persona().age }} ans</strong><small>{{ persona().risk }} · horizon {{ persona().horizon }}</small></div>
+    </div>
+
     @if (result.impact.coherence; as coherence) {
       @if (coherence.conflicts.length) {
-        <div class="coherence ko">
-          <strong>Incohérence avec ton profil</strong>
+        <div class="alert ko" role="alert">
+          <strong>⚠ Ce titre ne correspond pas à ton profil</strong>
           <ul>@for (conflict of coherence.conflicts; track conflict) { <li>{{ conflict }}</li> }</ul>
         </div>
       } @else if (coherence.risk.status === 'ok') {
-        <div class="coherence ok"><strong>Risque du titre compatible avec ton profil</strong></div>
-      }
-      <small>{{ coherence.notice }}</small>
-    }
-    @if (result.impact.scenario; as scenario) {
-      @if (scenario.position_cad != null) {
-        <small>
-          Exemple fictif · Position de {{ scenario.position_cad | number:'1.0-0' }} CAD
-          @if (scenario.portfolio_cad != null) {
-            sur {{ scenario.portfolio_cad | number:'1.0-0' }} CAD,
-            achat de {{ scenario.purchase_cad | number:'1.0-0' }} CAD
-          } @else if (scenario.withdrawal_cad != null) {
-            · Retrait prévu de {{ scenario.withdrawal_cad | number:'1.0-0' }} CAD
-          }
-        </small>
+        <div class="alert ok"><strong>✓ Le risque observé reste dans les limites de ton profil</strong></div>
       }
     }
-    <dl class="metrics">
-      @for (metric of result.impact.metrics; track metric.label) {
-        <div><dt>{{ metric.label }}</dt><dd>
-          @if (metric.unit === '%') { {{ metric.value | percent:'1.1-2' }} }
-          @else { {{ metric.value | currency:'CAD':'code':'1.0-2' }} }
-        </dd></div>
-      }
-    </dl>
-    <ul class="takeaways">
-      @for (bullet of bullets(result.impact.text); track $index) { <li>{{ bullet }}</li> }
-    </ul>
-  </article>
-</section>
-@if ((result.dossier?.agent_decisions?.length ?? 0) + (result.impact.decisions?.length ?? 0) > 0) {
-  <section class="panel decisions">
-    <h2>Décisions des agents</h2>
-    @for (decision of [...(result.dossier?.agent_decisions ?? []), ...(result.impact.decisions ?? [])]; track $index) {
-      <div class="decision" [class.refused]="!decision.accepted">
-        <strong>{{ decision.agent === 'event' ? 'Enquêteur' : 'Conseiller' }} · {{ decision.tool }}</strong>
-        @if (decision.reason) { <span>« {{ decision.reason }} »</span> }
-        @if (!decision.accepted) { <small>Refusé par le garde-fou : {{ decision.refusal }}</small> }
+
+    @if (rules().length) {
+      <div class="rules">
+        @for (rule of rules(); track rule.title) {
+          <div class="rule" [class.breach]="rule.breach">
+            <small>{{ rule.title }}</small>
+            <strong class="num">{{ rule.value | percent:'1.0-0' }}</strong>
+            <div class="gauge"><span [style.width.%]="rule.fill * 100"></span><i [style.left.%]="rule.mark * 100"></i></div>
+            <small>Limite du profil&nbsp;: <span class="num">{{ rule.limit | percent:'1.0-0' }}</span>
+              · {{ rule.breach ? 'dépassée' : 'respectée' }}</small>
+          </div>
+        }
       </div>
     }
+
+    @if (exposures().length) {
+      <h3>Si une position avait été détenue ce jour-là</h3>
+      <div class="exposures">
+        @for (e of exposures(); track e.amount) {
+          <div><small>Position de <span class="num">{{ e.amount | number:'1.0-0' }} $</span></small>
+            <strong class="num" [class.neg]="e.change < 0">{{ e.change | currency:'CAD':'symbol-narrow':'1.0-0' }}</strong></div>
+        }
+      </div>
+    }
+
+    @if (extraMetrics().length) {
+      <dl class="metrics">
+        @for (metric of extraMetrics(); track metric.label) {
+          <div><dt>{{ metric.label }}</dt><dd class="num">
+            @if (metric.unit === '%') { {{ metric.value | percent:'1.1-2' }} }
+            @else { {{ metric.value | currency:'CAD':'symbol-narrow':'1.0-0' }} }
+          </dd></div>
+        }
+      </dl>
+    }
+
+    <h3>Analyse du Conseiller</h3>
+    <ul class="points">
+      @for (bullet of bullets(result.impact.text); track $index) { <li>{{ bullet }}</li> }
+    </ul>
+    <p class="note">Simulation : analyse de cohérence, pas un conseil financier. Les limites des profils sont des hypothèses fictives.</p>
+  </article>
+</section>
+
+@if (decisions().length) {
+  <section class="panel decisions">
+    <header class="act-title">
+      <span class="eyebrow">Ce que les agents ont décidé</span>
+      <small class="muted">Chaque choix est validé par le code avant d’être exécuté</small>
+    </header>
+    <ol>
+      @for (decision of decisions(); track $index) {
+        <li [class.refused]="!decision.accepted">
+          <span class="who-tag" [class.impact]="decision.agent === 'impact'">{{ decision.agent === 'event' ? 'Enquêteur' : 'Conseiller' }}</span>
+          <div>
+            <strong>{{ decision.label }}</strong>
+            @if (decision.reason) { <p>« {{ decision.reason }} »</p> }
+            @if (!decision.accepted) { <small class="refusal">Refusé par le garde-fou : {{ decision.refusal }}</small> }
+          </div>
+        </li>
+      }
+    </ol>
   </section>
 }
+
 @if (result.trace?.length) {
   <details class="panel trace">
-    <summary>Détails de l’analyse</summary>
-  @for (step of result.trace!; track $index) {
-    <div class="trace-row">
-      <strong>{{ step.agent }} · {{ step.name }}</strong>
-      <span>{{ step.source }} · {{ step.status }}</span>
-    </div>
-  }
+    <summary>Traces techniques ({{ result.trace!.length }} outils exécutés)</summary>
+    @for (step of result.trace!; track $index) {
+      <div class="trace-row">
+        <span class="num">{{ step.agent }} · {{ step.name }}</span>
+        <span>{{ step.source }} · {{ step.status }}</span>
+      </div>
+    }
   </details>
 }

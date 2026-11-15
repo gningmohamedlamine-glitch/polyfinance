@@ -5,6 +5,7 @@ import { Subscription } from 'rxjs';
 import { AgentTimeline } from '../../components/agent-timeline/agent-timeline';
 import { MovementAnalysis } from '../../components/movement-analysis/movement-analysis';
 import { ChartSelection, PriceChart } from '../../components/price-chart/price-chart';
+import { PERSONAS, personaOf } from '../../personas';
 import { AgentProgress, Analysis, MarketApi, Price, Profile, Stock } from '../../services/market-api';
 
 type SelectionMode = 'session' | 'range';
@@ -32,6 +33,30 @@ export class Explorer {
   rangeStart = '';
   rangeEnd = '';
   profile: Profile = 'amira';
+  readonly personas = PERSONAS;
+  entered = signal(false);
+  switcherOpen = signal(false);
+
+  persona() { return personaOf(this.profile); }
+
+  /** Simulation de connexion : aucun mot de passe, seul le profil fictif change. */
+  enter(profile: Profile) {
+    this.profile = profile;
+    this.entered.set(true);
+    this.analyzeCurrent();
+  }
+
+  switchProfile(profile: Profile) {
+    this.switcherOpen.set(false);
+    if (profile === this.profile) return;
+    this.selectProfile(profile);
+  }
+
+  leave() {
+    this.switcherOpen.set(false);
+    this.clearPendingAnalysis();
+    this.entered.set(false);
+  }
 
   rangeInvalid() {
     const rows = this.rows();
@@ -162,7 +187,7 @@ export class Explorer {
   }
 
   analyzeCurrent() {
-    if (!this.canAnalyze()) return;
+    if (!this.entered() || !this.canAnalyze()) return;
     if (this.mode() === 'range') {
       if (this.rangeStart === this.rangeEnd) {
         this.applySession(this.rangeStart, true);

@@ -1,5 +1,5 @@
 .pipeline {
-  --connector: #dbe4df;
+  --connector: #dfe4ee;
   margin-top: 16px;
   padding: 12px 16px;
 }
@@ -165,8 +165,8 @@
 .tool span { color: var(--text); }
 
 @keyframes pulse {
-  from { box-shadow: 0 0 0 0 #17644f55; }
-  to { box-shadow: 0 0 0 7px #17644f00; }
+  from { box-shadow: 0 0 0 0 #1d4ed855; }
+  to { box-shadow: 0 0 0 7px #1d4ed800; }
 }
 @keyframes travel { from { background-position: 100% 0; } to { background-position: -100% 0; } }
 @keyframes reveal { from { opacity: 0; } to { opacity: 1; } }

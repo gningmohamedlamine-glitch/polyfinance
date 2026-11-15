@@ -1,54 +1,97 @@
-<main>
-  <header><span>AlphaForge</span><small>Simulation historique · PolyFinances</small></header>
-  <section class="intro">
-    <h1>Qu’est-ce qui s’est passé ici&nbsp;?</h1>
-    <p>Clique sur une séance ou glisse sur une période pour comprendre le mouvement.</p>
-  </section>
-  <div class="layout">
-    <section class="panel market">
-      <div class="market-title">
-        <span class="ticker">{{ ticker }}</span>
-        <div><h2>{{ stockName() }}</h2><span>Cours historique · USD</span></div>
-      </div>
-      <div class="heading">
-        <label>Action
-          <select [(ngModel)]="ticker" (ngModelChange)="load($event)">
-            @for (stock of stocks(); track stock.ticker) {
-              <option [value]="stock.ticker">{{ stock.ticker }} · {{ stock.name }}</option>
-            }
-          </select>
-        </label>
-        <fieldset class="mode" role="radiogroup" aria-label="Type de sélection">
-          <legend class="sr-only">Type de sélection</legend>
-          <label><input type="radio" name="selection-mode" [value]="'session'"
-            [checked]="mode() === 'session'" (change)="setMode('session')"> Séance</label>
-          <label><input type="radio" name="selection-mode" [value]="'range'"
-            [checked]="mode() === 'range'" (change)="setMode('range')"> Période</label>
-        </fieldset>
-        @if (mode() === 'session') {
-          <label>Séance
-            <select [ngModel]="sessionDate" (ngModelChange)="onSessionDateChange($event)" [disabled]="!rows().length">
-              @for (row of rows(); track row.date; let first = $first) {
-                @if (!first) { <option [value]="row.date">{{ row.date }}</option> }
-              }
-            </select>
-          </label>
-        } @else {
-          <label>Début
-            <select [ngModel]="rangeStart" (ngModelChange)="onRangeStartChange($event)" [disabled]="!rows().length">
-              @for (row of rows(); track row.date) {
-                <option [value]="row.date">{{ row.date }}</option>
-              }
-            </select>
-          </label>
-          <label>Fin
-            <select [ngModel]="rangeEnd" (ngModelChange)="onRangeEndChange($event)" [disabled]="!rows().length">
-              @for (row of rows(); track row.date) {
-                <option [value]="row.date">{{ row.date }}</option>
-              }
-            </select>
-          </label>
+@if (!entered()) {
+  <main class="welcome">
+    <div class="welcome-head">
+      <span class="brand-mark" aria-hidden="true">α</span>
+      <span class="eyebrow">AlphaForge AI · Simulation</span>
+      <h1>Qui es-tu&nbsp;?</h1>
+      <p>Choisis un profil d’investisseur fictif. Le même mouvement de marché sera expliqué, puis analysé selon ta situation.</p>
+    </div>
+    <div class="persona-grid">
+      @for (p of personas; track p.id) {
+        <button type="button" class="persona-card" (click)="enter(p.id)">
+          <span class="avatar" [attr.data-profile]="p.id">{{ p.initial }}</span>
+          <strong>{{ p.name }}, {{ p.age }} ans</strong>
+          <span class="tags"><span>{{ p.risk }}</span><span>{{ p.horizon }}</span></span>
+          <span class="goal">{{ p.goal }}</span>
+          <span class="enter">Entrer →</span>
+        </button>
+      }
+    </div>
+    <p class="disclaimer">Profils fictifs · aucune donnée personnelle · pas un conseil financier.</p>
+  </main>
+} @else {
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark" aria-hidden="true">α</span><strong>AlphaForge AI</strong></div>
+    <label class="ticker-select"><span class="sr-only">Action</span>
+      <select [(ngModel)]="ticker" (ngModelChange)="load($event)">
+        @for (stock of stocks(); track stock.ticker) {
+          <option [value]="stock.ticker">{{ stock.ticker }} · {{ stock.name }}</option>
         }
+      </select>
+    </label>
+    <nav class="scenarios" aria-label="Cas de démo">
+      <button type="button" [class.active]="ticker === 'NVDA' && sessionDate === '2024-08-29'" (click)="load('NVDA', '2024-08-29')">Résultats NVIDIA · 29 août 2024</button>
+      <button type="button" [class.active]="ticker === 'NVDA' && sessionDate === '2022-09-13'" (click)="load('NVDA', '2022-09-13')">IPC américain · 13 sept. 2022</button>
+    </nav>
+    <div class="who">
+      <button type="button" class="profile-chip" (click)="switcherOpen.set(!switcherOpen())"
+              [attr.aria-expanded]="switcherOpen()" aria-haspopup="true">
+        <span class="avatar small" [attr.data-profile]="profile">{{ persona().initial }}</span>
+        <span><strong>{{ persona().name }}</strong><small>{{ persona().risk }}</small></span>
+        <span class="caret" aria-hidden="true">▾</span>
+      </button>
+      @if (switcherOpen()) {
+        <div class="switcher" role="menu">
+          <span class="eyebrow">Changer de profil · la séance est conservée</span>
+          @for (p of personas; track p.id) {
+            <button type="button" role="menuitem" [class.current]="p.id === profile" (click)="switchProfile(p.id)">
+              <span class="avatar small" [attr.data-profile]="p.id">{{ p.initial }}</span>
+              <span><strong>{{ p.name }}, {{ p.age }} ans</strong><small>{{ p.risk }} · {{ p.horizon }}</small></span>
+            </button>
+          }
+          <button type="button" class="leave" (click)="leave()">Se déconnecter</button>
+        </div>
+      }
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="panel act1">
+      <div class="act-head">
+        <div>
+          <span class="eyebrow">Acte 1 · La séance</span>
+          <h2>{{ stockName() }} <span class="muted">({{ ticker }})</span></h2>
+          <p class="muted">Clique sur une séance ou glisse sur une période pour comprendre le mouvement.</p>
+        </div>
+        <div class="controls">
+          <fieldset class="mode" role="radiogroup" aria-label="Type de sélection">
+            <legend class="sr-only">Type de sélection</legend>
+            <label [class.on]="mode() === 'session'"><input type="radio" name="selection-mode" [value]="'session'"
+              [checked]="mode() === 'session'" (change)="setMode('session')"> Séance</label>
+            <label [class.on]="mode() === 'range'"><input type="radio" name="selection-mode" [value]="'range'"
+              [checked]="mode() === 'range'" (change)="setMode('range')"> Période</label>
+          </fieldset>
+          @if (mode() === 'session') {
+            <label>Séance
+              <select [ngModel]="sessionDate" (ngModelChange)="onSessionDateChange($event)" [disabled]="!rows().length">
+                @for (row of rows(); track row.date; let first = $first) {
+                  @if (!first) { <option [value]="row.date">{{ row.date }}</option> }
+                }
+              </select>
+            </label>
+          } @else {
+            <label>Début
+              <select [ngModel]="rangeStart" (ngModelChange)="onRangeStartChange($event)" [disabled]="!rows().length">
+                @for (row of rows(); track row.date) { <option [value]="row.date">{{ row.date }}</option> }
+              </select>
+            </label>
+            <label>Fin
+              <select [ngModel]="rangeEnd" (ngModelChange)="onRangeEndChange($event)" [disabled]="!rows().length">
+                @for (row of rows(); track row.date) { <option [value]="row.date">{{ row.date }}</option> }
+              </select>
+            </label>
+          }
+        </div>
       </div>
       <app-price-chart
         [rows]="rows()"
@@ -57,34 +100,21 @@
         (selectionChange)="onChartSelection($event)"
       />
       @if (mode() === 'range' && !rangeInvalid()) {
-        <p class="range-note">
-          Comparaison&nbsp;: clôture du {{ rangeStart }} → clôture du {{ rangeEnd }}.
-        </p>
+        <p class="range-note">Comparaison&nbsp;: clôture du {{ rangeStart }} → clôture du {{ rangeEnd }}.</p>
       }
-      <div class="examples">
-        <span>Cas de démo</span>
-        <button type="button" (click)="load('NVDA', '2024-08-29')">Résultats NVIDIA (mouvement propre au titre)</button>
-        <button type="button" (click)="load('NVDA', '2022-09-13')">IPC américain (choc de marché amplifié)</button>
-      </div>
     </section>
-    <section class="panel context">
-      <h2>Ton profil</h2>
-      <label>Profil
-        <select name="profile" [ngModel]="profile" (ngModelChange)="selectProfile($event)">
-          <option value="amira">Amira · Croissance</option>
-          <option value="robert">Robert · Préservation</option>
-          <option value="mateo">Mateo · Préférences ESG</option>
-        </select>
-      </label>
-    </section>
-  </div>
-  @if (busy() || progress().length) {
-    <app-agent-timeline
-      [steps]="progress()" [busy]="busy()" [hasResult]="result() !== null"
-      [selectionLabel]="ticker + ' · ' + (mode() === 'range' ? rangeStart + ' → ' + rangeEnd : sessionDate)"
-      [profileLabel]="profile === 'amira' ? 'Amira' : profile === 'robert' ? 'Robert' : 'Mateo'"
-    />
-  }
-  @if (error()) { <p class="status" role="alert">{{ error() }}</p> }
-  @if (result(); as analysis) { <app-movement-analysis [analysis]="analysis" (retry)="analyzeCurrent()" /> }
-</main>
+
+    @if (busy() || progress().length) {
+      <app-agent-timeline
+        [steps]="progress()" [busy]="busy()" [hasResult]="result() !== null"
+        [selectionLabel]="ticker + ' · ' + (mode() === 'range' ? rangeStart + ' → ' + rangeEnd : sessionDate)"
+        [profileLabel]="persona().name"
+      />
+    }
+    @if (error()) { <p class="status" role="alert">{{ error() }}</p> }
+    @if (result(); as analysis) {
+      <app-movement-analysis [analysis]="analysis" [persona]="persona()" (retry)="analyzeCurrent()" />
+    }
+    <footer class="disclaimer">Simulation : analyse de cohérence, pas un conseil financier. Profils fictifs.</footer>
+  </main>
+}
