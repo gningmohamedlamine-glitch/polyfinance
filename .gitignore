@@ -13,3 +13,6 @@ credentials
 
 # BOB workspace memory
 .bob/
+
+# Archives temporaires de test
+.tmp_ci/
