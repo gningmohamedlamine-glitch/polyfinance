@@ -182,8 +182,9 @@ export class Explorer {
     void run;
     this.historyRequest?.unsubscribe();
     this.cancelAnalysis();
+    this.busy.set(false);
     this.error.set('');
-    this.result.set(null);
+    // Le dernier résultat reste affiché jusqu'à la prochaine exécution (signalé comme précédent).
     this.rows.set([]);
     this.rangeStart = '';
     this.rangeEnd = '';
@@ -401,8 +402,15 @@ export class Explorer {
 
   private clearPendingAnalysis() {
     this.cancelAnalysis();
-    this.result.set(null);
     this.busy.set(false);
+  }
+
+  /** Libellé de la sélection du résultat affiché, pour signaler qu'il est antérieur. */
+  resultLabel() {
+    const selection = this.result()?.dossier?.selection;
+    if (!selection) return '';
+    const end = selection.end_close_date;
+    return `${selection.ticker} · ${selection.applied === 'period' ? selection.start_close_date + ' → ' + end : end}`;
   }
 
   private cancelAnalysis() {

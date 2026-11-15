@@ -149,7 +149,8 @@
     @if (stale() && !busy() && !error()) {
       <div class="panel pending">
         <strong>Sélection prête : {{ ticker }} · {{ (fromDate() | date:'d MMM y':'UTC') + ' → ' + (toDate() | date:'d MMM y':'UTC') }}</strong>
-        <span class="muted">Les deux agents analyseront ce mouvement pour {{ persona().name }}.</span>
+        <span class="muted">Les deux agents analyseront ce mouvement pour {{ persona().name }}.
+          @if (result()) { Le résultat affiché ci-dessous est celui de l’analyse précédente ({{ resultLabel() }}). }</span>
         <button type="button" class="primary" (click)="run()"><svg class="ico" [lucideIcon]="icons.play" aria-hidden="true"></svg> Exécuter l’analyse</button>
       </div>
     }

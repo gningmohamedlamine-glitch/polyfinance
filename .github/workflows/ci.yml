@@ -1,0 +1,79 @@
+# Intégration continue : tests Python, compilation Angular et image Docker vérifiée.
+# Aucun secret ni appel à Bedrock : les agents tournent en mode local pendant les tests.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Tests Python (agents + backend)
+    runs-on: ubuntu-latest
+    env:
+      BEDROCK_MODEL_ID: ""
+      MARKET_WEB_SEARCH: "0"
+      PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - run: pip install -r backend/requirements.txt
+      - name: Tests des agents (garde-fous, ESG, Contrôleur)
+        run: python -m unittest discover -s agents/tests -t . -v
+      - name: Tests du backend Django
+        working-directory: backend
+        run: python manage.py test markets -v 2
+
+  frontend:
+    name: Compilation Angular
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - run: npm run build
+
+  docker:
+    name: Image Docker (démarrage et santé)
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Construire l'image
+        run: docker build --platform linux/amd64 -t alphaforge:ci .
+      - name: Démarrer et vérifier
+        run: |
+          docker run -d --name app --read-only --tmpfs /dev/shm -p 8080:8080 alphaforge:ci
+          curl --fail --silent --show-error --max-time 5 --retry 12 --retry-all-errors --retry-delay 1 http://127.0.0.1:8080/api/health/
+          curl --fail --silent --show-error --max-time 5 http://127.0.0.1:8080/ > /dev/null
+          # Analyse complète en mode local (sans Bedrock) : le Contrôleur doit répondre.
+          curl --fail --silent --show-error --max-time 60 "http://127.0.0.1:8080/api/analysis/?ticker=NVDA&date=2024-08-29&profile=mateo&stream=1" |
+            python3 -c '
+          import json, sys
+          result = next((m["analysis"] for line in sys.stdin if (m := json.loads(line))["kind"] == "result"), None)
+          assert result, "pas de résultat"
+          assert result["controls"]["controls"], "le Contrôleur doit renvoyer ses contrôles"
+          assert result["impact"]["esg"], "la vérification ESG doit être présente pour Mateo"
+          print("Analyse locale OK, verdict du Contrôleur :", result["controls"]["verdict"])
+          '
+      - if: failure()
+        run: docker logs app || true
