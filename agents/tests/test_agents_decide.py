@@ -51,7 +51,8 @@ class InvestigatorTests(unittest.TestCase):
         with patch("agents.agent_loop.bedrock_client", return_value=client):
             dossier = run_event_agent(resolve_window("NVDA", date="2024-08-29"))
         self.assertEqual([d["accepted"] for d in dossier["agent_decisions"]], [False, False])
-        self.assertEqual(dossier["publications"], [])
+        self.assertTrue(dossier["publications"])
+        self.assertTrue(all(row["session"] == "2024-08-29" for row in dossier["publications"]))
         self.assertEqual(dossier["coverage"]["sec_search"], "disabled")
 
     @patch.dict(os.environ, {"BEDROCK_MODEL_ID": "gpt-6-astra"}, clear=True)

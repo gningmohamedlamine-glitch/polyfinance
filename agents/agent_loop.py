@@ -9,9 +9,12 @@ au modèle comme erreur, pour qu'il corrige ou conclue.
 from __future__ import annotations
 
 import json
+import logging
 import os
 
 from botocore.exceptions import BotoCoreError, ClientError
+
+logger = logging.getLogger(__name__)
 
 from .model_text import bedrock_client, public_text
 
@@ -101,4 +104,5 @@ def run_tool_loop(agent, model, instructions, payload, tool_specs, execute, noti
         return done("", "local", f"bedrock_error:{type(error).__name__}")
     except (KeyError, TypeError, ValueError, AttributeError):
         # Réponse inattendue du modèle : on bascule en mode local plutôt que de faire échouer l'analyse.
+        logger.exception("tool loop failed")
         return done("", "local", "bedrock_invalid_response")

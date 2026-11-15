@@ -3,6 +3,7 @@ import os
 import unittest
 from concurrent.futures import Future
 from threading import Barrier
+from time import monotonic, sleep
 from unittest.mock import Mock, patch
 
 from agents.event_agent import run_event_agent
@@ -185,8 +186,8 @@ class EventAgentTests(unittest.TestCase):
             providers.wait()
             return result
 
-        agentcore.side_effect = lambda *_args: collect(agentcore.return_value)
-        grounding.side_effect = lambda *_args: collect(grounding.return_value)
+        agentcore.side_effect = lambda *_args, **_kwargs: collect(agentcore.return_value)
+        grounding.side_effect = lambda *_args, **_kwargs: collect(grounding.return_value)
         client = Mock()
         client.converse.return_value = _judge_message([{
             "url": "https://www.reuters.com/nvda-story",
@@ -229,3 +230,73 @@ class EventAgentTests(unittest.TestCase):
             rank.assert_called_once()
         finally:
             nova.set_result(([], "grounding"))
+
+
+class SearchBenchmarkTests(unittest.TestCase):
+    """Compares the overlapped search with the previous sequential wait."""
+
+    @patch.dict(os.environ, {"MARKET_WEB_SEARCH": "1", "MARKET_WEB_SEARCH_AGENTCORE": "1"}, clear=True)
+    @patch("agents.web_search._check_articles", side_effect=lambda leads, **_: leads)
+    @patch("agents.web_search._rank_web")
+    @patch("agents.web_search._grounding_leads")
+    @patch("agents.web_search.search_agentcore_leads")
+    def test_ranking_overlaps_the_nova_wait(self, agentcore, grounding, rank, _check):
+        session = "2024-08-15"
+        windows = {session: ("2024-08-10", "2024-08-20")}
+        lead = {
+            "url": "https://news.example/nvda", "title": "NVIDIA slides", "session": session,
+            "published_date": session, "summary": "Baisse.", "after_session": False,
+        }
+        nova_s, rank_s = 0.6, 0.45
+
+        def slow_agentcore(*_args, **_kwargs):
+            return [lead]
+
+        def slow_nova(*_args, **_kwargs):
+            sleep(nova_s)
+            return [], "timeout"
+
+        def slow_rank(*_args, **_kwargs):
+            sleep(rank_s)
+            return ([{**lead, "relevance": "Lié au titre."}], "found")
+
+        agentcore.side_effect = slow_agentcore
+        grounding.side_effect = slow_nova
+        rank.side_effect = slow_rank
+
+        started = monotonic()
+        leads, status = find_web_leads(Mock(), "NVDA", "NVIDIA", windows, moves={session: -0.04})
+        elapsed = monotonic() - started
+
+        self.assertEqual(status, "found")
+        self.assertEqual(len(leads), 1)
+        sequential = nova_s + rank_s
+        self.assertLess(elapsed, sequential - 0.15, f"overlapped {elapsed:.2f}s, sequential would be {sequential:.2f}s")
+        self.assertGreaterEqual(elapsed, nova_s - 0.05)
+
+    @patch.dict(os.environ, {"MARKET_WEB_SEARCH_AGENTCORE": "1"}, clear=True)
+    @patch("agents.web_search.agentcore_client")
+    @patch("agents.web_search._agentcore_queries")
+    def test_broad_queries_wait_until_official_results_miss_a_session(self, queries, factory):
+        queries.return_value = [f"q{i}" for i in range(10)]
+        session = "2024-08-15"
+
+        def fetch(searchQuery, **_kwargs):
+            host = "one.example" if searchQuery == "q0" else "two.example"
+            if searchQuery in {"q0", "q1"}:
+                return {"results": [{
+                    "url": f"https://{host}/{searchQuery}",
+                    "title": "NVIDIA shares drop",
+                    "publishedAt": session,
+                    "text": "NVIDIA shares drop after the session.",
+                }]}
+            return {"results": []}
+
+        factory.return_value.invoke_web_search.side_effect = fetch
+        leads = search_agentcore_leads(
+            "NVDA", "NVIDIA", {session: ("2024-08-10", "2024-08-20")},
+            moves={session: -0.04},
+        )
+        called = [call.kwargs["searchQuery"] for call in factory.return_value.invoke_web_search.call_args_list]
+        self.assertEqual(sorted(called), [f"q{i}" for i in range(8)])
+        self.assertEqual(len(leads), 2)

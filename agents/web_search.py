@@ -9,7 +9,7 @@ import re
 from concurrent.futures import ThreadPoolExecutor, TimeoutError
 from datetime import date, datetime, timedelta
 from itertools import batched
-from threading import BoundedSemaphore
+from threading import BoundedSemaphore, Thread
 from time import monotonic
 from urllib.parse import urlsplit
 
@@ -30,6 +30,9 @@ RAW_COLLECT_MAX = int(os.getenv("MARKET_WEB_RAW_LEAD_MAX", "24"))
 CLUSTER_KEEP = int(os.getenv("MARKET_WEB_CLUSTER_KEEP", "12"))
 RELEVANCE_KEEP = int(os.getenv("MARKET_WEB_RELEVANCE_KEEP", "8"))
 AGENTCORE_WORKERS = 3
+OFFICIAL_QUERY_COUNT = 4
+# Official sites plus company news. Generic geopolitical queries stay behind these.
+PRIORITY_QUERY_COUNT = 8
 GROUNDING_SOFT_BUDGET = 10
 ARTICLE_CHECK_LIMIT = 5
 _grounding_workers = ThreadPoolExecutor(max_workers=4, thread_name_prefix="web-grounding")
@@ -343,14 +346,19 @@ def _cluster_leads(client, ticker, name, leads: list[dict], *, moves=None) -> li
     return _simple_dedupe_leads(leads)
 
 
-def search_agentcore_leads(ticker, name, windows, *, limit=RAW_COLLECT_MAX):
-    """Dated news via Bedrock AgentCore invoke_web_search."""
+def search_agentcore_leads(ticker, name, windows, *, limit=RAW_COLLECT_MAX, moves=None, covered_sessions=()):
+    """Dated news via Bedrock AgentCore invoke_web_search.
+
+    Company and official-site queries always run. Generic geopolitical queries
+    run only when those results do not yet cover every material session.
+    """
     if os.getenv("MARKET_WEB_SEARCH_AGENTCORE", "1") != "1":
         return []
-    queries = []
+    priority, broad = [], []
     for session, (start, end) in windows.items():
-        for text in _agentcore_queries(ticker, name, start, end):
-            queries.append((session, start, end, text))
+        texts = _agentcore_queries(ticker, name, start, end)
+        priority.extend((session, start, end, text) for text in texts[:PRIORITY_QUERY_COUNT])
+        broad.extend((session, start, end, text) for text in texts[PRIORITY_QUERY_COUNT:])
     leads: list[dict] = []
     seen: set[str] = set()
     try:
@@ -380,38 +388,47 @@ def search_agentcore_leads(ticker, name, windows, *, limit=RAW_COLLECT_MAX):
             logger.info("AgentCore web search failed for %s: %s", ticker, type(error).__name__)
         return []
 
-    # Keep query priority independent of network completion order. Submit one
-    # batch at a time so hitting the lead limit leaves at most one batch in flight.
-    with ThreadPoolExecutor(max_workers=AGENTCORE_WORKERS) as workers:
-        for batch in batched(queries, AGENTCORE_WORKERS):
-            if len(leads) >= limit:
-                break
-            for (session, start, end, _), results in zip(batch, workers.map(fetch, batch)):
-                for item in results:
-                    if len(leads) >= limit:
-                        break
-                    url = item.get("url")
-                    if not isinstance(url, str) or not url.strip():
-                        continue
-                    url = url.strip()
-                    if not url.startswith("https://") or _host_blocked(url):
-                        continue
-                    published = _parse_published(item.get("publishedAt"))
-                    if not published or not start <= published <= end:
-                        continue
-                    title = item.get("title")
-                    text = item.get("text")
-                    summary = (_clean_snippet(text) if isinstance(text, str) else "") or "Extrait indisponible."
-                    _append_lead(leads, seen, {
-                        "url": url,
-                        "title": _clean_snippet(title) if isinstance(title, str) else "Article",
-                        "published_date": published,
-                        "session": session,
-                        "summary": summary,
-                        "original_excerpt": summary,
-                        "source_type": "news",
-                        "after_session": published > session,
-                    }, limit=limit)
+    def collect(queries):
+        # Keep query priority independent of network completion order. Submit one
+        # batch at a time so hitting the lead limit leaves at most one batch in flight.
+        with ThreadPoolExecutor(max_workers=AGENTCORE_WORKERS) as workers:
+            for batch in batched(queries, AGENTCORE_WORKERS):
+                if len(leads) >= limit:
+                    break
+                for (session, start, end, _), results in zip(batch, workers.map(fetch, batch)):
+                    for item in results:
+                        if len(leads) >= limit:
+                            break
+                        url = item.get("url")
+                        if not isinstance(url, str) or not url.strip():
+                            continue
+                        url = url.strip()
+                        if not url.startswith("https://") or _host_blocked(url):
+                            continue
+                        published = _parse_published(item.get("publishedAt"))
+                        if not published or not start <= published <= end:
+                            continue
+                        title = item.get("title")
+                        text = item.get("text")
+                        summary = (_clean_snippet(text) if isinstance(text, str) else "") or "Extrait indisponible."
+                        _append_lead(leads, seen, {
+                            "url": url,
+                            "title": _clean_snippet(title) if isinstance(title, str) else "Article",
+                            "published_date": published,
+                            "session": session,
+                            "summary": summary,
+                            "original_excerpt": summary,
+                            "source_type": "news",
+                            "after_session": published > session,
+                        }, limit=limit)
+
+    collect(priority)
+    covered = (
+        moves is not None and bool(leads)
+        and _covers_material_sessions(leads, ticker, name, windows, moves, covered_sessions)
+    )
+    if not covered and len(leads) < limit:
+        collect(broad)
     if leads:
         logger.info("AgentCore returned %d dated lead(s) for %s", len(leads), ticker)
     return leads
@@ -471,21 +488,24 @@ def _collect_cited_leads(rows, cited_raw, cited_normalized, windows, *, limit=RA
     return leads
 
 
-def _search_queries(ticker, name, windows):
+def _search_queries(ticker, name, windows, *, macro=True):
     queries = []
     for session, (start, end) in windows.items():
         day = date.fromisoformat(session).strftime("%B %d %Y")
-        queries.extend(_agentcore_queries(ticker, name, start, end)[:4])
+        queries.extend(_agentcore_queries(ticker, name, start, end)[:OFFICIAL_QUERY_COUNT])
         queries.append(f"{ticker} {name} stock news after:{start} before:{end}")
         queries.append(f'"{name}" OR {ticker} earnings analyst {start}..{end}')
         queries.append(f"{ticker} shares market news {day} Reuters OR Bloomberg OR CNBC")
-        queries.append(f"{ticker} export ban sanctions tariffs after:{start} before:{end}")
-        queries.append(f"war geopolitical trade tariffs semiconductor market {start}..{end}")
-    return queries[:20]
+        if macro:
+            queries.append(f"{ticker} export ban sanctions tariffs after:{start} before:{end}")
+            queries.append(f"war geopolitical trade tariffs semiconductor market {start}..{end}")
+        else:
+            queries.append(f"{name} {ticker} investor announcement {day}")
+    return queries[:20 if macro else 12]
 
 
-def _grounding_leads(client, ticker, name, windows):
-    queries = _search_queries(ticker, name, windows)
+def _grounding_leads(client, ticker, name, windows, macro=True):
+    queries = _search_queries(ticker, name, windows, macro=macro)
     prompt = (
         f"Search the public web for news and market coverage about {name} ({ticker}) "
         "around specific U.S. equity trading dates. Include company news, sector news, and "
@@ -647,7 +667,8 @@ def _rank_web(client, ticker, name, moves, leads, *, combined=True):
     return _apply_relevance(public, judged)
 
 
-def find_web_leads(client, ticker, name, windows, moves=None, *, covered_sessions=(), details=None, deep=False):
+def find_web_leads(client, ticker, name, windows, moves=None, *, covered_sessions=(), details=None, deep=False,
+                   macro=True):
     if os.getenv("MARKET_WEB_SEARCH") != "1":
         return [], "disabled"
 
@@ -656,25 +677,56 @@ def find_web_leads(client, ticker, name, windows, moves=None, *, covered_session
     grounding = None
     if _grounding_slots.acquire(blocking=False):
         try:
-            grounding = _grounding_workers.submit(_grounding_leads, client, ticker, name, windows)
+            grounding = _grounding_workers.submit(
+                _grounding_leads, client, ticker, name, windows, macro or deep,
+            )
         except BaseException:
             _grounding_slots.release()
             raise
         grounding.add_done_callback(lambda _: _grounding_slots.release())
 
-    agentcore = search_agentcore_leads(ticker, name, windows)
+    agentcore = search_agentcore_leads(
+        ticker, name, windows, moves=moves, covered_sessions=covered_sessions,
+    )
     primary = _merge_leads(sorted(agentcore, key=lambda row: not is_official(row["url"])))
+    # Rank AgentCore leads while Nova is still searching. The soft budget still
+    # requires the ranked leads to cover the material sessions.
+    early_rank: dict = {}
+    rank_thread = None
+    if primary and not deep:
+        def _rank_primary():
+            try:
+                early_rank["value"] = _rank_web(client, ticker, name, moves, primary)
+            except BaseException as error:
+                early_rank["error"] = error
+
+        rank_thread = Thread(target=_rank_primary, name="web-rank", daemon=True)
+        rank_thread.start()
+
+    def ranked_primary():
+        if rank_thread is None:
+            return None
+        rank_thread.join()
+        if "error" in early_rank:
+            raise early_rank["error"]
+        return early_rank.get("value")
+
     early = None
     extra, detail = [], "busy"
     if grounding is not None:
-        if (not deep and not grounding.done() and primary
-                and _covers_material_sessions(primary, ticker, name, windows, moves, covered_sessions)):
-            early = _rank_web(client, ticker, name, moves, primary)
-        enough = early is not None and _covers_material_sessions(
-            [lead for lead in early[0] if lead.get("relevance") != RELEVANCE_UNEVALUATED],
-            ticker, name, windows, moves, covered_sessions,
+        provisional = (
+            not deep and not grounding.done() and bool(primary)
+            and _covers_material_sessions(primary, ticker, name, windows, moves, covered_sessions)
         )
-        remaining = max(0, GROUNDING_SOFT_BUDGET - (monotonic() - started)) if enough else None
+        if provisional:
+            early = ranked_primary()
+            enough = early is not None and _covers_material_sessions(
+                [lead for lead in early[0] if lead.get("relevance") != RELEVANCE_UNEVALUATED],
+                ticker, name, windows, moves, covered_sessions,
+            )
+            if not enough:
+                early = None
+        remaining = max(0, GROUNDING_SOFT_BUDGET - (monotonic() - started)) if early is not None else None
         try:
             extra, detail = grounding.result(timeout=remaining)
         except TimeoutError:
@@ -693,8 +745,10 @@ def find_web_leads(client, ticker, name, windows, moves=None, *, covered_session
     else:
         source = "grounding"
 
-    if early is not None and leads == primary:
+    if early is not None and not extra:
         result, status = early
+    elif not extra and rank_thread is not None:
+        result, status = ranked_primary()
     else:
         result, status = _rank_web(client, ticker, name, moves, leads, combined=not deep)
     if result:

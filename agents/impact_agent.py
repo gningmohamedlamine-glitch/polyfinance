@@ -292,11 +292,15 @@ def _fallback_text(profile: str, metrics: list[dict], assumptions: str, coherenc
 
 ADVISOR = (
     "Tu es le Conseiller de profil d’AlphaForge. Tu reçois le dossier de l’Enquêteur (faits vérifiés) "
-    "et le profil fictif d’un investisseur. Choisis toi-même les calculs utiles à CE profil, "
-    f"avec au plus {MAX_DECISIONS} appels d’outils ; avant chaque appel, écris une phrase qui justifie ton choix. "
-    "Tous les chiffres viennent des outils : n’en invente aucun. "
-    "Réponds ensuite en français, en trois puces au plus. Sois bref : chaque puce fait au plus 25 mots, une idée par puce. Ne répète pas les chiffres déjà affichés à l’écran (variation, indices, limites du profil) sauf s’ils servent ta phrase. Si verify_profile_coherence signale des "
-    "conflits, la première puce le dit en une phrase (la liste détaillée est déjà affichée au-dessus). Ne donne aucun conseil d’achat "
+    "et le profil fictif d’un investisseur. Les calculs déjà faits en Python sont dans profile_calculations : "
+    "cite-les et rédige la synthèse sans outil quand ils suffisent. "
+    "Appelle un outil seulement s’il manque un chiffre, "
+    f"avec au plus {MAX_DECISIONS} appels ; avant chaque appel, écris une seule phrase qui justifie ton choix. "
+    "Tous les chiffres viennent de profile_calculations ou des outils : n’en invente aucun. "
+    "Réponds ensuite en français, en trois puces au plus. Sois bref : chaque puce fait au plus 25 mots, une idée par puce. "
+    "Ne répète pas les chiffres déjà affichés à l’écran (variation, indices, limites du profil) sauf s’ils servent ta phrase. "
+    "Si verify_profile_coherence signale des conflits, la première puce le dit en une phrase "
+    "(la liste détaillée est déjà affichée au-dessus). Ne donne aucun conseil d’achat "
     "ou de vente : décris ce que le mouvement implique pour ce profil. Qualifie les pistes web de non vérifiées. "
     "Chaque mesure a sa propre fenêtre : la variation de la sélection est dans dossier.returns ; la volatilité, "
     "la pire baisse et la comparaison avec ESGV portent sur les 12 mois avant la fin de la sélection. "
@@ -425,6 +429,7 @@ def _run_advisor(model, dossier, profile, scenario, notify, prepared, esg_future
     """Mode agent : le Conseiller choisit ses calculs ; la cohérence reste garantie par le code."""
     allowed = PROFILE_TOOLS[profile]
     results: dict[str, tuple] = {}
+    chosen: set[str] = set()
 
     def calculate(name):
         if name in prepared:
@@ -441,6 +446,7 @@ def _run_advisor(model, dossier, profile, scenario, notify, prepared, esg_future
         if name in results:
             return False, "Calcul déjà effectué : utilise le résultat précédent ou conclus."
         notify("impact", name, "running", mode="model")
+        chosen.add(name)
         results[name] = calculate(name)
         metrics, assumptions, trace_entries, coherence = results[name]
         notify("impact", name, "done", mode="model")
@@ -458,6 +464,10 @@ def _run_advisor(model, dossier, profile, scenario, notify, prepared, esg_future
     payload = {
         "profile": PROFILES[profile],
         "scenario": scenario,
+        "profile_calculations": [
+            {"tool": name, "metrics": metrics, "assumptions": assumptions, "coherence": coherence}
+            for name, (metrics, assumptions, _trace, coherence) in prepared.items()
+        ],
         "dossier": {
             "selection": dossier["selection"],
             "returns": dossier["returns"],
@@ -479,12 +489,13 @@ def _run_advisor(model, dossier, profile, scenario, notify, prepared, esg_future
     guarded = False
     for name in required:
         if name not in results:
-            notify("impact", name, "running", mode="guard")
+            already = name in prepared
+            notify("impact", name, "running", mode="local" if already else "guard")
             results[name] = calculate(name)
-            notify("impact", name, "done", mode="guard")
+            notify("impact", name, "done", mode="local" if already else "guard")
             for entry in results[name][2]:
-                entry["source"] = "guard"
-            guarded = True
+                entry["source"] = "local" if already else "guard"
+            guarded = guarded or not already
     coherence = results["verify_profile_coherence"][3]
     order = ["verify_profile_coherence", *(name for name in results if name != "verify_profile_coherence")]
     metrics, assumptions = [], []
@@ -494,7 +505,13 @@ def _run_advisor(model, dossier, profile, scenario, notify, prepared, esg_future
         if tool_assumptions:
             assumptions.append(tool_assumptions)
         for entry in tool_trace:
-            trace.append({**entry, "source": entry["source"] if entry["source"] == "guard" else "model"})
+            if name in chosen:
+                source = "model"
+            elif entry["source"] in {"guard", "local"}:
+                source = entry["source"]
+            else:
+                source = "model"
+            trace.append({**entry, "source": source})
     assumptions_text = " ".join(assumptions)
     text = loop["text"]
     if guarded and loop["mode"] == "bedrock":
