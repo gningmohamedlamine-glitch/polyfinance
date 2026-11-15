@@ -33,7 +33,7 @@ export interface AgentDecision {
 }
 export interface Usage { input_tokens: number; output_tokens: number; model_calls: number; model?: string | null }
 export interface Coherence {
-  coherent: boolean;
+  coherent: boolean | null;
   conflicts: string[];
   limits: { annual_volatility: number; max_drawdown: number; max_weight: number; horizon_years: number; max_sector_weight?: number };
   sector?: { sector: string | null; is_tech: boolean; before: number; after: number; assumption: string } | null;
@@ -102,6 +102,13 @@ export interface Analysis {
         session?: string;
         after_session?: boolean;
         source_type?: string;
+        corroboration?: number;
+        source_origin?: 'official' | 'other';
+        page_status?: 'retrieved' | 'unavailable' | 'not_checked';
+        excerpt_status?: string;
+        original_excerpt?: string;
+        domains?: string[];
+        verification?: 'corroborated' | 'single_source';
         relevance?: string;
         story_key?: string;
         related_count?: number;

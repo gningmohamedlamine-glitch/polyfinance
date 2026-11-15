@@ -18,6 +18,7 @@ export class DossierView {
   sources = computed(() => this.analysis().event.sources);
   leads = computed(() => this.analysis().dossier?.coverage.web_leads ?? []);
   verified = computed(() => this.sources().filter(s => s.excerpt_status === 'verified').length);
+  corroborated = computed(() => this.leads().filter(l => (l.corroboration ?? 1) >= 2).length);
   unexplained = computed(() => this.analysis().dossier?.coverage.sessions_unexplained ?? []);
   decisions = computed(() => (this.analysis().dossier?.agent_decisions ?? []));
   limits = computed(() => {

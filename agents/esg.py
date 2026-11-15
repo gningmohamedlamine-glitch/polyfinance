@@ -45,16 +45,47 @@ def asset_sector(ticker: str) -> str | None:
     return None
 
 
-def esgv_membership(ticker: str) -> dict:
+def esgv_membership(ticker: str, end_date: str) -> dict:
     """Appartenance à ESGV si la liste publiée par Vanguard a été ajoutée au dépôt."""
     path = DATA / "esgv_holdings.csv"
     if not path.exists():
         return {"status": "unavailable"}
     with path.open(newline="", encoding="utf-8-sig") as source:
         rows = list(csv.DictReader(source))
+    dated = []
+    for row in rows:
+        try:
+            stamp = date.fromisoformat(row.get("as_of") or "").isoformat()
+        except ValueError:
+            continue
+        if stamp <= end_date:
+            dated.append((stamp, row))
+    if not dated:
+        return {"status": "unavailable"}
+    latest = max(stamp for stamp, _ in dated)
+    rows = [row for stamp, row in dated if stamp == latest]
     tickers = {(row.get("ticker") or row.get("Ticker") or "").strip().upper() for row in rows}
     as_of = next((row.get("as_of") for row in rows if row.get("as_of")), None)
     return {"status": "ok", "member": ticker.upper() in tickers, "as_of": as_of, "holdings": len(tickers)}
+
+
+def catalog_publications(ticker: str, end_date: str) -> list[dict]:
+    """Événements publiés dans les 365 jours précédents ; date sans heure utilisable le lendemain."""
+    path = DATA / "esg_publications.csv"
+    if not path.exists():
+        return []
+    end = date.fromisoformat(end_date)
+    start = end - timedelta(days=365)
+    found = []
+    with path.open(newline="", encoding="utf-8-sig") as source:
+        for row in csv.DictReader(source):
+            try:
+                published = date.fromisoformat(row["published_date"])
+            except (ValueError, KeyError):
+                continue
+            if row.get("ticker") == ticker and start <= published < end:
+                found.append({**row, "kind": "publication officielle cataloguée"})
+    return found
 
 
 def matching_publications(dossier: dict) -> list[dict]:
@@ -140,16 +171,20 @@ def esg_screen(dossier: dict, client=None) -> dict:
                 "start_date": risk["start_date"], "end_date": risk["end_date"]}
 
     comparison = {"stock": snapshot(ticker), "reference": snapshot(ESG_REFERENCE)}
-    controversies = matching_publications(dossier)
+    controversies = catalog_publications(ticker, end_date) + matching_publications(dossier)
     web_status = "disabled"
     if client is not None:
         web, web_status = web_controversies(client, ticker, selection.get("name", ticker), end_date)
         controversies += web
-    membership = esgv_membership(ticker)
+    # Dédupliquer et appliquer la même fenêtre à toutes les origines.
+    start = (date.fromisoformat(end_date) - timedelta(days=365)).isoformat()
+    controversies = list({item["url"]: item for item in reversed(controversies)
+                          if item.get("url") and start <= (item.get("published_date") or "") < end_date}.values())
+    membership = esgv_membership(ticker, end_date)
 
-    missing = ["Aucune note ESG ni donnée d’émissions dans le jeu de données."]
+    missing = ["Couverture ESG partielle : aucun score global ni série structurée d’émissions."]
     if membership["status"] != "ok":
-        missing.append("Liste des titres d’ESGV non fournie : l’appartenance au filtre ESG n’est pas vérifiée.")
+        missing.append("Composition historique d’ESGV indisponible à cette date : appartenance non vérifiée.")
     if web_status != "found" and not controversies:
         missing.append("Aucune controverse datée trouvée dans les sources consultées : absence de preuve, "
                        "pas preuve d’absence.")
@@ -159,7 +194,7 @@ def esg_screen(dossier: dict, client=None) -> dict:
     if membership.get("status") == "ok" and not membership["member"]:
         attention.append("Le titre ne figure pas dans la liste publiée d’ESGV.")
     if controversies:
-        attention.append(f"{len(controversies)} controverse(s) ou piste(s) à examiner, non vérifiée(s) pour les pistes web.")
+        attention.append(f"{len(controversies)} publication(s) ESG ou piste(s) à examiner. " + " ".join(item.get("summary") or item["title"] for item in controversies[:3]))
     return {
         "ticker": ticker,
         "sector": sector,

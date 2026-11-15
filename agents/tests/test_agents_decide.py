@@ -80,7 +80,41 @@ class AdvisorTests(unittest.TestCase):
         self.assertEqual(robert["mode"], "bedrock")
         self.assertFalse(robert["coherence"]["coherent"])
         self.assertEqual(robert["metrics"][0]["label"], "Volatilité annuelle (12 mois)")
+        self.assertIn("Écart par rapport au retrait", [metric["label"] for metric in robert["metrics"]])
         self.assertTrue(any(step["name"] == "profile_coherence" and step["source"] == "guard" for step in robert["trace"]))
+
+    def test_amira_position_tool_does_not_use_robert_withdrawal(self):
+        dossier = self.dossier()
+        client = scripted(tool_use("position_value_cad", {}), final("- Variation simulée en CAD."))
+        with patch.dict(os.environ, {"BEDROCK_MODEL_ID": "gpt-6-astra"}, clear=True), \
+                patch("agents.agent_loop.bedrock_client", return_value=client):
+            amira = run_impact_agent(dossier, "amira", SCENARIO)
+        self.assertTrue(amira["decisions"][0]["accepted"])
+        output = amira["decisions"][0]["output"]
+        self.assertEqual([metric["label"] for metric in output["metrics"]],
+                         ["Variation de la position", "Valeur finale simulée"])
+        self.assertNotIn("Robert", output["assumptions"])
+        self.assertNotIn("retrait", output["assumptions"])
+        self.assertNotIn("Écart par rapport au retrait", [metric["label"] for metric in amira["metrics"]])
+        trace = next(step for step in amira["trace"] if step["name"] == "position_value_cad")
+        self.assertNotIn("withdrawal_cad", trace["arguments"])
+
+    def test_mateo_guard_requires_esg_before_returning_text(self):
+        dossier = self.dossier()
+        client = scripted(final("Tout va bien."))
+        with patch.dict(os.environ, {"BEDROCK_MODEL_ID": "test"}, clear=True),                 patch("agents.agent_loop.bedrock_client", return_value=client):
+            result = run_impact_agent(dossier, "mateo", SCENARIO)
+        self.assertIsNotNone(result["esg"])
+        self.assertNotEqual(result["text"], "Tout va bien.")
+        self.assertTrue(any(t["name"] == "esg_screen" and t["source"] == "guard" for t in result["trace"]))
+
+    def test_insufficient_history_cannot_validate_profile(self):
+        from agents.impact_agent import profile_coherence
+        from agents.governance import run_controls
+        coherence = profile_coherence("robert", "NVDA", "2021-11-15")
+        self.assertIsNone(coherence["coherent"])
+        controls = run_controls({}, {}, {"coherence": coherence}, "2021-11-15")
+        self.assertEqual(next(c["status"] for c in controls["controls"] if c["id"] == "profile"), "warn")
 
     def test_profile_specific_tools_only(self):
         dossier = self.dossier()

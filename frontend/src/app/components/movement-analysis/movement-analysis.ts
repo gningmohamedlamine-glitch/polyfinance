@@ -1,35 +1,22 @@
 import { CurrencyPipe, DecimalPipe, PercentPipe } from '@angular/common';
-import { Component, computed, input, output } from '@angular/core';
+import { Component, computed, input } from '@angular/core';
 import { LucideDynamicIcon } from '@lucide/angular';
 import { ICONS } from '../../icons';
 import { EsgPanel } from '../esg-panel/esg-panel';
-import { ControlsPanel } from '../controls-panel/controls-panel';
-import { SensitivityPanel } from '../sensitivity-panel/sensitivity-panel';
 import { Persona } from '../../personas';
-import { AgentDecision, Analysis } from '../../services/market-api';
-
-const TOOL_LABELS: Record<string, string> = {
-  search_catalog: 'Chercher dans le catalogue vérifié',
-  search_sec_filings: 'Chercher les dépôts 8-K (SEC EDGAR)',
-  search_web: 'Chercher des pistes sur le web',
-  verify_profile_coherence: 'Vérifier la cohérence avec le profil',
-  position_value_cad: 'Chiffrer la position en CAD',
-  direct_weight: 'Mesurer le poids dans le portefeuille',
-  exclusion_evidence: 'Vérifier les preuves ESG',
-};
+import { Analysis } from '../../services/market-api';
 
 export type TextPart = { text: string; href?: string };
 
 @Component({
   selector: 'app-movement-analysis',
-  imports: [CurrencyPipe, DecimalPipe, PercentPipe, LucideDynamicIcon, EsgPanel, ControlsPanel, SensitivityPanel],
+  imports: [CurrencyPipe, DecimalPipe, PercentPipe, LucideDynamicIcon, EsgPanel],
   templateUrl: './movement-analysis.html',
   styleUrl: './movement-analysis.css',
 })
 export class MovementAnalysis {
   analysis = input.required<Analysis>();
   persona = input.required<Persona>();
-  retry = output<void>();
   readonly icons = ICONS;
 
   /** Décomposition : mouvement attendu vu la sensibilité au marché (bêta) contre part propre au titre. */
@@ -56,14 +43,6 @@ export class MovementAnalysis {
       .map(symbol => ({ symbol, label: symbol === 'XLK' ? 'Secteur techno' : rows[symbol].name, ret: rows[symbol].return! }));
   });
 
-  decisions = computed<(AgentDecision & { label: string })[]>(() => [
-    ...(this.analysis().dossier?.agent_decisions ?? []),
-    ...(this.analysis().impact.decisions ?? []),
-  ].map(decision => ({ ...decision, label: TOOL_LABELS[decision.tool] ?? decision.tool })));
-
-  webLeads = computed(() => this.analysis().dossier?.coverage.web_leads ?? []);
-
-  /** Règles de cohérence affichées en cartes (valeurs calculées par le backend). */
   rules = computed(() => {
     const coherence = this.analysis().impact.coherence;
     if (!coherence || coherence.risk.status !== 'ok') return [];
@@ -97,18 +76,6 @@ export class MovementAnalysis {
     && !metric.label.startsWith('Rendement 12 mois') && metric.label !== 'Volatilité 12 mois (ESGV)'
     && !metric.label.startsWith('Part techno')));
 
-  /** Consommation réelle du modèle, renvoyée par Bedrock (aucun coût estimé). */
-  usage = computed(() => {
-    const parts = [
-      { agent: 'Enquêteur', usage: this.analysis().dossier?.usage },
-      { agent: 'Conseiller', usage: this.analysis().impact.usage },
-    ].filter(part => part.usage && part.usage.model_calls > 0);
-    return parts.length ? parts : null;
-  });
-
-  sourceCount = computed(() => this.analysis().event.sources.length);
-  verifiedCount = computed(() => this.analysis().event.sources.filter(s => s.excerpt_status === 'verified').length);
-
   bullets(text: string) {
     const lines = text.split(/\r?\n/).map(line => line.trim().replace(/^(?:[-*•]|\d+[.)])\s+/, '').replaceAll('**', '')).filter(Boolean);
     // Texte local en un seul paragraphe : une phrase par puce pour rester lisible.
@@ -138,18 +105,5 @@ export class MovementAnalysis {
       parts.push({ text: line.slice(last) });
     }
     return parts.length ? parts : [{ text: line }];
-  }
-
-  oneLine(text?: string, max = 140) {
-    const line = text?.replace(/\s+/g, ' ').trim();
-    if (!line) return '';
-    return line.length > max ? `${line.slice(0, max - 1)}…` : line;
-  }
-
-  leadLine(lead: { relevance?: string; summary: string; facts?: string[] }) {
-    if (lead.facts?.length) {
-      return this.oneLine(lead.facts.join(' · '));
-    }
-    return this.oneLine(lead.relevance?.trim() || lead.summary);
   }
 }

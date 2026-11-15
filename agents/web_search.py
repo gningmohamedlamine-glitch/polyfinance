@@ -14,6 +14,7 @@ from botocore.config import Config
 from botocore.exceptions import BotoCoreError, ClientError, ConnectTimeoutError, ReadTimeoutError
 
 from .model_text import public_text
+from .source_quality import COMPANY_HOSTS, check_source, is_official
 
 logger = logging.getLogger(__name__)
 MODEL = "us.amazon.nova-2-lite-v1:0"
@@ -98,7 +99,7 @@ def _session_for_date(published: str, windows: dict[str, tuple[str, str]]) -> st
 
 def _host_blocked(url: str) -> bool:
     host = (urlsplit(url).hostname or "").lower()
-    return not host or host.endswith("sec.gov")
+    return not host
 
 
 def _clean_snippet(text: str) -> str:
@@ -153,6 +154,10 @@ def _append_lead(leads: list[dict], seen: set[str], row: dict, *, limit: int) ->
 
 def _agentcore_queries(ticker, name, start, end):
     return [
+        f"site:{COMPANY_HOSTS.get(ticker, 'sec.gov')} {name} after:{start} before:{end}",
+        f"site:sec.gov {name} after:{start} before:{end}",
+        f"site:federalreserve.gov monetary after:{start} before:{end}",
+        f"site:bls.gov news release after:{start} before:{end}",
         f"{ticker} {name} stock news"[:200],
         f"{ticker} {name} earnings analyst"[:200],
         f"{ticker} CEO resignation governance"[:200],
@@ -165,6 +170,20 @@ def _agentcore_queries(ticker, name, start, end):
 def _title_fingerprint(title: str) -> str:
     words = re.findall(r"\w+", (title or "").lower())
     return " ".join(words[:5]) if words else ""
+
+
+def _domain(url: str) -> str:
+    host = (urlsplit(url).hostname or "").lower()
+    return host[4:] if host.startswith("www.") else host
+
+
+def corroborate(lead: dict, urls: list[str]) -> dict:
+    """Corroboration = nombre de sites indépendants qui rapportent la même histoire (domaines distincts)."""
+    domains = sorted({_domain(u) for u in [lead["url"], *urls] if _domain(u)})
+    lead["domains"] = domains
+    lead["corroboration"] = len(domains)
+    lead["verification"] = "corroborated" if len(domains) >= 2 else "single_source"
+    return lead
 
 
 def _merge_leads(*batches: list[dict], limit: int = RAW_COLLECT_MAX) -> list[dict]:
@@ -189,15 +208,15 @@ def _simple_dedupe_leads(leads: list[dict], *, limit: int = CLUSTER_KEEP) -> lis
         groups.setdefault(key, []).append(lead)
     out: list[dict] = []
     for key, items in groups.items():
-        best = max(items, key=lambda row: len(row.get("summary", "")))
+        best = max(items, key=lambda row: (is_official(row['url']), len(row.get("summary", ""))))
         facts = _facts_from_summary(best.get("summary", ""))
-        out.append({
+        out.append(corroborate({
             **best,
             "story_key": key[:80] or best.get("title", "")[:80],
             "related_count": len(items),
             "facts": facts,
             "summary": "; ".join(facts) if facts else best.get("summary", ""),
-        })
+        }, [row["url"] for row in items]))
         if len(out) >= limit:
             break
     return out
@@ -234,7 +253,7 @@ def _cluster_leads(client, ticker, name, leads: list[dict]) -> list[dict]:
         f"Entrée: {json.dumps(leads, ensure_ascii=False)}\n"
         f"Produit au plus {CLUSTER_KEEP} histoires distinctes (événements différents). "
         "Fusionne les doublons (même démission, même tarif, même rapport) en une seule entrée. "
-        "Pour chaque histoire: choisis la meilleure url, conserve title, published_date, session, "
+        "Pour chaque histoire: privilégie la publication officielle pertinente si disponible, conserve title, published_date, session, "
         "source_type; liste 2 à 5 faits distincts en français (facts); cite aussi_urls pour les "
         "autres articles du même groupe.\n"
         'Réponds uniquement avec {"stories": [{"story_key": "...", "url": "...", "title": "...", '
@@ -269,6 +288,8 @@ def _cluster_leads(client, ticker, name, leads: list[dict]) -> list[dict]:
         if not isinstance(url, str) or not url.strip():
             continue
         base = by_url.get(normalize_url(url), {})
+        if not base:
+            continue  # A model cannot introduce an unfetched URL during clustering.
         facts = story.get("facts")
         if not isinstance(facts, list):
             facts = []
@@ -278,14 +299,15 @@ def _cluster_leads(client, ticker, name, leads: list[dict]) -> list[dict]:
         also = story.get("also_urls")
         if not isinstance(also, list):
             also = []
-        also = [u for u in also if isinstance(u, str) and u.strip()]
-        published = story.get("published_date") or base.get("published_date")
-        session = story.get("session") or base.get("session")
+        also = [u for u in also if isinstance(u, str) and normalize_url(u) in by_url]
+        published = base.get("published_date")
+        session = base.get("session")
         if not isinstance(published, str) or not isinstance(session, str):
             continue
         source_type = story.get("source_type") if isinstance(story.get("source_type"), str) else base.get("source_type", SOURCE_TYPE_DEFAULT)
-        clustered.append({
+        clustered.append(corroborate({
             "url": url.strip(),
+            "original_excerpt": base.get("original_excerpt", ""),
             "title": (story.get("title") if isinstance(story.get("title"), str) else base.get("title", "Article"))[:500],
             "published_date": published,
             "session": session,
@@ -295,7 +317,7 @@ def _cluster_leads(client, ticker, name, leads: list[dict]) -> list[dict]:
             "story_key": (story.get("story_key") if isinstance(story.get("story_key"), str) else "")[:80],
             "related_count": 1 + len(also),
             "facts": facts,
-        })
+        }, also))
     if clustered:
         logger.info("Clustered %d raw lead(s) into %d story(ies) for %s", len(leads), len(clustered), ticker)
         return clustered
@@ -349,8 +371,8 @@ def search_agentcore_leads(ticker, name, windows, *, limit=RAW_COLLECT_MAX):
             url = url.strip()
             if not url.startswith("https://") or _host_blocked(url):
                 continue
-            published = _parse_published(item.get("publishedAt")) or session
-            if not start <= published <= end:
+            published = _parse_published(item.get("publishedAt"))
+            if not published or not start <= published <= end:
                 continue
             title = _clean_snippet(item.get("title") if isinstance(item.get("title"), str) else "")
             if not title:
@@ -368,6 +390,7 @@ def search_agentcore_leads(ticker, name, windows, *, limit=RAW_COLLECT_MAX):
                 "published_date": published,
                 "session": assigned,
                 "summary": summary,
+                "original_excerpt": summary,
                 "source_type": "news",
                 "after_session": published > assigned,
             }, limit=limit)
@@ -419,6 +442,7 @@ def _collect_cited_leads(rows, cited_raw, cited_normalized, windows, *, limit=RA
             source_type = source_type.strip()[:80]
         leads.append(_normalize_lead({
             **{field: row[field][:500] for field in REQUIRED_FIELDS},
+            "original_excerpt": row.get("original_excerpt", "")[:1000] if isinstance(row.get("original_excerpt"), str) else "",
             "url": url if url.startswith("https://") else normalize_url(url),
             "published_date": published,
             "after_session": published > row["session"],
@@ -433,6 +457,7 @@ def _search_queries(ticker, name, windows):
     queries = []
     for session, (start, end) in windows.items():
         day = date.fromisoformat(session).strftime("%B %d %Y")
+        queries.extend(_agentcore_queries(ticker, name, start, end)[:4])
         queries.append(f"{ticker} {name} stock news after:{start} before:{end}")
         queries.append(f'"{name}" OR {ticker} earnings analyst {start}..{end}')
         queries.append(f"{ticker} shares market news {day} Reuters OR Bloomberg OR CNBC")
@@ -447,11 +472,14 @@ def _grounding_leads(client, ticker, name, windows):
         f"Search the public web for news and market coverage about {name} ({ticker}) "
         "around specific U.S. equity trading dates. Include company news, sector news, and "
         "macro or geopolitical drivers (wars, tariffs, export bans, sanctions) when dated "
-        "in the windows. SEC EDGAR is already handled separately; do not return sec.gov links.\n"
+        "in the windows. Prioritize official company investor relations, SEC press releases, "
+        "Federal Reserve and BLS publications. Exclude live stock quote pages and undated pages. "
+        "Never invent a publication date or substitute the trading date.\n"
         f"Queries: {json.dumps(queries)}.\n"
         f"Publication-date windows by session (YYYY-MM-DD): {json.dumps(windows)}.\n"
         "Return only a JSON array of objects with url, title, published_date, session, "
-        "source_type, summary (one short French sentence). Copy exact cited https URLs."
+        "source_type, summary (one short French sentence), original_excerpt (a short verbatim "
+        "passage in the source language, or empty if unavailable). Copy exact cited https URLs."
     )
     try:
         response = client.converse(
@@ -561,7 +589,7 @@ def find_web_leads(client, ticker, name, windows, moves=None):
 
     agentcore = search_agentcore_leads(ticker, name, windows)
     extra, detail = _grounding_leads(client, ticker, name, windows)
-    leads = _merge_leads(agentcore, extra)
+    leads = _merge_leads(sorted(agentcore + extra, key=lambda row: not is_official(row['url'])))
     if not leads:
         if detail in {"timeout", "unavailable", "not_executed", "invalid_response"}:
             return [], detail
@@ -580,4 +608,4 @@ def find_web_leads(client, ticker, name, windows, moves=None):
     result, status = _apply_relevance(leads, judged)
     if result:
         logger.info("Web leads for %s via %s: %d kept", ticker, source, len(result))
-    return result, status
+    return [check_source(lead) for lead in result], status

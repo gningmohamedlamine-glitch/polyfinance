@@ -77,6 +77,8 @@ def run_controls(dossier: dict, event: dict, impact: dict, selection_end: str, s
         add("profile", "Contraintes du profil", "warn" if mentioned else "fail",
             f"{len(conflicts)} limite(s) dépassée(s), "
             + ("signalée(s) à l’utilisateur." if mentioned else "mais absente(s) du texte du Conseiller."))
+    elif coherence.get("missing"):
+        add("profile", "Contraintes du profil", "warn", "Cohérence indéterminée : historique insuffisant.")
     else:
         add("profile", "Contraintes du profil", "ok", "Le risque observé respecte les limites du profil.")
 
@@ -114,9 +116,12 @@ def run_controls(dossier: dict, event: dict, impact: dict, selection_end: str, s
     # 5. Pistes web : présentées comme non vérifiées.
     leads = dossier.get("coverage", {}).get("web_leads") or []
     if leads:
-        labelled = all("non vérifi" in text.lower() or "web" not in text.lower() for text in texts.values())
-        add("web", "Pistes web signalées comme non vérifiées", "ok" if labelled else "warn",
-            f"{len(leads)} piste(s) web, affichées comme non vérifiées.")
+        corroborated = sum(1 for lead in leads if (lead.get("corroboration") or 1) >= 2)
+        labelled = all(any(word in text.lower() for word in ("non vérifi", "corrobor", "source unique", "piste"))
+                       or "web" not in text.lower() for text in texts.values())
+        add("web", "Pistes web distinguées des preuves", "ok" if labelled else "warn",
+            f"{len(leads)} piste(s) web : {corroborated} corroborée(s) par au moins deux sites indépendants, "
+            f"{len(leads) - corroborated} à source unique. Aucune n’est une preuve vérifiée.")
 
     # 6. Aucune donnée postérieure à la séance analysée.
     late = []

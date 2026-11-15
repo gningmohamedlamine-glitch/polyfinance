@@ -93,3 +93,9 @@ small { color: var(--muted); font-size: .78rem; }
 .usage-none { font-size: .84rem; margin: 10px 0; }
 .chip, .badge, .alert > strong { display: inline-flex; align-items: center; gap: 6px; }
 .points a { font-weight: 600; }
+
+.disclosure { border-top: 1px solid var(--border); padding-top: 12px; min-width: 0; }
+.disclosure summary { font-size: .9rem; font-weight: 600; }
+.disclosure summary small { display: inline-block; margin-left: 4px; }
+.disclosure-body { display: grid; gap: 12px; margin-top: 12px; }
+.disclosure.technical { border-top: 1px solid var(--border); padding-top: 16px; }

@@ -45,6 +45,29 @@ def amount(request, key, default):
     return value
 
 
+def parse_scenario(request, profile):
+    if profile == "mateo":
+        return {}
+    position = amount(request, "position_cad", 10_000)
+    if profile == "robert":
+        return {"position_cad": position, "withdrawal_cad": amount(request, "withdrawal_cad", 9_500)}
+
+    portfolio = amount(request, "portfolio_cad", 100_000)
+    purchase = amount(request, "purchase_cad", 5_000)
+    # Hypothèse du scénario : le portefeuille fictif d’Amira est déjà très exposé à la technologie.
+    tech_weight = float(request.GET.get("tech_weight", 0.47))
+    if not 0 <= tech_weight <= 1:
+        raise ValueError("La part de technologie doit être comprise entre 0 et 1.")
+    if portfolio == 0 or position + purchase > portfolio:
+        raise ValueError("La position et l’achat doivent tenir dans le portefeuille existant.")
+    return {
+        "position_cad": position,
+        "portfolio_cad": portfolio,
+        "purchase_cad": purchase,
+        "tech_weight": tech_weight,
+    }
+
+
 def parse_selection(request, ticker: str):
     start = request.GET.get("start_date")
     end = request.GET.get("end_date")
@@ -72,26 +95,10 @@ def analysis(request):
         return JsonResponse({"error": "Action ou profil inconnu."}, status=400)
     try:
         window = parse_selection(request, ticker)
-        position = amount(request, "position_cad", 10_000)
-        withdrawal = amount(request, "withdrawal_cad", 9_500)
-        portfolio = amount(request, "portfolio_cad", 100_000)
-        purchase = amount(request, "purchase_cad", 5_000)
-        # Hypothèse du scénario : portefeuille fictif d’Amira déjà très exposé à la techno (intérêt pour l’IA).
-        tech_weight = float(request.GET.get("tech_weight", 0.47))
-        if not 0 <= tech_weight <= 1:
-            raise ValueError("La part de technologie doit être comprise entre 0 et 1.")
-        if profile == "amira" and (portfolio == 0 or position + purchase > portfolio):
-            raise ValueError("La position et l’achat doivent tenir dans le portefeuille existant.")
+        scenario = parse_scenario(request, profile)
     except ValueError as error:
         return JsonResponse({"error": str(error)}, status=400)
 
-    scenario = {
-        "position_cad": position,
-        "withdrawal_cad": withdrawal,
-        "portfolio_cad": portfolio,
-        "purchase_cad": purchase,
-        "tech_weight": tech_weight,
-    }
     if request.GET.get("stream") == "1":
         response = StreamingHttpResponse(
             analysis_stream(window, profile, scenario), content_type="application/x-ndjson",

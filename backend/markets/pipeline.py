@@ -9,6 +9,7 @@ from agents.dossier import SCHEMA, selection_payload
 from agents.governance import run_controls
 from agents.sensitivity import run_sensitivity
 from agents.events import catalog_fingerprint, publication_coverage, session_window
+from agents.impact_agent import _fallback_text
 from agents.main import event_agent, impact_agent
 
 from .window import movement_legacy, window_returns
@@ -139,6 +140,12 @@ def run_analysis(window, profile, scenario, progress=None):
     notify("governance", "stage", "running")
     sensitivity = run_sensitivity(window, returns, profile, scenario, impact.get("coherence") or {})
     controls = run_controls(dossier, event, impact, window.end_close_date, sensitivity)
+    if controls["verdict"] == "fail":
+        event["text"] = "La cause du mouvement reste indéterminée. Consulte les rendements calculés et les sources du dossier."
+        impact["text"] = _fallback_text(profile, impact["metrics"], impact["assumptions"], impact["coherence"])
+        event["text_mode"] = impact["text_mode"] = "guard"
+        # Copie pour préserver le dossier conservé en cache.
+        dossier = {**dossier, "synthesis": {**dossier["synthesis"], "text": event["text"], "text_mode": "guard"}}
     notify("governance", "stage", "done", mode="local")
     return {
         "controls": controls,

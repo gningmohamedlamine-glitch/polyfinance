@@ -23,3 +23,12 @@ class EventsTests(unittest.TestCase):
         self.assertEqual(coverage["sessions_with_evidence"], ["2024-08-29"])
         urls = [row["url"] for row in pubs]
         self.assertEqual(len(urls), len(set(urls)))
+
+class CorroborationTests(unittest.TestCase):
+    def test_counts_independent_domains_only(self):
+        from agents.web_search import corroborate
+        lead = corroborate({"url": "https://www.reuters.com/a"}, ["https://reuters.com/b", "https://apnews.com/c"])
+        self.assertEqual((lead["corroboration"], lead["verification"]), (2, "corroborated"))
+        self.assertEqual(lead["domains"], ["apnews.com", "reuters.com"])
+        single = corroborate({"url": "https://example.com/x"}, [])
+        self.assertEqual(single["verification"], "single_source")

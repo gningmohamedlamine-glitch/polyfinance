@@ -60,8 +60,9 @@ INVESTIGATOR = (
     "Réponds ensuite en français, en deux ou trois puces courtes : ce qui a bougé, ce qui a été publié, "
     "et ce qui pourrait expliquer l’écart. Une publication datée ne prouve pas le sens du mouvement : "
     "si les chiffres publiés sont en hausse et que le titre baisse, dis que la source ne suffit pas à "
-    "expliquer la baisse. Cite les champs excerpt mot pour mot quand ils existent. Les pistes web sont "
-    "des pistes non vérifiées ; une piste after_session ne peut pas expliquer le mouvement. "
+    "expliquer la baisse. Cite les champs excerpt mot pour mot quand ils existent. Les pistes web ne sont "
+    "pas des preuves vérifiées : dis « corroborée par N sources » quand corroboration ≥ 2, sinon « source unique » ; "
+    "une piste after_session ne peut pas expliquer le mouvement. "
     "Si les preuves ne permettent pas de trancher, écris que la cause est indéterminée."
 )
 
@@ -192,7 +193,7 @@ def _executor(context: ToolContext, notify, network: bool):
             rows, status = run_sec_search(context, notify, sessions, mode="model")
             return True, {"filings": rows, "status": status}
         leads, status = run_web_search(context, notify, sessions, mode="model")
-        return True, {"web_leads": leads, "status": status}
+        return True, {"web_leads": [lead for lead in leads if not lead.get("after_session")], "status": status}
 
     return execute
 
@@ -251,7 +252,7 @@ def run_event_agent(window: ResolvedWindow, progress=None) -> dict:
         if guard_leads:
             # Le texte de l'Enquêteur a été écrit sans ces pistes : on le réécrit avec elles.
             evidence = {key: dossier[key] for key in ("selection", "returns", "benchmarks", "notable_sessions")}
-            evidence["web_leads"] = context.coverage.get("web_leads", [])
+            evidence["web_leads"] = [lead for lead in context.coverage.get("web_leads", []) if not lead.get("after_session")]
             evidence["publications"] = dossier["publications"][:8]
             rewrite = synthesize("event", SYSTEM, evidence, 2000, notify)
             usage = rewrite.pop("usage", {}) or {}
@@ -277,7 +278,7 @@ def run_event_agent(window: ResolvedWindow, progress=None) -> dict:
     evidence = {
         key: dossier[key] for key in ("selection", "returns", "benchmarks", "notable_sessions")
     }
-    evidence["web_leads"] = context.coverage.get("web_leads", [])
+    evidence["web_leads"] = [lead for lead in context.coverage.get("web_leads", []) if not lead.get("after_session")]
     # Limit prose context while retaining every checked publication in the API response.
     evidence["publications"] = dossier["publications"][:8]
     synthesis = synthesize("event", SYSTEM, evidence, 2000, notify)

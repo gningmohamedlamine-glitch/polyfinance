@@ -1,7 +1,9 @@
+import { ControlsPanel } from '../../components/controls-panel/controls-panel';
+import { SensitivityPanel } from '../../components/sensitivity-panel/sensitivity-panel';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { DatePipe, DecimalPipe, PercentPipe } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { Subscription } from 'rxjs';
 import { AgentTimeline } from '../../components/agent-timeline/agent-timeline';
 import { DossierView } from '../../components/dossier-view/dossier-view';
@@ -26,7 +28,7 @@ type SavedExplorer = {
 
 @Component({
   selector: 'app-explorer',
-  imports: [FormsModule, DatePipe, DecimalPipe, PercentPipe, LucideDynamicIcon, PriceChart, MovementAnalysis, AgentTimeline, DossierView, TracesView, Welcome, Logo],
+  imports: [FormsModule, DatePipe, LucideDynamicIcon, PriceChart, MovementAnalysis, AgentTimeline, DossierView, TracesView, Welcome, Logo, ControlsPanel, SensitivityPanel],
   templateUrl: './explorer.html',
   styleUrl: './explorer.css',
 })
@@ -53,43 +55,26 @@ export class Explorer {
   chartHorizon = signal<Horizon>('1M');
   chartStyle = signal<ChartStyle>('line');
 
-  /** Indicateurs clés affichés sous le graphique une fois l'analyse terminée. */
-  kpis() {
-    const analysis = this.result();
-    if (!analysis) return null;
-    const sources = analysis.event.sources ?? [];
-    const model = analysis.dossier?.returns?.market_model;
-    return {
-      move: analysis.movement.usd_return,
-      residual: model?.status === 'ok' ? model.residual_pp : null,
-      sources: sources.length,
-      verified: sources.filter(s => s.excerpt_status === 'verified').length,
-      leads: analysis.dossier?.coverage.web_leads?.length ?? 0,
-    };
-  }
+  sourceCount() { return this.result()?.event.sources.length ?? 0; }
   entered = signal(false);
   switcherOpen = signal(false);
 
   persona() { return personaOf(this.profile); }
 
-  /** Trois vues : l'analyse (actes 1 à 3), le dossier de preuves et les traces des agents. */
-  view = signal<'analyse' | 'dossier' | 'traces'>('analyse');
   readonly pages = [
-    { id: 'analyse' as const, label: 'Analyse' },
-    { id: 'dossier' as const, label: 'Dossier de preuves' },
-    { id: 'traces' as const, label: 'Traces des agents' },
-  ];
-  readonly sections = [
-    { id: 'acte1', label: 'La séance' },
-    { id: 'acte2', label: 'Ce qui s’est passé' },
-    { id: 'acte3', label: 'Pour toi' },
-    { id: 'sensibilite', label: 'Mise à l’épreuve' },
-    { id: 'controles', label: 'Contrôles' },
-    { id: 'decisions', label: 'Décisions des agents' },
-  ];
-  activeSection = signal('acte1');
+    { id: 'analyse', label: 'Configurer l’analyse', icon: this.icons.analyse },
+    { id: 'resultat', label: 'Résultat', icon: this.icons.doc },
+    { id: 'dossier', label: 'Dossier de preuves', icon: this.icons.dossier },
+    { id: 'controles', label: 'Contrôles et sensibilité', icon: this.icons.shield },
+    { id: 'traces', label: 'Traces des agents', icon: this.icons.traces },
+  ] as const;
+  view = signal<(typeof this.pages)[number]['id']>('analyse');
 
-  openPage(id: 'analyse' | 'dossier' | 'traces') {
+  pageTitle() {
+    return this.pages.find(page => page.id === this.view())?.label;
+  }
+
+  openPage(id: (typeof this.pages)[number]['id']) {
     this.view.set(id);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -97,41 +82,17 @@ export class Explorer {
   stale = signal(false);
   private autoRun = false;
 
-  /** Le menu de gauche fait défiler la page vers chaque acte (aucune page fictive). */
-  goTo(id: string) {
-    this.activeSection.set(id);
-    const scroll = () => {
-      const element = document.getElementById(id);
-      if (element instanceof HTMLDetailsElement) element.open = true;
-      element?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    };
-    if (this.view() !== 'analyse') {
-      this.view.set('analyse');
-      setTimeout(scroll, 50);
-    } else {
-      scroll();
-    }
-  }
-
-  /** Nouvelle analyse : retour à la sélection de la séance. */
   newAnalysis() {
-    this.goTo('acte1');
+    this.view.set('analyse');
+    requestAnimationFrame(() => {
+      document.getElementById('stock-picker-title')?.focus({ preventScroll: true });
+      document.getElementById('stock-picker')?.scrollIntoView({ block: 'start' });
+    });
   }
 
-  /** Bouton « Exécuter l'analyse » : relance les deux agents sur la sélection courante. */
   run() {
+    this.view.set('analyse');
     this.analyzeCurrent();
-  }
-
-  available(id: string) {
-    const result = this.result();
-    if (id === 'acte1') return true;
-    if (!result) return false;
-    if (id === 'decisions') return !!(result.dossier?.agent_decisions?.length || result.impact.decisions?.length);
-    if (id === 'traces') return !!result.trace?.length;
-    if (id === 'controles') return !!result.controls;
-    if (id === 'sensibilite') return !!result.sensitivity?.checks.length;
-    return true;
   }
 
   aiMode() {
@@ -326,6 +287,7 @@ export class Explorer {
 
   selectProfile(profile: Profile) {
     this.profile = profile;
+    this.view.set('analyse');
     this.persistSelection();
     // Autre profil : l'analyse attend le bouton, comme toute autre modification.
     // Le résultat dépend du profil : on ne laisse jamais l'analyse de Robert sous le nom d'Amira.
@@ -415,6 +377,7 @@ export class Explorer {
         }
         this.result.set(message);
         this.busy.set(false);
+        this.openPage('resultat');
       },
       error: (error: Error) => {
         this.busy.set(false);

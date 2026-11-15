@@ -49,6 +49,21 @@ class AnalysisViewTests(SimpleTestCase):
         dossier = response.json()["dossier"]
         self.assertEqual(dossier["selection"]["applied"], "period")
 
+    def test_analysis_parses_only_the_selected_profiles_fields(self):
+        cases = {
+            "amira": ({"withdrawal_cad": "invalide"},
+                      {"position_cad": 10_000, "portfolio_cad": 100_000, "purchase_cad": 5_000, "tech_weight": 0.47}),
+            "robert": ({"purchase_cad": "invalide"}, {"position_cad": 10_000, "withdrawal_cad": 9_500}),
+            "mateo": ({"position_cad": "invalide"}, {}),
+        }
+        for profile, (irrelevant, expected) in cases.items():
+            with self.subTest(profile=profile), patch("markets.views.run_analysis", return_value={}) as analyze:
+                response = self.client.get("/api/analysis/", {
+                    "ticker": "NVDA", "date": "2024-08-29", "profile": profile, **irrelevant,
+                })
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(analyze.call_args.args[1:], (profile, expected))
+
     def test_invalid_range(self):
         response = self.client.get(
             "/api/analysis/",
