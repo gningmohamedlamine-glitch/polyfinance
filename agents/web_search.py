@@ -6,7 +6,9 @@ import json
 import logging
 import os
 import re
-from concurrent.futures import ThreadPoolExecutor, TimeoutError
+from concurrent.futures import TimeoutError
+from contextvars import copy_context
+from .runtime import ContextExecutor as ThreadPoolExecutor
 from datetime import date, datetime, timedelta
 from itertools import batched
 from threading import BoundedSemaphore, Thread
@@ -17,7 +19,9 @@ import boto3
 from botocore.config import Config
 from botocore.exceptions import BotoCoreError, ClientError, ConnectTimeoutError, ReadTimeoutError
 
+from .runtime import converse, network_call
 from .model_text import public_text
+from .temporal import annotate
 from .source_quality import COMPANY_HOSTS, check_source, is_official
 
 logger = logging.getLogger(__name__)
@@ -151,7 +155,7 @@ def _normalize_lead(lead: dict) -> dict:
     relevance = lead.get("relevance")
     if isinstance(relevance, str) and relevance.strip():
         out["relevance"] = _clean_snippet(relevance)[:500]
-    return out
+    return annotate(out)
 
 
 def _append_lead(leads: list[dict], seen: set[str], row: dict, *, limit: int) -> None:
@@ -190,7 +194,7 @@ def _domain(url: str) -> str:
 
 
 def corroborate(lead: dict, urls: list[str]) -> dict:
-    """Corroboration = nombre de sites indépendants qui rapportent la même histoire (domaines distincts)."""
+    """Corroboration = nombre de domaines distincts ; leur indépendance éditoriale n’est pas vérifiée."""
     domains = sorted({_domain(u) for u in [lead["url"], *urls] if _domain(u)})
     lead["domains"] = domains
     lead["corroboration"] = len(domains)
@@ -280,7 +284,7 @@ def _cluster_leads(client, ticker, name, leads: list[dict], *, moves=None) -> li
             "Un suivi publié après la séance peut être utile mais ne constitue pas une cause contemporaine."
         )
     try:
-        response = client.converse(
+        response = converse(client,
             modelId=MODEL,
             messages=[{"role": "user", "content": [{"text": prompt}]}],
             inferenceConfig={"maxTokens": 1400},
@@ -327,6 +331,7 @@ def _cluster_leads(client, ticker, name, leads: list[dict], *, moves=None) -> li
         clustered.append(corroborate({
             "url": url.strip(),
             "original_excerpt": base.get("original_excerpt", ""),
+            "published_at": base.get("published_at"),
             "title": (story.get("title") if isinstance(story.get("title"), str) else base.get("title", "Article"))[:500],
             "published_date": published,
             "session": session,
@@ -370,6 +375,7 @@ def search_agentcore_leads(ticker, name, windows, *, limit=RAW_COLLECT_MAX, move
     def fetch(task):
         _, start, end, query = task
         try:
+            network_call()
             response = search.invoke_web_search(
                 webSearchId=WEB_SEARCH_ID,
                 searchQuery=query,
@@ -415,6 +421,7 @@ def search_agentcore_leads(ticker, name, windows, *, limit=RAW_COLLECT_MAX, move
                             "url": url,
                             "title": _clean_snippet(title) if isinstance(title, str) else "Article",
                             "published_date": published,
+                            "published_at": str(item.get("publishedAt")) if "T" in str(item.get("publishedAt")) or isinstance(item.get("publishedAt"), datetime) else None,
                             "session": session,
                             "summary": summary,
                             "original_excerpt": summary,
@@ -520,7 +527,7 @@ def _grounding_leads(client, ticker, name, windows, macro=True):
         "passage in the source language, or empty if unavailable). Copy exact cited https URLs."
     )
     try:
-        response = client.converse(
+        response = converse(client,
             modelId=MODEL,
             messages=[{"role": "user", "content": [{"text": prompt}]}],
             toolConfig={"tools": [{"systemTool": {"name": "nova_grounding"}}]},
@@ -574,7 +581,7 @@ def _judge_relevance(client, ticker, name, moves, leads):
         '"relevance": "une courte phrase en français"} — une entrée par piste, mêmes url.'
     )
     try:
-        response = client.converse(
+        response = converse(client,
             modelId=MODEL,
             messages=[{"role": "user", "content": [{"text": prompt}]}],
             inferenceConfig={"maxTokens": 1200},
@@ -700,7 +707,7 @@ def find_web_leads(client, ticker, name, windows, moves=None, *, covered_session
             except BaseException as error:
                 early_rank["error"] = error
 
-        rank_thread = Thread(target=_rank_primary, name="web-rank", daemon=True)
+        rank_thread = Thread(target=copy_context().run, args=(_rank_primary,), name="web-rank", daemon=True)
         rank_thread.start()
 
     def ranked_primary():

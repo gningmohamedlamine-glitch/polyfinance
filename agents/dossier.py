@@ -83,12 +83,12 @@ def local_event_text(context: ToolContext) -> str:
         )
     if context.publications:
         titles = "; ".join(source["title"] for source in context.publications[:2])
-        parts.append(f"Publications vérifiées : {titles}.")
+        parts.append(f"Publications datées : {titles}.")
         parts.append("Ces publications datent la séance, mais ne prouvent pas à elles seules le sens du mouvement.")
     else:
-        parts.append("Aucune publication vérifiée pour cette fenêtre. La cause du mouvement demeure indéterminée.")
+        parts.append("Aucune publication datée pour cette fenêtre. La cause du mouvement demeure indéterminée.")
     if context.coverage["sessions_unexplained"]:
         unexplained = ", ".join(context.coverage["sessions_unexplained"][:4])
-        parts.append(f"Séances sans publication vérifiée : {unexplained}.")
+        parts.append(f"Séances sans publication datée : {unexplained}.")
     parts.append("Les écarts avec les indices restent descriptifs et n’établissent pas une cause.")
     return " ".join(parts)

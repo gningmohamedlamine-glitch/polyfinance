@@ -12,7 +12,7 @@ COPY backend/requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt && useradd --system --uid 10001 dashboard
 COPY backend/ backend/
 COPY agents/ agents/
-COPY data/prices_daily.csv data/fx_usdcad_daily.csv data/market_events.csv data/sector_etfs_daily.csv data/assets_universe.csv data/esg_publications.csv data/esgv_holdings.cs[v] data/
+COPY data/prices_daily.csv data/fx_usdcad_daily.csv data/market_events.csv data/sector_etfs_daily.csv data/assets_universe.csv data/esg_publications.csv data/esg_emissions.csv data/esgv_holdings.cs[v] data/
 COPY data/sources/ data/sources/
 COPY --from=frontend /build/dist/frontend/browser/ frontend/dist/frontend/browser/
 USER dashboard

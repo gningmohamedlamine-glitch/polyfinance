@@ -1,7 +1,9 @@
 """Read timestamped current reports from the SEC submissions API."""
 import json
+import os
 from datetime import datetime
-from functools import lru_cache
+from .cache import ttl_cache
+from .runtime import network_call
 from urllib.error import URLError
 from urllib.request import Request, urlopen
 from zoneinfo import ZoneInfo
@@ -11,10 +13,11 @@ from .events import session_window
 CIKS = {"NVDA": 1045810, "AAPL": 320193, "MSFT": 789019, "GOOGL": 1652044, "AMZN": 1018724, "TSLA": 1318605}
 
 
-@lru_cache(maxsize=12)
+@ttl_cache(seconds=900, maxsize=12)
 def submissions(ticker):
+    network_call()
     request = Request(f"https://data.sec.gov/submissions/CIK{CIKS[ticker]:010d}.json",
-                      headers={"User-Agent": "AlphaForge Datathon, Polytechnique Montreal (polyfinances.ca)"})
+                      headers={"User-Agent": os.getenv("SEC_USER_AGENT") or "AlphaForge Datathon, Polytechnique Montreal (polyfinances.ca)"})
     with urlopen(request, timeout=4) as response:
         return json.load(response)["filings"]["recent"]
 

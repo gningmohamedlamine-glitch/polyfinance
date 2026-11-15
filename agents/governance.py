@@ -9,6 +9,7 @@ informations manquantes. Statuts : ok, warn (à signaler), fail (règle enfreint
 from __future__ import annotations
 
 import re
+from .temporal import availability
 
 ADVICE = re.compile(
     r"\b(ach[eè]te[zs]?|achetons|vends|vendez|vendons|je (?:te |vous )?recommande|nous recommandons|"
@@ -97,34 +98,56 @@ def run_controls(dossier: dict, event: dict, impact: dict, selection_end: str, s
             if not any(abs(value - k) <= tolerance for k in known):
                 unmatched.append(f"{agent} : {raw}")
     if total == 0:
-        add("numbers", "Chiffres cités conformes aux données", "info", "Aucun chiffre cité dans les textes.")
+        add("numbers", "Repérage des chiffres (contrôle partiel)", "info", "Aucun chiffre cité dans les textes.")
     else:
-        add("numbers", "Chiffres cités conformes aux données", "warn" if unmatched else "ok",
+        add("numbers", "Repérage des chiffres (contrôle partiel)", "warn" if unmatched else "ok",
             f"Introuvable(s) dans les données : {', '.join(unmatched)}." if unmatched
-            else f"{total} chiffre(s) cité(s), tous retrouvés dans les données ou les sources.")
+            else f"{total} chiffre(s) retrouvé(s) ; ce contrôle global ne valide ni le signe, ni l’unité, ni le lien avec une affirmation.")
 
     # 4. Sources : datées, extraits vérifiés contre le texte source.
     sources = event.get("sources") or []
     verified = sum(1 for s in sources if s.get("excerpt_status") == "verified")
     if not sources:
         add("sources", "Sources datées", "info", "Aucune source datée : la cause doit rester indéterminée.")
-    elif verified:
+    elif verified == len(sources):
         add("sources", "Sources datées", "ok", f"{len(sources)} source(s), {verified} extrait(s) vérifié(s) dans le texte source.")
     else:
-        add("sources", "Sources datées", "warn", f"{len(sources)} source(s), aucun extrait vérifié (texte source non téléchargé).")
+        add("sources", "Sources datées", "warn", f"{verified}/{len(sources)} extrait(s) retrouvé(s). Les autres restent à vérifier.")
 
     # 5. Pistes web : présentées comme non vérifiées.
     leads = dossier.get("coverage", {}).get("web_leads") or []
     if leads:
         corroborated = sum(1 for lead in leads if (lead.get("corroboration") or 1) >= 2)
-        labelled = all(any(word in text.lower() for word in ("non vérifi", "corrobor", "source unique", "piste"))
-                       or "web" not in text.lower() for text in texts.values())
-        add("web", "Pistes web distinguées des preuves", "ok" if labelled else "warn",
-            f"{len(leads)} piste(s) web : {corroborated} corroborée(s) par au moins deux sites indépendants, "
-            f"{len(leads) - corroborated} à source unique. Aucune n’est une preuve vérifiée.")
+        excerpts = sum(lead.get('excerpt_status') == 'verified' for lead in leads)
+        mismatches = sum(lead.get('excerpt_status') == 'mismatch' for lead in leads)
+        add("web", "Vérification des pistes web", "warn" if mismatches or excerpts < len(leads) else "ok",
+            f"{len(leads)} piste(s), {excerpts} extrait(s) retrouvé(s), {mismatches} non concordant(s). "
+            f"{corroborated} histoire(s) rapportée(s) sur plusieurs domaines, sans garantie d’indépendance. "
+            "La vérification textuelle ne certifie ni le résumé ni la causalité.")
+
+    claims = [*event.get('claims', []), *impact.get('claims', [])]
+    unsupported = [c for c in claims if c.get('status') != 'linked']
+    invalid = any(c.get('invalid_evidence_ids') for c in claims)
+    add('claim_evidence', 'Références par affirmation', 'fail' if invalid else 'warn' if unsupported else 'info',
+        f"{len(claims) - len(unsupported)}/{len(claims)} affirmation(s) avec références valides. "
+        "Le lien sémantique reste à apprécier ; une référence seule ne valide pas la conclusion.")
+    numeric_reviews = [c for c in claims if c.get('numeric_check', {}).get('status') == 'review']
+    add('claim_numbers', 'Chiffres et calculs explicitement cités', 'warn' if numeric_reviews else 'info',
+        f"{len(numeric_reviews)} affirmation(s) à revoir pour signe, unité ou valeur. "
+        "Contrôle limité aux chiffres avec unité et aux champs de calcul cités ; la formulation peut demander une interprétation.")
 
     # 6. Aucune donnée postérieure à la séance analysée.
     late = []
+    for source in sources:
+        stamp = availability(source, source.get('session') or selection_end)
+        if stamp['temporal_status'] == 'after_close':
+            late.append('publication après clôture')
+    for result in (event, impact):
+        for claim in result.get('claims', []):
+            for ref in claim.get('evidence_ids', []):
+                evidence = result.get('evidence', {}).get(ref, {})
+                if evidence.get('eligible_for_explanation') is False:
+                    late.append('référence non disponible pour la séance')
     risk = coherence.get("risk") or {}
     if risk.get("end_date") and risk["end_date"] > selection_end:
         late.append("mesure du risque")
@@ -132,6 +155,11 @@ def run_controls(dossier: dict, event: dict, impact: dict, selection_end: str, s
     for snap in (esg.get("comparison") or {}).values():
         if snap and snap.get("end_date", "") > selection_end:
             late.append("comparaison ESG")
+    for item in [*esg.get('controversies', []), *esg.get('disclosures', []), *esg.get('emissions', [])]:
+        if not availability(item, selection_end)['eligible_for_explanation']:
+            late.append('publication ESG non disponible')
+    if (esg.get('membership') or {}).get('published_date', '') >= selection_end:
+        late.append('composition ESGV non disponible')
     add("no_future", "Aucune donnée postérieure à la séance", "fail" if late else "ok",
         "Données futures utilisées : " + ", ".join(late) if late else
         "Risque, bêta et comparaisons calculés uniquement avec des données antérieures.")

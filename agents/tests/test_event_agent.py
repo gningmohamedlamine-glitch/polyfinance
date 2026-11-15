@@ -57,7 +57,8 @@ class EventAgentTests(unittest.TestCase):
         windows = web.call_args.args[-1]
         self.assertEqual(windows["2024-10-08"], ("2024-09-18", "2024-10-13"))
         self.assertIn(("event", "web_search", "done", 1, None), events)
-        self.assertEqual(synthesis.call_args.args[2]["web_leads"], [{"title": "Piste"}])
+        self.assertEqual(synthesis.call_args.args[2]["web_leads"], [])  # Undated leads cannot explain a session.
+        self.assertEqual(dossier["coverage"]["web_leads"], [{"title": "Piste"}])
         self.assertEqual(dossier["coverage"]["web_search"], "found")
         self.assertEqual(dossier["synthesis"]["mode_reason"], "bedrock_error")
 

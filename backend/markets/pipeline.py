@@ -1,8 +1,13 @@
 """Orchestrate the two agents and validate their handoff."""
 
+from copy import deepcopy
+from time import monotonic
+from agents.runtime import bounded_analysis, BudgetExceeded, checkpoint, setting
+from agents.evidence import ensure_explanation
+
 import logging
 import os
-from concurrent.futures import ThreadPoolExecutor
+from agents.runtime import ContextExecutor as ThreadPoolExecutor
 from threading import Lock
 from time import perf_counter
 
@@ -51,10 +56,13 @@ def get_dossier(window, returns, notify, *, on_evidence=None, deep=False):
     key = (
         window.ticker, window.requested, window.start_close_date, window.end_close_date,
         catalog_fingerprint(), os.getenv("MARKET_WEB_SEARCH"), os.getenv("MARKET_WEB_SEARCH_AGENTCORE"),
-        model_for("event"), deep,
+        model_for("event"), os.getenv("AWS_REGION"), deep, repr(returns),
     )
     with _cache_lock:
-        cached = _event_cache.get(key)
+        entry = _event_cache.get(key)
+        cached = deepcopy(entry[1]) if entry and entry[0] > monotonic() else None
+        if cached is None:
+            _event_cache.pop(key, None)
     if cached is not None:
         notify("event", "cached_dossier", "done")
     def handoff(evidence):
@@ -74,11 +82,14 @@ def get_dossier(window, returns, notify, *, on_evidence=None, deep=False):
 
     coverage = dossier["coverage"]
     grounding = coverage.get("nova_grounding")
-    grounding_complete = grounding in (None, "grounding") or (grounding == "budget_elapsed" and not deep)
+    grounding_complete = grounding in (None, "grounding")
     if (cached is None and dossier["synthesis"]["mode_reason"] in (None, "model_unconfigured")
-            and grounding_complete and "unavailable" not in (coverage["web_search"], coverage["sec_search"])):
+            and grounding_complete
+            and coverage["web_search"] in {"found", "no_relevant_sources", "no_dated_sources", "disabled", "not_needed", "out_of_scope"}
+            and coverage["sec_search"] in {"searched", "disabled", "not_needed", "not_requested"}):
         with _cache_lock:
-            _event_cache[key] = dossier
+            checkpoint()
+            _event_cache[key] = (monotonic() + setting("ANALYSIS_CACHE_TTL_SECONDS", 900, 86400), deepcopy(dossier))
             if len(_event_cache) > 64:
                 _event_cache.pop(next(iter(_event_cache)))
     return dossier
@@ -118,10 +129,19 @@ def explain(agent: str, reason: str | None) -> str:
 
 
 def run_analysis(window, profile, scenario, progress=None, *, preview=None, evidence_preview=None, deep=False):
+    try:
+        return bounded_analysis(_run_analysis, window, profile, scenario, progress,
+                                preview=preview, evidence_preview=evidence_preview, deep=deep)
+    except BudgetExceeded as error:
+        raise ModelUnavailable(str(error)) from error
+
+
+def _run_analysis(window, profile, scenario, progress=None, *, preview=None, evidence_preview=None, deep=False):
     started = {}
     progress_lock = Lock()
 
     def notify(agent, action, status, count=None, mode=None, *, reason=None):
+        checkpoint()
         key = (agent, action)
         elapsed = None
         with progress_lock:
@@ -184,13 +204,17 @@ def run_analysis(window, profile, scenario, progress=None, *, preview=None, evid
     if require_model() and impact["mode"] != "bedrock":
         raise ModelUnavailable(explain("Conseiller", impact.get("mode_reason")))
     notify("governance", "stage", "running")
+    ensure_explanation(event, dossier)
+    ensure_explanation(impact, {"metrics": impact.get("metrics", []), "coherence": impact.get("coherence", {}), "esg": impact.get("esg")})
     controls = run_controls(dossier, event, impact, window.end_close_date, sensitivity)
     if controls["verdict"] == "fail":
         event["text"] = "La cause du mouvement reste indéterminée. Consulte les rendements calculés et les sources du dossier."
         impact["text"] = _fallback_text(profile, impact["metrics"], impact["assumptions"], impact["coherence"])
         event["text_mode"] = impact["text_mode"] = "guard"
+        ensure_explanation(event, dossier)
+        ensure_explanation(impact, {"metrics": impact["metrics"], "coherence": impact["coherence"]})
         # Copie pour préserver le dossier conservé en cache.
-        dossier = {**dossier, "synthesis": {**dossier["synthesis"], "text": event["text"], "text_mode": "guard"}}
+        dossier = {**dossier, "synthesis": {**dossier["synthesis"], **{key: event[key] for key in ("text", "claims", "evidence")}, "text_mode": "guard"}}
     notify("governance", "stage", "done", mode="local")
     return {
         "controls": controls,

@@ -16,7 +16,10 @@ from botocore.exceptions import BotoCoreError, ClientError
 
 logger = logging.getLogger(__name__)
 
+from .runtime import converse
 from .model_text import bedrock_client, public_text
+
+from .evidence import INSTRUCTIONS, index_evidence, explain
 
 MAX_DECISIONS = 4
 
@@ -38,6 +41,9 @@ def run_tool_loop(agent, model, instructions, payload, tool_specs, execute, noti
 
     execute(name, args) -> (ok: bool, result: dict | str). Une valeur ok=False est un refus.
     """
+    index = index_evidence(payload)
+    payload = {**payload, "evidence_index": list(index)}
+    instructions += INSTRUCTIONS
     decisions: list[dict] = []
     messages = [{"role": "user", "content": [{"text": json.dumps(payload, ensure_ascii=False)}]}]
     params = {
@@ -50,11 +56,11 @@ def run_tool_loop(agent, model, instructions, payload, tool_specs, execute, noti
     usage = {"input_tokens": 0, "output_tokens": 0, "model_calls": 0}
 
     def done(text, mode, reason):
-        return {"text": text, "mode": mode, "mode_reason": reason, "decisions": decisions, "usage": usage}
+        return {**explain(text, index), "mode": mode, "mode_reason": reason, "decisions": decisions, "usage": usage}
 
     try:
         for _ in range(MAX_DECISIONS + 2):
-            response = bedrock_client().converse(messages=messages, **params)
+            response = converse(bedrock_client(), messages=messages, **params)
             usage["model_calls"] += 1
             usage["input_tokens"] += response.get("usage", {}).get("inputTokens", 0)
             usage["output_tokens"] += response.get("usage", {}).get("outputTokens", 0)
@@ -81,6 +87,11 @@ def run_tool_loop(agent, model, instructions, payload, tool_specs, execute, noti
                     ok, result = False, f"Limite de {MAX_DECISIONS} décisions atteinte : conclus avec les preuves réunies."
                 else:
                     ok, result = execute(name, args)
+                if ok:
+                    additions = index_evidence(result, f'/tools/{name}/{calls}')
+                    index.update(additions)
+                    if isinstance(result, dict):
+                        result = {**result, 'evidence_index': list(additions)}
                 decisions.append({
                     "agent": agent, "tool": name, "arguments": args,
                     "accepted": ok, "reason": reason[:400] or None,

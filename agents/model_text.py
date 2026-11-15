@@ -9,6 +9,9 @@ import boto3
 from botocore.config import Config
 from botocore.exceptions import BotoCoreError, ClientError
 
+from .runtime import converse
+from .evidence import INSTRUCTIONS, index_evidence, explain
+
 THINKING_BLOCK = re.compile(r"<thinking\b[^>]*>.*?(?:</thinking\s*>|\Z)", re.I | re.S)
 THINKING_TAG = re.compile(r"</?thinking\b[^>]*>", re.I)
 
@@ -37,9 +40,12 @@ def synthesize(agent, instructions, evidence, max_tokens, notify, *, model_id=No
     if not model:
         return {"text": "", "mode": "local", "mode_reason": "model_unconfigured"}
 
+    index = index_evidence(evidence)
+    evidence = {**evidence, "evidence_index": list(index)}
+    instructions += INSTRUCTIONS
     notify(agent, "synthesize", "running")
     try:
-        response = bedrock_client().converse(
+        response = converse(bedrock_client(),
             modelId=model,
             system=[{"text": instructions}],
             messages=[{"role": "user", "content": [{"text": json.dumps(evidence, ensure_ascii=False)}]}],
@@ -51,7 +57,7 @@ def synthesize(agent, instructions, evidence, max_tokens, notify, *, model_id=No
             text = public_text(response["output"]["message"])
             if text:
                 notify(agent, "synthesize", "done", mode="bedrock")
-                return {"text": text, "mode": "bedrock", "mode_reason": None, "usage": usage}
+                return {**explain(text, index), "mode": "bedrock", "mode_reason": None, "usage": usage}
         reason = "bedrock_incomplete"
     except ClientError as error:
         reason = f"bedrock_error:{error.response.get('Error', {}).get('Code', 'ClientError')}"

@@ -6,6 +6,8 @@ import unicodedata
 from functools import lru_cache
 from pathlib import Path
 
+from .temporal import close_at, annotate
+
 EVENTS = Path(__file__).resolve().parents[1] / "data" / "market_events.csv"
 SOURCES = Path(__file__).resolve().parents[1] / "data" / "sources"
 
@@ -50,8 +52,8 @@ def catalog_fingerprint():
 
 
 def session_window(previous_date, session):
-    # The cutoff is 16:00 Eastern for the US sessions in the application.
-    return previous_date + "T16:00", session + "T16:00"
+    # Ordinary and early US closes, expressed in Eastern time.
+    return close_at(previous_date).strftime("%Y-%m-%dT%H:%M"), close_at(session).strftime("%Y-%m-%dT%H:%M")
 
 
 def _matching_events(events, ticker, previous_date, session):
@@ -93,7 +95,7 @@ def search_publications(ticker, sessions, price_rows):
                 continue
             if url:
                 seen_urls.add(url)
-            row = {**event, "session": session, "excerpt_status": verify_excerpt(event)}
+            row = annotate({**event, "session": session, "excerpt_status": verify_excerpt(event)})
             results.append(row)
     results.sort(key=lambda item: (item["session"], item["time_et"], item.get("url", "")))
     return results
