@@ -62,7 +62,13 @@
       <section class="results" aria-labelledby="results-title">
         <div class="results-head">
           <h2 id="results-title">{{ stale() || busy() || error() ? 'Dernière analyse' : 'Mouvement et impact sur le profil' }}</h2>
-          <span class="muted">{{ resultLabel() }} · {{ persona().name }}</span>
+          <div class="stock-heading">
+            @if (analysis.dossier?.selection; as selection) {
+              @if (selection.ticker; as symbol) { <app-stock-logo [ticker]="symbol" [compact]="true" /> }
+              @if (selection.name) { <strong>{{ selection.name }}</strong> }
+            }
+            <span class="muted">{{ resultLabel() }} · {{ persona().name }}</span>
+          </div>
         </div>
         <app-movement-analysis [analysis]="analysis" [persona]="persona()" />
       </section>
@@ -80,6 +86,7 @@
         @for (stock of stocks(); track stock.ticker) {
           <button type="button" class="stock-option" [attr.aria-pressed]="ticker === stock.ticker"
                   (click)="ticker !== stock.ticker && load(stock.ticker)">
+            <app-stock-logo [ticker]="stock.ticker" [compact]="true" />
             <strong>{{ stock.name }}</strong>
             <small>{{ stock.ticker }}</small>
           </button>
@@ -99,9 +106,14 @@
     <section class="panel act1" id="acte1">
       <div class="act-head">
         <div>
-          <span class="eyebrow">Période à analyser</span>
-          <h2>{{ stockName() }} <span class="muted">({{ ticker }})</span></h2>
-          <p class="muted">Sélectionne une séance ou une période dans le graphique ou avec les dates.</p>
+          <div class="stock-heading">
+            <app-stock-logo [ticker]="ticker" />
+            <div>
+              <span class="eyebrow">Période à analyser</span>
+              <h2>{{ stockName() }} <span class="symbol">{{ ticker }}</span></h2>
+            </div>
+          </div>
+          <p class="muted">Clique pour choisir une séance, glisse pour sélectionner une période ou saisis les dates.</p>
         </div>
         <div class="controls">
           <div class="control-row">
@@ -149,6 +161,16 @@
           @if (busy()) { <span class="spinner" aria-hidden="true"></span> Analyse en cours… } @else { <svg class="ico" [lucideIcon]="icons.play" aria-hidden="true"></svg> Exécuter l’analyse }
         </button>
       </div>
+      @if (kpis(); as k) {
+        <div class="kpi-row">
+          <div class="kpi" [class.neg]="k.move < 0" [class.pos]="k.move > 0">
+            <small>Variation constatée</small><strong><app-market-change [value]="k.move" [showIcon]="true" /></strong><span>en USD sur la sélection</span></div>
+          <div class="kpi"><small>Part propre au titre</small>
+            <strong>@if (k.residual !== null) { <app-market-change [value]="k.residual" unit="pts" /> } @else { — }</strong><span>après l’effet du marché (bêta)</span></div>
+          <div class="kpi"><small>Publications retenues</small><strong class="num">{{ k.sources }}</strong><span>dont {{ k.verified }} extrait(s) vérifié(s)</span></div>
+          <div class="kpi"><small>Pistes web</small><strong class="num">{{ k.leads }}</strong><span>dont {{ k.corroborated }} corroborée(s) par plusieurs sites</span></div>
+        </div>
+      }
     </section>
 
     @if (busy()) {

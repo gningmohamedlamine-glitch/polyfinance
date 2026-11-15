@@ -4,25 +4,28 @@
     <header>
       <div>
         <span class="eyebrow">Mise à l’épreuve</span>
-        <h2><svg class="ico" [lucideIcon]="icons.range" aria-hidden="true"></svg> Et si on changeait d’hypothèse ?</h2>
+        <h2>Et si on changeait d’hypothèse ?</h2>
       </div>
-      <span class="verdict" [class.fragile]="!s.robust">{{ s.summary }}</span>
+      <span class="verdict" [class.fragile]="!s.robust">
+        <svg class="ico" [lucideIcon]="s.robust ? icons.check : icons.alert" aria-hidden="true"></svg>
+        {{ s.robust ? 'Conclusions stables dans les tests' : 'Une conclusion ou plus varie' }}
+      </span>
     </header>
     <div class="grid">
       @for (check of s.checks; track check.id) {
         <article [class.fragile]="!check.holds">
-          <strong>{{ check.question }}</strong>
-          <dl>
-            <div><dt>Hypothèse retenue</dt><dd>{{ check.base }}</dd></div>
-            <div><dt>Hypothèse alternative</dt><dd>{{ check.alternative }}</dd></div>
+          <h3>{{ check.question }}</h3>
+          <dl class="comparison">
+            <div><dt>Scénario de référence</dt><dd>{{ check.base }}</dd></div>
+            <div><dt>Variante testée</dt><dd>{{ check.alternative }}</dd></div>
           </dl>
           <span class="tag">
             <svg class="ico" [lucideIcon]="check.holds ? icons.check : icons.alert" aria-hidden="true"></svg>
-            {{ check.holds ? 'La conclusion tient' : 'La conclusion dépend de cette hypothèse' }}
+            {{ check.holds ? 'Même conclusion' : 'La conclusion change' }}
           </span>
         </article>
       }
     </div>
-    <p class="notice">Recalculs en code, sans modèle, avec les mêmes données historiques.</p>
+    <p class="notice">Les deux scénarios sont recalculés avec les mêmes données historiques.</p>
   </section>
 }

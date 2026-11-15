@@ -1,13 +1,14 @@
-import { DecimalPipe, PercentPipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { Component, computed, input } from '@angular/core';
 import { LucideDynamicIcon } from '@lucide/angular';
 import { ICONS } from '../../icons';
 import { Analysis } from '../../services/market-api';
+import { MarketChange } from '../market-change/market-change';
 
 /** Dossier de preuves : tout ce que l'Enquêteur a trouvé, vérifié ou écarté, avec ses limites. */
 @Component({
   selector: 'app-dossier-view',
-  imports: [DecimalPipe, PercentPipe, LucideDynamicIcon],
+  imports: [DatePipe, DecimalPipe, LucideDynamicIcon, MarketChange],
   templateUrl: './dossier-view.html',
   styleUrl: './dossier-view.css',
 })

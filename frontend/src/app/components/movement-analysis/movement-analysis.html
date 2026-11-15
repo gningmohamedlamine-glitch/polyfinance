@@ -11,15 +11,15 @@
     </header>
 
     <div class="headline">
-      <span class="big num" [class.neg]="result.movement.usd_return < 0">{{ result.movement.usd_return | percent:'1.2-2' }}</span>
+      <app-market-change class="big" [value]="result.movement.usd_return" [showIcon]="true" />
       <span class="sub">en USD
-        @if (result.movement.cad_return != null) { · <span class="num">{{ result.movement.cad_return | percent:'1.2-2' }}</span> en CAD }
+        @if (result.movement.cad_return != null) { · <app-market-change [value]="result.movement.cad_return" /> en CAD }
       </span>
     </div>
 
     <div class="bench">
       @for (b of benchmarks(); track b.symbol) {
-        <span><small>{{ b.label }}</small><strong class="num">{{ b.ret | percent:'1.2-2' }}</strong></span>
+        <div><small>{{ b.label }}</small><strong><app-market-change [value]="b.ret" /></strong></div>
       }
     </div>
 
@@ -103,11 +103,11 @@
         @if (result.impact.esg; as esg) { <app-esg-panel [esg]="esg" /> }
 
         @if (exposures().length) {
-          <h3>Si une position avait été détenue ce jour-là</h3>
+          <h3>Variation simulée d’une position sur la sélection</h3>
           <div class="exposures">
             @for (e of exposures(); track e.amount) {
               <div><small>Position de <span class="num">{{ e.amount | number:'1.0-0' }} $</span></small>
-                <strong class="num" [class.neg]="e.change < 0">{{ e.change | currency:'CAD':'symbol-narrow':'1.0-0' }}</strong></div>
+                <strong><app-market-change [value]="e.change" unit="CAD" digits="1.0-0" /></strong></div>
             }
           </div>
         }

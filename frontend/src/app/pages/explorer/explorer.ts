@@ -11,6 +11,8 @@ import { TracesView } from '../../components/traces-view/traces-view';
 import { Welcome } from '../../components/welcome/welcome';
 import { Logo } from '../../components/logo/logo';
 import { MovementAnalysis } from '../../components/movement-analysis/movement-analysis';
+import { MarketChange } from '../../components/market-change/market-change';
+import { StockLogo } from '../../components/stock-logo/stock-logo';
 import { ChartSelection, ChartStyle, HORIZONS, Horizon, PriceChart } from '../../components/price-chart/price-chart';
 import { LucideDynamicIcon } from '@lucide/angular';
 import { ICONS } from '../../icons';
@@ -28,7 +30,7 @@ type SavedExplorer = {
 
 @Component({
   selector: 'app-explorer',
-  imports: [FormsModule, DatePipe, LucideDynamicIcon, PriceChart, MovementAnalysis, AgentTimeline, DossierView, TracesView, Welcome, Logo, ControlsPanel, SensitivityPanel],
+  imports: [FormsModule, DatePipe, LucideDynamicIcon, PriceChart, MovementAnalysis, MarketChange, StockLogo, AgentTimeline, DossierView, TracesView, Welcome, Logo, ControlsPanel, SensitivityPanel],
   templateUrl: './explorer.html',
   styleUrl: './explorer.css',
 })
@@ -56,6 +58,23 @@ export class Explorer {
   chartStyle = signal<ChartStyle>('line');
 
   sourceCount() { return this.result()?.event.sources.length ?? 0; }
+
+  kpis() {
+    if (this.busy() || this.stale() || this.error()) return null;
+    const analysis = this.result();
+    if (!analysis) return null;
+    const sources = analysis.event.sources;
+    const model = analysis.dossier?.returns?.market_model;
+    const leads = analysis.dossier?.coverage.web_leads ?? [];
+    return {
+      move: analysis.movement.usd_return,
+      residual: model?.status === 'ok' ? model.residual_pp ?? null : null,
+      sources: sources.length,
+      verified: sources.filter(source => source.excerpt_status === 'verified').length,
+      leads: leads.length,
+      corroborated: leads.filter(lead => (lead.corroboration ?? 1) >= 2).length,
+    };
+  }
   entered = signal(false);
   switcherOpen = signal(false);
 

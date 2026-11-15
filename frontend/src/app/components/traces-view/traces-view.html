@@ -53,16 +53,18 @@
 
 @if (analysis().trace?.length) {
   <section class="panel">
-    <h3>Toutes les étapes exécutées</h3>
-    <table>
-      <thead><tr><th>Agent</th><th>Étape</th><th>Origine</th><th>Statut</th></tr></thead>
-      <tbody>
-        @for (t of analysis().trace!; track $index) {
-          <tr><td>{{ t.agent === 'event' ? 'Enquêteur' : 'Conseiller' }}</td><td>{{ label(t.name) }}</td>
-              <td><span class="src" [attr.data-src]="t.source">{{ t.source }}</span></td><td>{{ t.status }}</td></tr>
-        }
-      </tbody>
-    </table>
+    <h3 id="trace-table-title">Toutes les étapes exécutées</h3>
+    <div class="table-scroll" role="region" aria-labelledby="trace-table-title" tabindex="0">
+      <table>
+        <thead><tr><th>Agent</th><th>Étape</th><th>Origine</th><th>Statut</th></tr></thead>
+        <tbody>
+          @for (t of analysis().trace!; track $index) {
+            <tr><td>{{ t.agent === 'event' ? 'Enquêteur' : 'Conseiller' }}</td><td>{{ label(t.name) }}</td>
+                <td><span class="src" [attr.data-src]="t.source">{{ t.source }}</span></td><td>{{ t.status }}</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
     <small class="muted">Origine : <b>model</b> = choisi par l’agent · <b>guard</b> = imposé par le garde-fou · <b>local</b> = calcul Python · <b>sec</b> / <b>bedrock</b> = service externe.</small>
   </section>
 }

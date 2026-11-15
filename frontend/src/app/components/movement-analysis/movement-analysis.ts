@@ -3,6 +3,7 @@ import { Component, computed, input } from '@angular/core';
 import { LucideDynamicIcon } from '@lucide/angular';
 import { ICONS } from '../../icons';
 import { EsgPanel } from '../esg-panel/esg-panel';
+import { MarketChange } from '../market-change/market-change';
 import { Persona } from '../../personas';
 import { Analysis } from '../../services/market-api';
 
@@ -10,7 +11,7 @@ export type TextPart = { text: string; href?: string };
 
 @Component({
   selector: 'app-movement-analysis',
-  imports: [CurrencyPipe, DecimalPipe, PercentPipe, LucideDynamicIcon, EsgPanel],
+  imports: [CurrencyPipe, DecimalPipe, PercentPipe, LucideDynamicIcon, EsgPanel, MarketChange],
   templateUrl: './movement-analysis.html',
   styleUrl: './movement-analysis.css',
 })
