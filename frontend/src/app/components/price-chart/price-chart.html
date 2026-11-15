@@ -1,13 +1,13 @@
 <div class="chart">
   <div class="chart-toolbar">
-    <div class="group" role="group" aria-label="Fenêtre affichée">
+    <label class="group">
       <span class="group-label">Afficher</span>
-      <div class="horizons">
+      <select class="horizon-select" [value]="horizon()" (change)="setHorizon($any($event.target).value)">
         @for (option of horizons; track option.key) {
-          <button type="button" [attr.aria-pressed]="horizon() === option.key" (click)="setHorizon(option.key)">{{ option.label }}</button>
+          <option [value]="option.key" [selected]="horizon() === option.key">{{ option.label }}</option>
         }
-      </div>
-    </div>
+      </select>
+    </label>
     <div class="horizons chart-style" role="group" aria-label="Type de graphique">
       <button type="button" [attr.aria-pressed]="chartStyle() === 'line'" (click)="chartStyle.set('line')"
         title="Prix de clôture de chaque séance">
