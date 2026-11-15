@@ -104,6 +104,7 @@ export interface Analysis {
     };
     coverage: {
       sessions_unexplained: string[];
+      sessions_measured?: string[];
       web_search?: string;
       web_search_reason?: string;
       nova_grounding?: string;

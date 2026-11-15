@@ -74,10 +74,13 @@ class AdvisorTests(unittest.TestCase):
         dossier = self.dossier()
         client = scripted(tool_use("position_value_cad", {}, "Robert a un retrait : je chiffre la position."),
                           final("- Variation simulée en CAD."))
+        writer = scripted(final("- Ce titre dépasse tes limites de risque."))
         with patch.dict(os.environ, {"BEDROCK_MODEL_ID": "gpt-6-astra"}, clear=True), \
-                patch("agents.agent_loop.bedrock_client", return_value=client):
+                patch("agents.agent_loop.bedrock_client", return_value=client), \
+                patch("agents.model_text.bedrock_client", return_value=writer):
             robert = run_impact_agent(dossier, "robert", SCENARIO)
         self.assertEqual(robert["mode"], "bedrock")
+        self.assertIn("dépasse tes limites", robert["text"])
         self.assertFalse(robert["coherence"]["coherent"])
         self.assertEqual(robert["metrics"][0]["label"], "Volatilité annuelle (12 mois)")
         self.assertIn("Écart par rapport au retrait", [metric["label"] for metric in robert["metrics"]])
@@ -163,3 +166,19 @@ class WebGuardTests(unittest.TestCase):
         self.assertEqual(len(dossier["coverage"]["web_leads"]), 1)
         self.assertIn("ventes au détail", dossier["synthesis"]["text"])
         self.assertTrue(any(t["name"] == "web_search" and t["source"] == "guard" for t in dossier["tools_executed"]))
+
+
+class AdvisorGuardRewriteTests(unittest.TestCase):
+    @patch.dict(os.environ, {"BEDROCK_MODEL_ID": "gpt-6-astra"}, clear=True)
+    def test_forced_esg_is_rewritten_by_the_model_not_a_template(self):
+        dossier = run_event_agent(resolve_window("NVDA", date="2024-08-29"))
+        # Le Conseiller oublie esg_screen : le garde-fou le lance, puis le modèle réécrit sa réponse.
+        loop = scripted(tool_use("verify_profile_coherence", {}, "Je vérifie le risque."), final("- Texte sans ESG."))
+        writer = scripted(final("- Volatilité au-delà de ta limite.\n- ESG : information insuffisante pour conclure."))
+        with patch("agents.agent_loop.bedrock_client", return_value=loop), \
+             patch("agents.model_text.bedrock_client", return_value=writer):
+            mateo = run_impact_agent(dossier, "mateo", {})
+        self.assertEqual(mateo["mode"], "bedrock")
+        self.assertIn("information insuffisante", mateo["text"])
+        self.assertNotIn("Manque :", mateo["text"])
+        self.assertTrue(any(t["name"] == "esg_screen" and t["source"] == "guard" for t in mateo["trace"]))

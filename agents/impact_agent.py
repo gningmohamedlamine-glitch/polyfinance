@@ -292,11 +292,11 @@ ADVISOR = (
     "et le profil fictif d’un investisseur. Choisis toi-même les calculs utiles à CE profil, "
     f"avec au plus {MAX_DECISIONS} appels d’outils ; avant chaque appel, écris une phrase qui justifie ton choix. "
     "Tous les chiffres viennent des outils : n’en invente aucun. "
-    "Réponds ensuite en français, en trois puces courtes au plus. Si verify_profile_coherence signale des "
-    "conflits, la première puce doit le dire clairement, chiffres à l’appui. Ne donne aucun conseil d’achat "
+    "Réponds ensuite en français, en trois puces au plus. Sois bref : chaque puce fait au plus 25 mots, une idée par puce. Ne répète pas les chiffres déjà affichés à l’écran (variation, indices, limites du profil) sauf s’ils servent ta phrase. Si verify_profile_coherence signale des "
+    "conflits, la première puce le dit en une phrase (la liste détaillée est déjà affichée au-dessus). Ne donne aucun conseil d’achat "
     "ou de vente : décris ce que le mouvement implique pour ce profil. Qualifie les pistes web de non vérifiées. "
-    "Pour les critères ESG, n’affirme jamais qu’un titre est conforme : cite les points d’attention trouvés "
-    "et les informations manquantes."
+    "Pour les critères ESG, n’affirme jamais qu’un titre est conforme : résume en une puce les points "
+    "d’attention, ou dis que l’information est insuffisante (le détail est affiché dans le panneau ESG)."
 )
 
 PROFILE_TOOLS = {
@@ -487,8 +487,22 @@ def _run_advisor(model, dossier, profile, scenario, notify, prepared, esg_future
         for entry in tool_trace:
             trace.append({**entry, "source": entry["source"] if entry["source"] == "guard" else "model"})
     assumptions_text = " ".join(assumptions)
+    text = loop["text"]
+    if guarded and loop["mode"] == "bedrock":
+        # Le modèle a conclu sans un calcul obligatoire : on lui fait réécrire sa réponse avec les résultats,
+        # plutôt que d'afficher un texte gabarit.
+        rewrite = synthesize("impact", ADVISOR + " Les calculs sont déjà faits : n’appelle aucun outil.", {
+            "profile": PROFILES[profile], "metrics": metrics, "assumptions": assumptions_text,
+            "coherence": coherence, "esg": _esg_of(trace),
+        }, 1500, notify)
+        usage = rewrite.pop("usage", {}) or {}
+        for key in ("input_tokens", "output_tokens", "model_calls"):
+            loop["usage"][key] = loop["usage"].get(key, 0) + usage.get(key, 0)
+        text = rewrite["text"]
+        if not text:
+            loop["mode"], loop["mode_reason"] = "local", rewrite["mode_reason"]
     return {
-        "text": _fallback_text(profile, metrics, assumptions_text, coherence) if guarded else (loop["text"] or _fallback_text(profile, metrics, assumptions_text, coherence)),
+        "text": text or _fallback_text(profile, metrics, assumptions_text, coherence),
         "mode": loop["mode"],
         "mode_reason": loop["mode_reason"],
         "coherence": coherence,

@@ -15,7 +15,7 @@
   <div class="panel kpi"><small>Variation constatée<app-info term="variation" label="variation constatée" align="left" /></small><strong><app-market-change [value]="a.movement.usd_return" [showIcon]="true" /></strong><small>en USD</small></div>
   <div class="panel kpi"><small>Part propre au titre<app-info term="residual" label="part propre au titre" /></small>
     <strong class="num">@if (model()?.status === 'ok') { {{ model()!.residual_pp | number:'1.2-2' }} pts } @else { — }</strong>
-    <small>après l’effet du marché (bêta)</small></div>
+    <small>{{ model()?.status === 'ok' ? 'après l’effet du marché (bêta)' : betaMissing }}</small></div>
   <div class="panel kpi"><small>Publications retenues<app-info term="sources" label="publications retenues" /></small><strong class="num">{{ sources().length }}</strong><small>dont {{ verified() }} extrait(s) vérifié(s)</small></div>
   <div class="panel kpi"><small>Pistes web<app-info term="web" label="pistes web" align="right" /></small><strong class="num">{{ leads().length }}</strong><small>dont {{ corroborated() }} corroborée(s) par plusieurs sites</small></div>
 </section>
@@ -25,7 +25,7 @@
   <p>Si aucune source datée n’explique le mouvement, l’agent conclut « cause indéterminée » au lieu d’en inventer une.
      Une publication datée ne prouve pas à elle seule le sens du mouvement.</p>
   @if (unexplained().length) {
-    <small>Séance(s) sans publication retenue : {{ unexplained().join(', ') }}</small>
+    <small>{{ unexplainedSummary() }}</small>
   }
 </section>
 

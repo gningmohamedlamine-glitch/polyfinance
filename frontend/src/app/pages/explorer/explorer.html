@@ -157,7 +157,7 @@
           <div class="kpi" [class.neg]="k.move < 0" [class.pos]="k.move > 0">
             <small>Variation constatée<app-info term="variation" label="variation constatée" align="left" /></small><strong><app-market-change [value]="k.move" [showIcon]="true" /></strong><span>en USD sur la sélection</span></div>
           <div class="kpi"><small>Part propre au titre<app-info term="residual" label="part propre au titre" /></small>
-            <strong>@if (k.residual !== null) { <app-market-change [value]="k.residual" unit="pts" /> } @else { — }</strong><span>après l’effet du marché (bêta)</span></div>
+            <strong>@if (k.residual !== null) { <app-market-change [value]="k.residual" unit="pts" /> } @else { — }</strong><span>{{ k.residual !== null ? 'après l’effet du marché (bêta)' : 'bêta indisponible : il faut un an d’historique avant le début' }}</span></div>
           <div class="kpi"><small>Publications retenues<app-info term="sources" label="publications retenues" /></small><strong class="num">{{ k.sources }}</strong><span>dont {{ k.verified }} extrait(s) vérifié(s)</span></div>
           <div class="kpi"><small>Pistes web<app-info term="web" label="pistes web" align="right" /></small><strong class="num">{{ k.leads }}</strong><span>dont {{ k.corroborated }} corroborée(s) par plusieurs sites</span></div>
         </div>

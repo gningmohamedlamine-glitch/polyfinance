@@ -24,6 +24,14 @@ export class DossierView {
   verified = computed(() => this.sources().filter(s => s.excerpt_status === 'verified').length);
   corroborated = computed(() => this.leads().filter(l => (l.corroboration ?? 1) >= 2).length);
   unexplained = computed(() => this.analysis().dossier?.coverage.sessions_unexplained ?? []);
+  readonly betaMissing = 'bêta indisponible : il faut un an d’historique avant le début de la sélection';
+  /** Résumé court : sur une longue période, on donne le nombre plutôt que la liste complète. */
+  unexplainedSummary = computed(() => {
+    const days = this.unexplained();
+    const measured = this.analysis().dossier?.coverage.sessions_measured?.length ?? days.length;
+    if (days.length <= 3) return `Séance(s) sans publication retenue : ${days.join(', ')}.`;
+    return `${days.length} séance(s) sur ${measured} sans publication retenue (de ${days[0]} à ${days[days.length - 1]}).`;
+  });
   decisions = computed(() => (this.analysis().dossier?.agent_decisions ?? []));
   limits = computed(() => {
     const limits = this.analysis().dossier?.limits ?? {};
