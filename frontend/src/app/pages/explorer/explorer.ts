@@ -135,7 +135,8 @@ export class Explorer {
   enter(profile: Profile) {
     this.profile = profile;
     this.entered.set(true);
-    this.analyzeCurrent();
+    // Rien ne part tout seul : seul le bouton « Exécuter l'analyse » lance les agents.
+    this.stale.set(this.canAnalyze());
   }
 
   switchProfile(profile: Profile) {
@@ -176,7 +177,9 @@ export class Explorer {
   }
 
   load(ticker: string, date?: string, run = false) {
-    this.autoRun = run;
+    // Les scénarios préparent la sélection ; l'analyse attend le bouton.
+    this.autoRun = false;
+    void run;
     this.historyRequest?.unsubscribe();
     this.cancelAnalysis();
     this.error.set('');
@@ -297,9 +300,9 @@ export class Explorer {
 
   selectProfile(profile: Profile) {
     this.profile = profile;
-    // Même séance, autre profil : on relance si une analyse est affichée (seul l'impact change).
-    if (this.result() || this.busy()) this.analyzeCurrent();
-    else this.stale.set(this.canAnalyze());
+    // Autre profil : l'analyse attend le bouton, comme toute autre modification.
+    if (this.busy()) { this.cancelAnalysis(); this.busy.set(false); }
+    this.stale.set(this.canAnalyze());
   }
 
   /** Les scénarios de démo lancent l'analyse ; un clic de sélection attend le bouton. */
