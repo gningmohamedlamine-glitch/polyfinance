@@ -1,12 +1,13 @@
 import { Component, computed, input } from '@angular/core';
 import { LucideDynamicIcon } from '@lucide/angular';
+import { ReportReveal } from '../../report-reveal';
 import { ICONS } from '../../icons';
 import { Controls } from '../../services/market-api';
 
 /** Panneau du Contrôleur : les vérifications automatiques, visibles par l'utilisateur. */
 @Component({
   selector: 'app-controls-panel',
-  imports: [LucideDynamicIcon],
+  imports: [LucideDynamicIcon, ReportReveal],
   templateUrl: './controls-panel.html',
   styleUrl: './controls-panel.css',
 })

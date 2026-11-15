@@ -1,5 +1,6 @@
 import { CurrencyPipe, DecimalPipe, PercentPipe } from '@angular/common';
 import { Component, computed, input } from '@angular/core';
+import { ReportReveal } from '../../report-reveal';
 import { LucideDynamicIcon } from '@lucide/angular';
 import { ICONS } from '../../icons';
 import { EsgPanel } from '../esg-panel/esg-panel';
@@ -11,7 +12,7 @@ export type TextPart = { text: string; href?: string };
 
 @Component({
   selector: 'app-movement-analysis',
-  imports: [CurrencyPipe, DecimalPipe, PercentPipe, LucideDynamicIcon, EsgPanel, MarketChange],
+  imports: [CurrencyPipe, DecimalPipe, PercentPipe, LucideDynamicIcon, EsgPanel, MarketChange, ReportReveal],
   templateUrl: './movement-analysis.html',
   styleUrl: './movement-analysis.css',
 })

@@ -1,9 +1,9 @@
 import { ControlsPanel } from '../../components/controls-panel/controls-panel';
 import { SensitivityPanel } from '../../components/sensitivity-panel/sensitivity-panel';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
+import { afterNextRender, Component, DestroyRef, ElementRef, inject, Injector, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { DatePipe } from '@angular/common';
+import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import { Subscription } from 'rxjs';
 import { AgentTimeline } from '../../components/agent-timeline/agent-timeline';
 import { DossierView } from '../../components/dossier-view/dossier-view';
@@ -17,9 +17,11 @@ import { ChartSelection, ChartStyle, HORIZONS, Horizon, PriceChart } from '../..
 import { LucideDynamicIcon } from '@lucide/angular';
 import { ICONS } from '../../icons';
 import { PERSONAS, personaOf } from '../../personas';
+import { ReportReveal } from '../../report-reveal';
 import { AgentProgress, Analysis, MarketApi, Price, Profile, Stock } from '../../services/market-api';
 
 type SelectionMode = 'session' | 'range';
+type Chapter = 'analyse' | 'resultat' | 'dossier' | 'controles' | 'traces';
 
 /** Sélection gardée pour l'onglet (idée d'Adam) : un rechargement ne perd ni le profil ni les dates. */
 const STORAGE_KEY = 'alphaforge.explorer.v2';
@@ -30,12 +32,15 @@ type SavedExplorer = {
 
 @Component({
   selector: 'app-explorer',
-  imports: [FormsModule, DatePipe, LucideDynamicIcon, PriceChart, MovementAnalysis, MarketChange, StockLogo, AgentTimeline, DossierView, TracesView, Welcome, Logo, ControlsPanel, SensitivityPanel],
+  imports: [FormsModule, DatePipe, NgTemplateOutlet, LucideDynamicIcon, PriceChart, MovementAnalysis, MarketChange, StockLogo, AgentTimeline, DossierView, TracesView, Welcome, Logo, ControlsPanel, SensitivityPanel, ReportReveal],
   templateUrl: './explorer.html',
-  styleUrl: './explorer.css',
+  styleUrls: ['./explorer.css', './chapters.css'],
 })
 export class Explorer {
   private api = inject(MarketApi);
+  private host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
+  private injector = inject(Injector);
+  private scrollFrame = 0;
   private historyRequest?: Subscription;
   private analysisRequest?: Subscription;
   stocks = signal<Stock[]>([]);
@@ -87,30 +92,50 @@ export class Explorer {
     { id: 'controles', label: 'Contrôles et sensibilité', icon: this.icons.shield },
     { id: 'traces', label: 'Traces des agents', icon: this.icons.traces },
   ] as const;
-  view = signal<(typeof this.pages)[number]['id']>('analyse');
+  readonly activeChapter = signal<Chapter>('analyse');
 
   pageTitle() {
-    return this.pages.find(page => page.id === this.view())?.label;
+    return this.pages.find(page => page.id === this.activeChapter())?.label;
   }
 
-  openPage(id: (typeof this.pages)[number]['id']) {
-    this.view.set(id);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  private chapter(id: Chapter) {
+    return this.host.querySelector<HTMLElement>(`#chapter-${id}`);
   }
+
+  openChapter(id: Chapter) {
+    const target = this.chapter(id);
+    if (!target) return;
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const indexOf = (chapter: Chapter) => this.pages.findIndex(page => page.id === chapter);
+    const skipsChapter = Math.abs(indexOf(id) - indexOf(this.activeChapter())) > 1;
+    target.querySelector<HTMLElement>('[data-chapter-title]')?.focus({ preventScroll: true });
+    // Direct jumps avoid expanding intervening deferred panels mid-scroll.
+    target.scrollIntoView({ block: 'start', behavior: reducedMotion || skipsChapter ? 'instant' : 'smooth' });
+  }
+
+  private readonly trackChapter = () => {
+    if (this.scrollFrame || !this.result()) return;
+    this.scrollFrame = requestAnimationFrame(() => {
+      this.scrollFrame = 0;
+      const offset = (this.host.querySelector('.topbar')?.getBoundingClientRect().bottom ?? 0) + 32;
+      let active: Chapter = 'analyse';
+      for (const { id } of this.pages) {
+        const section = this.chapter(id);
+        if (!section || section.getBoundingClientRect().top > offset) break;
+        active = id;
+      }
+      this.activeChapter.set(active);
+    });
+  };
   /** Sélection modifiée sans analyse : on invite à cliquer sur « Exécuter l'analyse ». */
   stale = signal(false);
   private autoRun = false;
 
   newAnalysis() {
-    this.view.set('analyse');
-    requestAnimationFrame(() => {
-      document.getElementById('stock-picker-title')?.focus({ preventScroll: true });
-      document.getElementById('stock-picker')?.scrollIntoView({ block: 'start' });
-    });
+    this.openChapter('analyse');
   }
 
   run() {
-    this.view.set('analyse');
     this.analyzeCurrent();
   }
 
@@ -139,8 +164,9 @@ export class Explorer {
     this.writeSaved({ entered: false });
     this.switcherOpen.set(false);
     this.clearPendingAnalysis();
+    this.result.set(null);
     this.entered.set(false);
-    this.view.set('analyse');
+    this.activeChapter.set('analyse');
   }
 
   rangeInvalid() {
@@ -161,6 +187,13 @@ export class Explorer {
   }
 
   constructor() {
+    window.addEventListener('scroll', this.trackChapter, { passive: true });
+    window.addEventListener('resize', this.trackChapter, { passive: true });
+    inject(DestroyRef).onDestroy(() => {
+      window.removeEventListener('scroll', this.trackChapter);
+      window.removeEventListener('resize', this.trackChapter);
+      cancelAnimationFrame(this.scrollFrame);
+    });
     this.api.stocks().subscribe({
       next: ({ stocks }) => {
         this.stocks.set(stocks);
@@ -306,7 +339,7 @@ export class Explorer {
 
   selectProfile(profile: Profile) {
     this.profile = profile;
-    this.view.set('analyse');
+    this.activeChapter.set('analyse');
     this.persistSelection();
     // Autre profil : l'analyse attend le bouton, comme toute autre modification.
     // Le résultat dépend du profil : on ne laisse jamais l'analyse de Robert sous le nom d'Amira.
@@ -314,6 +347,7 @@ export class Explorer {
     this.busy.set(false);
     this.result.set(null);
     this.stale.set(this.canAnalyze());
+    afterNextRender(() => this.openChapter('analyse'), { injector: this.injector });
   }
 
   /** Les scénarios de démo lancent l'analyse ; un clic de sélection attend le bouton. */
@@ -396,7 +430,7 @@ export class Explorer {
         }
         this.result.set(message);
         this.busy.set(false);
-        this.openPage('resultat');
+        afterNextRender(() => this.openChapter('resultat'), { injector: this.injector });
       },
       error: (error: Error) => {
         this.busy.set(false);

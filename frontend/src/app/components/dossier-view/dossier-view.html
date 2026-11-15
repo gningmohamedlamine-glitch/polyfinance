@@ -1,6 +1,6 @@
 @let a = analysis();
 @let sel = selection();
-<section class="panel head">
+<section class="panel head" reportReveal>
   <div>
     <span class="eyebrow">Dossier de preuves · Agent Enquêteur</span>
     <h2>{{ sel?.name ?? sel?.ticker }}
@@ -11,7 +11,7 @@
   <span class="status" [attr.data-tone]="status().tone">{{ status().label }}</span>
 </section>
 
-<section class="kpis">
+<section class="kpis" reportReveal>
   <div class="panel kpi"><small>Variation constatée</small><strong><app-market-change [value]="a.movement.usd_return" [showIcon]="true" /></strong><small>en USD</small></div>
   <div class="panel kpi"><small>Part propre au titre</small>
     <strong class="num">@if (model()?.status === 'ok') { {{ model()!.residual_pp | number:'1.2-2' }} pts } @else { — }</strong>
@@ -20,7 +20,7 @@
   <div class="panel kpi"><small>Pistes web</small><strong class="num">{{ leads().length }}</strong><small>dont {{ corroborated() }} corroborée(s) par plusieurs sites</small></div>
 </section>
 
-<section class="panel rule">
+<section class="panel rule" reportReveal>
   <strong><svg class="ico" [lucideIcon]="icons.shield" aria-hidden="true"></svg> Règle de prudence de l’Enquêteur</strong>
   <p>Si aucune source datée n’explique le mouvement, l’agent conclut « cause indéterminée » au lieu d’en inventer une.
      Une publication datée ne prouve pas à elle seule le sens du mouvement.</p>
@@ -29,7 +29,7 @@
   }
 </section>
 
-<section class="panel">
+<section class="panel" reportReveal>
   <div class="section-head"><h3>Publications et pistes web</h3><small class="muted">{{ sources().length + leads().length }} élément(s)</small></div>
   @if (webStatus(); as web) { <p class="web-status muted">{{ web }}</p> }
   @if (!sources().length && !leads().length) {
@@ -75,7 +75,7 @@
 </section>
 
 @if (decisions().length) {
-  <section class="panel">
+  <section class="panel" reportReveal>
     <div class="section-head"><h3>Comment l’Enquêteur a cherché</h3><small class="muted">Chaque choix est validé par le code</small></div>
     <ol class="steps">
       @for (d of decisions(); track $index) {
@@ -90,7 +90,7 @@
 }
 
 @if (limits().length) {
-  <section class="panel">
+  <section class="panel" reportReveal>
     <h3>Limites déclarées du dossier</h3>
     <dl class="limits">
       @for (l of limits(); track l.label) { <div><dt>{{ l.label }}</dt><dd>{{ l.value }}</dd></div> }

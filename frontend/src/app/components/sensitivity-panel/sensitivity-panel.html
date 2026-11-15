@@ -1,6 +1,6 @@
 @let s = sensitivity();
 @if (s.checks.length) {
-  <section class="panel sensitivity" id="sensibilite" aria-label="Mise à l’épreuve des conclusions">
+  <section class="panel sensitivity" id="sensibilite" aria-label="Mise à l’épreuve des conclusions" reportReveal>
     <header>
       <div>
         <span class="eyebrow">Mise à l’épreuve</span>
@@ -8,17 +8,57 @@
       </div>
       <span class="verdict" [class.fragile]="!s.robust">
         <svg class="ico" [lucideIcon]="s.robust ? icons.check : icons.alert" aria-hidden="true"></svg>
-        {{ s.robust ? 'Conclusions stables dans les tests' : 'Une conclusion ou plus varie' }}
+        {{ s.robust ? 'Conclusions stables dans les tests' : 'Au moins une conclusion change' }}
       </span>
     </header>
     <div class="grid">
-      @for (check of s.checks; track check.id) {
+      @for (check of checks(); track check.id) {
         <article [class.fragile]="!check.holds">
           <h3>{{ check.question }}</h3>
-          <dl class="comparison">
-            <div><dt>Scénario de référence</dt><dd>{{ check.base }}</dd></div>
-            <div><dt>Variante testée</dt><dd>{{ check.alternative }}</dd></div>
-          </dl>
+          @if (check.chart; as chart) {
+            <div class="chart">
+              @for (measure of chart.measures; track measure.label) {
+                <div class="measure">
+                  <div class="measure-heading">
+                    <h4>{{ measure.label }}</h4>
+                    @if (measure.limit !== undefined) {
+                      <span class="limit">Limite du profil · {{ measure.limit | number:'1.0-2' }} {{ chart.unit }}</span>
+                    }
+                  </div>
+                  <dl class="bars">
+                    @for (bar of measure.bars; track $index; let scenario = $index) {
+                      <div class="bar-row" [class.reference]="scenario === 0">
+                        <dt>{{ chart.scenarios[scenario].label }}</dt>
+                        <dd>
+                          <span class="track" aria-hidden="true">
+                            <span class="origin" [style.left.%]="chart.zero"></span>
+                            <span class="bar" [style.left.%]="bar.start" [style.width.%]="bar.width"></span>
+                            @if (measure.marker !== null) {
+                              <span class="marker" [style.left.%]="measure.marker"></span>
+                            }
+                          </span>
+                          <strong class="num">{{ bar.value | number:(chart.unit === 'pts' ? '1.2-2' : '1.0-2') }} {{ chart.unit }}</strong>
+                        </dd>
+                      </div>
+                    }
+                  </dl>
+                </div>
+              }
+            </div>
+            <dl class="outcomes">
+              @for (scenario of chart.scenarios; track $index) {
+                <div>
+                  <dt>{{ scenario.label }}@if ($first) { <span> · Référence</span> }</dt>
+                  <dd>{{ scenario.verdict }}@if (scenario.detail) { <span> · {{ scenario.detail }}</span> }</dd>
+                </div>
+              }
+            </dl>
+          } @else {
+            <dl class="comparison">
+              <div><dt>Scénario de référence</dt><dd>{{ check.base }}</dd></div>
+              <div><dt>Variante testée</dt><dd>{{ check.alternative }}</dd></div>
+            </dl>
+          }
           <span class="tag">
             <svg class="ico" [lucideIcon]="check.holds ? icons.check : icons.alert" aria-hidden="true"></svg>
             {{ check.holds ? 'Même conclusion' : 'La conclusion change' }}
@@ -26,6 +66,5 @@
         </article>
       }
     </div>
-    <p class="notice">Les deux scénarios sont recalculés avec les mêmes données historiques.</p>
   </section>
 }

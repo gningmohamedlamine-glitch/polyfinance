@@ -43,6 +43,17 @@ def run_sensitivity(window, returns: dict, profile: str, scenario: dict, coheren
             "base": f"Face au Nasdaq-100 : part propre {_pp(base['residual'])} (bêta {_num(base['beta'])}) → {_driver(base)}",
             "alternative": f"Face au S&P 500 : part propre {_pp(alt['residual'])} (bêta {_num(alt['beta'])}) → {_driver(alt)}",
             "holds": holds,
+            "chart": {
+                "unit": "pts",
+                "scenarios": [
+                    {"label": label, "detail": f"Bêta {_num(model['beta'])}", "verdict": _driver(model)}
+                    for label, model in (("Nasdaq-100", base), ("S&P 500", alt))
+                ],
+                "measures": [
+                    {"label": "Effet attendu du marché", "values": [model["expected_return"] * 100 for model in (base, alt)]},
+                    {"label": "Part propre au titre", "values": [model["residual_pp"] for model in (base, alt)]},
+                ],
+            },
         })
 
     # 2. Fenêtre de mesure du risque.
@@ -62,6 +73,21 @@ def run_sensitivity(window, returns: dict, profile: str, scenario: dict, coheren
             "alternative": (f"Sur 6 mois : volatilité {short['risk']['annual_volatility']:.0%}, "
                             f"pire baisse {short['risk']['max_drawdown']:.0%} → {verdict(short)}"),
             "holds": bool(long_risk["conflicts"]) == bool(short["conflicts"]),
+            "chart": {
+                "unit": "%",
+                "scenarios": [
+                    {"label": label, "verdict": "Hors limites" if risk["conflicts"] else "Dans les limites"}
+                    for label, risk in (("12 mois", long_risk), ("6 mois", short))
+                ],
+                "measures": [
+                    {"label": "Volatilité annualisée", "values": [
+                        risk["risk"]["annual_volatility"] * 100 for risk in (long_risk, short)
+                    ], "limit": long_risk["limits"]["annual_volatility"] * 100},
+                    {"label": "Amplitude de la pire baisse", "values": [
+                        abs(risk["risk"]["max_drawdown"]) * 100 for risk in (long_risk, short)
+                    ], "limit": abs(long_risk["limits"]["max_drawdown"]) * 100},
+                ],
+            },
         })
 
     # 3. Amira : hypothèse sur la part de technologie du portefeuille fictif.
@@ -81,6 +107,19 @@ def run_sensitivity(window, returns: dict, profile: str, scenario: dict, coheren
             "alternative": " ; ".join(f"initiale {b:.0%} → {a:.0%} ({'au-delà' if breach else 'en deçà'})"
                                       for b, a, breach in outcomes),
             "holds": all(breach == base_breach for _, _, breach in outcomes),
+            "chart": {
+                "unit": "%",
+                "scenarios": [
+                    {"label": f"{before * 100:.0f} % au départ",
+                     "verdict": "Au-dessus de la limite" if breach else "Dans la limite"}
+                    for before, _, breach in ((sector["before"], sector["after"], base_breach), *outcomes)
+                ],
+                "measures": [{
+                    "label": "Part techno après l’achat",
+                    "values": [sector["after"] * 100, *(after * 100 for _, after, _ in outcomes)],
+                    "limit": limit * 100,
+                }],
+            },
         })
 
     robust = all(check["holds"] for check in checks)

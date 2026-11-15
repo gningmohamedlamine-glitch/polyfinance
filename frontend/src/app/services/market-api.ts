@@ -135,7 +135,19 @@ export interface Analysis {
 }
 export type Profile = 'amira' | 'robert' | 'mateo';
 
-export interface SensitivityCheck { id: string; question: string; base: string; alternative: string; holds: boolean }
+export interface SensitivityChart {
+  unit: 'pts' | '%';
+  scenarios: { label: string; detail?: string; verdict: string }[];
+  measures: { label: string; values: number[]; limit?: number }[];
+}
+export interface SensitivityCheck {
+  id: string;
+  question: string;
+  base: string;
+  alternative: string;
+  holds: boolean;
+  chart?: SensitivityChart;
+}
 export interface Sensitivity { checks: SensitivityCheck[]; robust: boolean; summary: string }
 export interface Control { id: string; label: string; status: 'ok' | 'warn' | 'fail' | 'info'; detail: string }
 export interface Controls { verdict: 'ok' | 'warn' | 'fail'; controls: Control[]; notice: string }

@@ -1,5 +1,6 @@
 import { DecimalPipe, JsonPipe } from '@angular/common';
 import { Component, computed, input } from '@angular/core';
+import { ReportReveal } from '../../report-reveal';
 import { AgentProgress, Analysis } from '../../services/market-api';
 
 const STEP_FOR_TOOL: Record<string, string> = {
@@ -20,7 +21,7 @@ const LABELS: Record<string, string> = {
 /** Traces des agents : durées mesurées, appels au modèle, entrées et sorties de chaque outil. */
 @Component({
   selector: 'app-traces-view',
-  imports: [DecimalPipe, JsonPipe],
+  imports: [DecimalPipe, JsonPipe, ReportReveal],
   templateUrl: './traces-view.html',
   styleUrl: './traces-view.css',
 })

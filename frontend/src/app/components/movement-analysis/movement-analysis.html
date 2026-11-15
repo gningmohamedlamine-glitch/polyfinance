@@ -2,7 +2,7 @@
 @let d = decomposition();
 <section class="acts">
   <!-- ACTE 2 : l'Enquêteur -->
-  <article class="panel act" id="acte2">
+  <article class="panel act" id="acte2" reportReveal>
     <header class="act-title">
       <span class="eyebrow">Mouvement du titre</span>
       <span class="chip" [class.bedrock]="result.event.mode === 'bedrock'">
@@ -54,7 +54,7 @@
   </article>
 
   <!-- ACTE 3 : le Conseiller -->
-  <article class="panel act" id="acte3">
+  <article class="panel act" id="acte3" reportReveal>
     <header class="act-title">
       <span class="eyebrow">Impact sur le profil</span>
       <span class="chip" [class.bedrock]="result.impact.mode === 'bedrock'">

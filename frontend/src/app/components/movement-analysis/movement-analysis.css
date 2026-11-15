@@ -1,5 +1,6 @@
 :host { display: grid; gap: 20px; }
-.acts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; align-items: start; }
+.acts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(20px, 2.5vw, 28px); align-items: start; }
+.act + .act { --reveal-delay: 65ms; }
 .act { display: grid; gap: 16px; }
 .act-title { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
 .chip { padding: 4px 10px; border-radius: 999px; background: #f2f4f7; color: var(--muted); font-size: .74rem; font-weight: 600; }

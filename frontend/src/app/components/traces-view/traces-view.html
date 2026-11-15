@@ -1,5 +1,5 @@
 @let u = usage();
-<section class="panel head">
+<section class="panel head" reportReveal>
   <div>
     <span class="eyebrow">Traces des agents</span>
     <h2>Ce que les agents ont fait, étape par étape</h2>
@@ -8,7 +8,7 @@
   <span class="status" [class.on]="bedrock()">{{ bedrock() ? 'Agents GPT-6 Astra (Bedrock)' : 'Calcul local (sans modèle)' }}</span>
 </section>
 
-<section class="kpis">
+<section class="kpis" reportReveal>
   <div class="panel kpi"><small>Durée totale</small><strong class="num">@if (total() < 1000) { {{ total() | number:'1.0-0' }} ms } @else { {{ total() / 1000 | number:'1.1-1' }} s }</strong><small>des deux agents</small></div>
   <div class="panel kpi"><small>Appels au modèle</small><strong class="num">{{ u.calls }}</strong><small>{{ u.model ?? 'aucun modèle configuré' }}</small></div>
   <div class="panel kpi"><small>Jetons consommés</small><strong class="num">{{ u.input + u.output | number:'1.0-0' }}</strong><small>{{ u.input | number:'1.0-0' }} en entrée · {{ u.output | number:'1.0-0' }} en sortie</small></div>
@@ -16,7 +16,7 @@
 </section>
 
 @if (timed().length) {
-  <section class="panel">
+  <section class="panel" reportReveal>
     <h3>Répartition du temps</h3>
     <div class="bar">
       @for (s of timed(); track $index) { <span [attr.data-hue]="s.hue" [style.flex-grow]="s.share" [title]="label(s.action)"></span> }
@@ -30,7 +30,7 @@
   </section>
 }
 
-<section class="panel">
+<section class="panel" reportReveal>
   <div class="section-head"><h3>Journal des appels d’outils</h3><small class="muted">Entrées choisies par le modèle, sorties renvoyées par le code</small></div>
   @if (!journal().length) {
     <p class="empty">Mode local : aucune décision de modèle. Une politique fixe a exécuté les outils ci-dessous.</p>
@@ -52,7 +52,7 @@
 </section>
 
 @if (analysis().trace?.length) {
-  <section class="panel">
+  <section class="panel" reportReveal>
     <h3 id="trace-table-title">Toutes les étapes exécutées</h3>
     <div class="table-scroll" role="region" aria-labelledby="trace-table-title" tabindex="0">
       <table>
