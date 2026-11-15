@@ -42,9 +42,15 @@ export class MovementAnalysis {
 
   benchmarks = computed(() => {
     const rows = this.analysis().movement.benchmarks;
+    const spark = this.compareSpark(this.analysis().movement.path ?? [], rows['QQQ']?.path ?? []);
     return ['SPY', 'QQQ', 'XLK']
       .filter(symbol => rows[symbol]?.return != null)
-      .map(symbol => ({ symbol, label: symbol === 'XLK' ? 'Secteur techno' : rows[symbol].name, ret: rows[symbol].return! }));
+      .map(symbol => ({
+        symbol,
+        label: symbol === 'XLK' ? 'Secteur techno' : rows[symbol].name,
+        ret: rows[symbol].return!,
+        spark: symbol === 'QQQ' ? spark : null,
+      }));
   });
 
   rules = computed(() => {
@@ -101,7 +107,68 @@ export class MovementAnalysis {
   }
 
   bulletLines(text: string): { parts: TextPart[] }[] {
-    return this.bullets(text).map(line => ({ parts: this.parseInlineParts(line) }));
+    return this.bullets(text)
+      .map(line => this.readable(line))
+      .filter(line => line.length > 0)
+      .map(line => ({ parts: this.parseInlineParts(line) }));
+  }
+
+  /** Le modèle cite parfois des champs ou des outils. On les dit en français, ou on les retire. */
+  readable(text: string): string {
+    const phrases: Record<string, string> = {
+      'source_origin=official': 'source officielle',
+      'source_origin=other': 'autre source',
+      'excerpt_status=verified': 'extrait vérifié',
+      'excerpt_status=no_excerpt': 'sans extrait vérifié',
+      'excerpt_status=mismatch': 'extrait non retrouvé',
+      'excerpt_status=source_missing': 'source introuvable',
+      'excerpt_status=not_checked': 'extrait non vérifié',
+      'temporal_status=before_close': 'avant la clôture',
+      'temporal_status=after_close': 'après la clôture',
+      'temporal_status=date_only_prior': 'date antérieure',
+      'temporal_status=same_day_time_unknown': 'heure inconnue',
+      'temporal_status=unknown_timezone': 'fuseau inconnu',
+      'temporal_status=invalid_timestamp': 'horodatage invalide',
+      'temporal_status=missing_date': 'date manquante',
+      'page_status=retrieved': 'page consultée',
+      'page_status=unavailable': 'page indisponible',
+      'page_status=not_checked': 'page non consultée',
+      'eligible_for_explanation=true': 'peut expliquer le mouvement',
+      'eligible_for_explanation=false': 'ne peut pas expliquer le mouvement',
+    };
+    let out = text.replace(/`([^`\n]+)`/g, ' $1 ');
+    out = out.replace(/\b([a-z][a-z0-9_]*)\s*=\s*([A-Za-z0-9_]+)/g, (full, key: string, value: string) => {
+      return phrases[`${key}=${value}`] ?? '';
+    });
+    out = out
+      .replace(/\b(profile_calculations|verify_profile_coherence|position_value_cad|direct_weight|esg_screen|search_catalog|search_web|search_sec_filings)\b/g, ' ')
+      .replace(/\b[a-z]+(?:_[a-z0-9]+)+\b/g, ' ')
+      .replace(/\(\s*\)/g, '')
+      .replace(/\s+([,.;:])/g, '$1')
+      .replace(/([:;])\s*([,.;])/g, '$2')
+      .replace(/(\s*,){2,}/g, ',')
+      .replace(/\s{2,}/g, ' ')
+      .replace(/^[,;:\s]+|[,;:\s]+$/g, '')
+      .trim();
+    if (!out) return '';
+    return out.charAt(0).toUpperCase() + out.slice(1);
+  }
+
+  /** Deux tracés sur la même échelle : le titre et le Nasdaq-100. */
+  private compareSpark(stock: number[], market: number[]) {
+    if (stock.length < 2 || market.length !== stock.length) return null;
+    const all = [...stock, ...market];
+    const min = Math.min(...all);
+    const max = Math.max(...all);
+    const span = max - min || 1;
+    const w = 112;
+    const h = 36;
+    const line = (values: number[]) => values.map((value, index) => {
+      const x = (index / (values.length - 1)) * w;
+      const y = h - 2 - ((value - min) / span) * (h - 4);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(' ');
+    return { w, h, stock: line(stock), market: line(market) };
   }
 
   /** Inline marks the model writes: `code`, **bold**, *italic*, and [label](https://…). */

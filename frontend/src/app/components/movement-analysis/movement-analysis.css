@@ -16,6 +16,8 @@ small { color: var(--muted); font-size: .78rem; }
 .sub { color: var(--muted); font-size: .9rem; }
 .bench { display: flex; gap: 10px; flex-wrap: wrap; }
 .bench > div { display: grid; gap: 3px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 10px; min-width: 100px; background: var(--bg); }
+.bench > div.with-spark { display: flex; align-items: center; gap: 10px; }
+.bench .spark { width: 108px; height: 36px; flex: none; }
 .bench strong { font-size: .95rem; }
 
 .decomp { padding: 14px; border-radius: 12px; background: #f8f9fc; border: 1px solid var(--border); display: grid; gap: 10px; }

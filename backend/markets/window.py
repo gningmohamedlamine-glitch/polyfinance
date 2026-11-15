@@ -349,14 +349,53 @@ def max_drawdown_cad(window: ResolvedWindow, position_cad: float) -> dict | None
     }
 
 
+def indexed_paths(window: ResolvedWindow, symbols: list[str]) -> dict[str, list[float]]:
+    """Rendement cumulé, base 0 au début de la sélection, sur les mêmes dates pour chaque série."""
+    dates: list[str] = []
+    for date in (window.start_close_date, *window.measured_sessions):
+        if date not in dates:
+            dates.append(date)
+    if len(dates) > 48:
+        step = max(1, (len(dates) - 1) // 40)
+        sampled = dates[::step]
+        if sampled[-1] != dates[-1]:
+            sampled.append(dates[-1])
+        dates = sampled
+    paths: dict[str, list[float]] = {}
+    for symbol in (window.ticker, *symbols):
+        try:
+            closes = {row.date: row.adj_close for row in _rows_any(symbol)}
+        except ValueError:
+            continue
+        base = closes.get(dates[0])
+        if not base:
+            continue
+        values: list[float] = []
+        last = None
+        for date in dates:
+            price = closes.get(date, last)
+            if price is None:
+                values = []
+                break
+            last = price
+            values.append(round(price / base - 1, 4))
+        if len(values) >= 2:
+            paths[symbol] = values
+    return paths
+
+
 def movement_legacy(window: ResolvedWindow, returns: dict) -> dict:
     """Shape expected by existing API consumers for a session click."""
+    paths = indexed_paths(window, list(returns["benchmarks"]))
     benchmarks = {}
     for symbol, bench in returns["benchmarks"].items():
         if bench["status"] == "ok":
-            benchmarks[symbol] = {"name": bench["name"], "return": bench["return"], "gap": bench["gap"]}
+            benchmarks[symbol] = {
+                "name": bench["name"], "return": bench["return"], "gap": bench["gap"],
+                "path": paths.get(symbol, []),
+            }
         else:
-            benchmarks[symbol] = {"name": bench["name"], "return": None, "gap": None}
+            benchmarks[symbol] = {"name": bench["name"], "return": None, "gap": None, "path": []}
     return {
         "ticker": window.ticker,
         "date": window.end_close_date,
@@ -365,5 +404,6 @@ def movement_legacy(window: ResolvedWindow, returns: dict) -> dict:
         "fx_return": returns["fx_return"],
         "cad_return": returns["cad_return"],
         "fx_dates": returns["fx_dates"],
+        "path": paths.get(window.ticker, []),
         "benchmarks": benchmarks,
     }

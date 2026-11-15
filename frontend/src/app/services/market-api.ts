@@ -79,7 +79,8 @@ export interface Analysis {
     previous_date: string;
     usd_return: number;
     cad_return: number | null;
-    benchmarks: Record<string, { name: string; return: number | null; gap: number | null; gap_pp?: number | null; status?: string }>;
+    path?: number[];
+    benchmarks: Record<string, { name: string; return: number | null; gap: number | null; gap_pp?: number | null; status?: string; path?: number[] }>;
   };
   dossier?: {
     selection: {

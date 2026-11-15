@@ -3,7 +3,7 @@ import unittest
 from django.test import SimpleTestCase
 
 from markets.market import load_prices
-from markets.window import _benchmark, notable_sessions, resolve_window, window_returns
+from markets.window import _benchmark, movement_legacy, notable_sessions, resolve_window, window_returns
 
 
 class WindowTests(SimpleTestCase):
@@ -14,6 +14,10 @@ class WindowTests(SimpleTestCase):
         window = resolve_window("NVDA", date="2024-08-29")
         returns = window_returns(window)
         self.assertAlmostEqual(returns["usd_return"], -0.06384855, places=8)
+        movement = movement_legacy(window, returns)
+        self.assertGreaterEqual(len(movement["path"]), 2)
+        self.assertEqual(len(movement["path"]), len(movement["benchmarks"]["SPY"]["path"]))
+        self.assertEqual(len(movement["path"]), len(movement["benchmarks"]["XLK"]["path"]))
         spy = returns["benchmarks"]["SPY"]
         self.assertEqual(spy["status"], "ok")
         self.assertAlmostEqual(spy["gap_pp"], -6.393808, places=5)
