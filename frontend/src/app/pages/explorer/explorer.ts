@@ -1,13 +1,13 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { DatePipe } from '@angular/common';
+import { DatePipe, DecimalPipe, PercentPipe } from '@angular/common';
 import { Subscription } from 'rxjs';
 import { AgentTimeline } from '../../components/agent-timeline/agent-timeline';
 import { DossierView } from '../../components/dossier-view/dossier-view';
 import { TracesView } from '../../components/traces-view/traces-view';
 import { MovementAnalysis } from '../../components/movement-analysis/movement-analysis';
-import { ChartSelection, PriceChart } from '../../components/price-chart/price-chart';
+import { ChartSelection, ChartStyle, HORIZONS, Horizon, PriceChart } from '../../components/price-chart/price-chart';
 import { LucideDynamicIcon } from '@lucide/angular';
 import { ICONS } from '../../icons';
 import { PERSONAS, personaOf } from '../../personas';
@@ -17,7 +17,7 @@ type SelectionMode = 'session' | 'range';
 
 @Component({
   selector: 'app-explorer',
-  imports: [FormsModule, DatePipe, LucideDynamicIcon, PriceChart, MovementAnalysis, AgentTimeline, DossierView, TracesView],
+  imports: [FormsModule, DatePipe, DecimalPipe, PercentPipe, LucideDynamicIcon, PriceChart, MovementAnalysis, AgentTimeline, DossierView, TracesView],
   templateUrl: './explorer.html',
   styleUrl: './explorer.css',
 })
@@ -40,6 +40,24 @@ export class Explorer {
   profile: Profile = 'amira';
   readonly personas = PERSONAS;
   readonly icons = ICONS;
+  readonly horizons = HORIZONS;
+  chartHorizon = signal<Horizon>('1M');
+  chartStyle = signal<ChartStyle>('line');
+
+  /** Indicateurs clés affichés sous le graphique une fois l'analyse terminée. */
+  kpis() {
+    const analysis = this.result();
+    if (!analysis) return null;
+    const sources = analysis.event.sources ?? [];
+    const model = analysis.dossier?.returns?.market_model;
+    return {
+      move: analysis.movement.usd_return,
+      residual: model?.status === 'ok' ? model.residual_pp : null,
+      sources: sources.length,
+      verified: sources.filter(s => s.excerpt_status === 'verified').length,
+      leads: analysis.dossier?.coverage.web_leads?.length ?? 0,
+    };
+  }
   entered = signal(false);
   switcherOpen = signal(false);
 

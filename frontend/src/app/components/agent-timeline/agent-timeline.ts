@@ -60,9 +60,9 @@ export class AgentTimeline {
 
   readonly nodes = [
     { id: 'selection', label: 'Sélection' },
-    { id: 'event', label: 'Marché' },
+    { id: 'event', label: 'Enquêteur' },
     { id: 'dossier', label: 'Dossier' },
-    { id: 'impact', label: 'Impact' },
+    { id: 'impact', label: 'Conseiller' },
     { id: 'output', label: 'Résultat' },
   ] as const;
 
@@ -85,8 +85,8 @@ export class AgentTimeline {
     const agent = this.impact()?.status === 'running' ? 'impact' : 'event';
     const runningTool = this.actions(agent).find(step => step.status === 'running');
     if (runningTool) return this.labels[runningTool.action] ?? runningTool.action;
-    if (this.impact()?.status === 'running') return 'Agent d’impact en cours';
-    if (this.market()?.status === 'running') return 'Agent marché en cours';
+    if (this.impact()?.status === 'running') return 'Le Conseiller analyse ton profil';
+    if (this.market()?.status === 'running') return 'L’Enquêteur cherche la cause du mouvement';
     return 'Analyse en cours';
   });
 

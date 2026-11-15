@@ -5,6 +5,7 @@ import {
   effect,
   HostListener,
   input,
+  model,
   output,
   signal,
   viewChild,
@@ -18,7 +19,18 @@ export type ChartSelection =
   | { kind: 'session'; date: string }
   | { kind: 'range'; startDate: string; endDate: string };
 
-type Horizon = '5J' | '1M' | '6M' | 'YTD' | '1A' | '5A' | 'Max';
+export type Horizon = '5J' | '1M' | '6M' | 'YTD' | '1A' | '5A' | 'Max';
+export type ChartStyle = 'line' | 'candles';
+/** Fenêtre affichée autour de la séance choisie : libellés en clair. */
+export const HORIZONS: { key: Horizon; label: string }[] = [
+  { key: '5J', label: '1 semaine' },
+  { key: '1M', label: '1 mois' },
+  { key: '6M', label: '6 mois' },
+  { key: 'YTD', label: 'Depuis janvier' },
+  { key: '1A', label: '1 an' },
+  { key: '5A', label: '5 ans' },
+  { key: 'Max', label: 'Tout' },
+];
 
 const DRAG_THRESHOLD = 8;
 const VIEW_WIDTH = 720;
@@ -36,19 +48,11 @@ type ChartPoint = Price & {
 export class PriceChart {
   rows = input.required<Price[]>();
   rangeMode = input(false);
-  chartStyle = signal<'line' | 'candles'>('line');
+  chartStyle = model<ChartStyle>('line');
+  showToolbar = input(true);
   readonly icons = ICONS;
-  /** Fenêtre affichée autour de la séance choisie : libellés en clair. */
-  readonly horizons = [
-    { key: '5J', label: '1 semaine' },
-    { key: '1M', label: '1 mois' },
-    { key: '6M', label: '6 mois' },
-    { key: 'YTD', label: 'Depuis janvier' },
-    { key: '1A', label: '1 an' },
-    { key: '5A', label: '5 ans' },
-    { key: 'Max', label: 'Tout' },
-  ] as const;
-  horizon = signal<Horizon>('1M');
+  readonly horizons = HORIZONS;
+  horizon = model<Horizon>('1M');
   firstBound = signal<string | null>(null);
   selection = input.required<ChartSelection>();
   selectionChange = output<ChartSelection>();

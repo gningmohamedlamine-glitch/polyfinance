@@ -30,7 +30,9 @@
       @for (page of pages; track page.id) {
         <button type="button" class="nav-item" [class.active]="view() === page.id"
                 [disabled]="page.id !== 'analyse' && !result()" (click)="openPage(page.id)">
-          <svg class="ico" [lucideIcon]="icons[page.id]" aria-hidden="true"></svg>{{ page.label }}
+          <svg class="ico" [lucideIcon]="icons[page.id]" aria-hidden="true"></svg><span class="nav-label">{{ page.label }}</span>
+          @if (page.id === 'dossier' && kpis(); as k) { <span class="badge" [attr.aria-label]="k.sources + ' source(s)'">{{ k.sources }}</span> }
+          @if (page.id === 'traces' && result()) { <span class="dot-ok" aria-label="Traces disponibles"></span> }
         </button>
         @if (page.id === 'analyse' && view() === 'analyse') {
           <div class="sub-nav">
@@ -45,7 +47,7 @@
     <div class="side-foot">
       <div class="side-profile">
         <span class="avatar small" [attr.data-profile]="profile">{{ persona().initial }}</span>
-        <div><strong>{{ persona().name }}, {{ persona().age }} ans</strong><small>{{ persona().risk }}</small></div>
+        <div><strong>{{ persona().name }}, {{ persona().age }} ans</strong><span class="risk" [attr.data-profile]="profile">{{ persona().risk }}</span></div>
       </div>
       @if (aiMode(); as mode) { <span class="ai-mode" [class.on]="mode !== 'Calcul local'">● {{ mode }}</span> }
       <button type="button" class="leave" (click)="leave()"><svg class="ico" [lucideIcon]="icons.logout" aria-hidden="true"></svg> Se déconnecter</button>
@@ -105,24 +107,53 @@
           <p class="muted">Clique sur un jour du graphique pour l’analyser (de la veille à ce jour), glisse pour une période, ou choisis les dates.</p>
         </div>
         <div class="controls">
-          <label class="field"><span class="field-label">Du</span>
-            <input type="date" [value]="fromDate()" [min]="minDate()" [max]="maxDate()"
-              (change)="onFromChange($any($event.target).value)" [disabled]="!rows().length">
-          </label>
-          <label class="field"><span class="field-label">Au</span>
-            <input type="date" [value]="toDate()" [min]="minDate()" [max]="maxDate()"
-              (change)="onToChange($any($event.target).value)" [disabled]="!rows().length">
-          </label>
+          <div class="control-row">
+            <label class="pill-field"><span class="field-label">Afficher</span>
+              <select [ngModel]="chartHorizon()" (ngModelChange)="chartHorizon.set($event)">
+                @for (option of horizons; track option.key) { <option [value]="option.key">{{ option.label }}</option> }
+              </select>
+            </label>
+            <div class="date-range">
+              <label class="pill-field"><span class="field-label">Du</span>
+                <input type="date" [value]="fromDate()" [min]="minDate()" [max]="maxDate()"
+                  (change)="onFromChange($any($event.target).value)" [disabled]="!rows().length">
+              </label>
+              <svg class="ico arrow" [lucideIcon]="icons.arrow" aria-hidden="true"></svg>
+              <label class="pill-field"><span class="field-label">Au</span>
+                <input type="date" [value]="toDate()" [min]="minDate()" [max]="maxDate()"
+                  (change)="onToChange($any($event.target).value)" [disabled]="!rows().length">
+              </label>
+            </div>
+          </div>
+          <div class="segmented" role="group" aria-label="Type de graphique">
+            <button type="button" [attr.aria-pressed]="chartStyle() === 'line'" (click)="chartStyle.set('line')"
+              title="Prix de clôture de chaque séance"><svg class="ico" [lucideIcon]="icons.line" aria-hidden="true"></svg> Ligne</button>
+            <button type="button" [attr.aria-pressed]="chartStyle() === 'candles'" (click)="chartStyle.set('candles')"
+              title="Ouverture, haut, bas et clôture de chaque séance"><svg class="ico" [lucideIcon]="icons.candles" aria-hidden="true"></svg> Bougies</button>
+          </div>
         </div>
       </div>
       <app-price-chart
         [rows]="rows()"
         [selection]="selection()"
+        [showToolbar]="false"
+        [(horizon)]="chartHorizon"
+        [(chartStyle)]="chartStyle"
         (selectionChange)="onChartSelection($event)"
       />
       @if (fromDate() && toDate() && !rangeInvalid()) {
         <p class="range-note">Comparaison&nbsp;: clôture du {{ fromDate() | date:'d MMM y':'UTC' }} → clôture du {{ toDate() | date:'d MMM y':'UTC' }}
           ({{ mode() === 'session' ? 'une journée' : 'une période' }}).</p>
+      }
+      @if (kpis(); as k) {
+        <div class="kpi-row">
+          <div class="kpi" [class.neg]="k.move < 0" [class.pos]="k.move > 0">
+            <small>Variation constatée</small><strong class="num">{{ k.move | percent:'1.2-2' }}</strong><span>en USD sur la sélection</span></div>
+          <div class="kpi"><small>Part propre au titre</small>
+            <strong class="num">@if (k.residual !== null) { {{ k.residual | number:'1.2-2' }} pts } @else { — }</strong><span>après l’effet du marché (bêta)</span></div>
+          <div class="kpi"><small>Sources datées</small><strong class="num">{{ k.sources }}</strong><span>dont {{ k.verified }} extrait(s) vérifié(s)</span></div>
+          <div class="kpi"><small>Pistes web</small><strong class="num">{{ k.leads }}</strong><span>non vérifiées</span></div>
+        </div>
       }
     </section>
 

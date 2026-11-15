@@ -1,6 +1,7 @@
 <section class="panel pipeline" [class.finished]="hasResult()" aria-label="Pipeline des agents">
   <header class="pipeline-header">
-    <h2>Pipeline des agents</h2>
+    <h2><span class="live-dot" [class.busy]="busy()" aria-hidden="true"></span> Pipeline des agents</h2>
+    <span class="hint">Clique sur une étape pour voir le détail</span>
   </header>
 
   <div class="progress-track">
@@ -13,14 +14,13 @@
           [attr.aria-expanded]="expanded() === node.id" aria-controls="pipeline-details"
           [attr.aria-label]="node.label + ' · ' + stateLabels[state]">
           <span class="icon-bubble">
-            <svg [lucideIcon]="icons[node.id]" aria-hidden="true"></svg>
-            @if (state === 'done') {
-              <span class="node-status"><svg [lucideIcon]="icons.check" aria-hidden="true"></svg></span>
-            } @else if (state === 'interrupted') {
+            <svg [lucideIcon]="state === 'done' ? icons.check : icons[node.id]" aria-hidden="true"></svg>
+            @if (state === 'interrupted') {
               <span class="node-status"><svg [lucideIcon]="icons.warning" aria-hidden="true"></svg></span>
             }
           </span>
-          <span>{{ node.label }}</span>
+          <span class="node-label">{{ node.label }}</span>
+          <small class="node-state">{{ stateLabels[state] }}</small>
         </button>
       </li>
     }
@@ -55,7 +55,7 @@
         @if (expanded(); as agent) {
           @if (agent === 'event' || agent === 'impact') {
             <div class="details-heading">
-              <strong>{{ agent === 'event' ? 'Agent marché' : 'Agent d’impact · ' + profileLabel() }}</strong>
+              <strong>{{ agent === 'event' ? 'Enquêteur' : 'Conseiller · ' + profileLabel() }}</strong>
               <span>{{ stageStatus(agent === 'event' ? market() : impact()) }}</span>
             </div>
             @if (actions(agent); as tools) {
