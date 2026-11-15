@@ -156,7 +156,7 @@ def web_controversies(client, ticker: str, name: str, end_date: str) -> tuple[li
     return leads, "found" if leads else "none_found"
 
 
-def esg_screen(dossier: dict, client=None) -> dict:
+def esg_screen(dossier: dict, client=None, *, web_result=None) -> dict:
     selection = dossier["selection"]
     ticker, end_date = selection["ticker"], selection["end_close_date"]
     sector = asset_sector(ticker)
@@ -173,7 +173,10 @@ def esg_screen(dossier: dict, client=None) -> dict:
     comparison = {"stock": snapshot(ticker), "reference": snapshot(ESG_REFERENCE)}
     controversies = catalog_publications(ticker, end_date) + matching_publications(dossier)
     web_status = "disabled"
-    if client is not None:
+    if web_result is not None:
+        web, web_status = web_result
+        controversies += web
+    elif client is not None:
         web, web_status = web_controversies(client, ticker, selection.get("name", ticker), end_date)
         controversies += web
     # Dédupliquer et appliquer la même fenêtre à toutes les origines.

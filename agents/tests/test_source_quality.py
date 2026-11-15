@@ -1,5 +1,8 @@
 import unittest
+from threading import Barrier
 from unittest.mock import Mock, patch
+
+from botocore.exceptions import ReadTimeoutError
 
 from agents.source_quality import check_source, is_official
 from agents.web_search import _host_blocked, _agentcore_queries, search_agentcore_leads, _cluster_leads
@@ -29,6 +32,29 @@ class SourceQualityTests(unittest.TestCase):
         factory.return_value.invoke_web_search.return_value = {'results': [{
             'url': 'https://www.sec.gov/a', 'title': 'News', 'text': 'Example news'}]}
         self.assertEqual(search_agentcore_leads('NVDA', 'NVIDIA', {'2022-05-09': ('2022-05-04', '2022-05-14')}), [])
+
+    @patch('agents.web_search._agentcore_queries', return_value=['official', 'slow', 'press', 'extra'])
+    @patch('agents.web_search.agentcore_client')
+    def test_parallel_batch_preserves_query_priority_and_stops_at_limit(self, factory, _queries):
+        started = Barrier(3, timeout=5)
+
+        def fetch(searchQuery, **_):
+            started.wait()
+            if searchQuery == 'slow':
+                raise ReadTimeoutError(endpoint_url='https://agentcore.example')
+            return {'results': [
+                {'url': f'https://example.com/{searchQuery}', 'publishedAt': '2022-05-09'},
+                {'url': 'https://example.com/shared', 'publishedAt': '2022-05-09'},
+            ]}
+
+        search = factory.return_value.invoke_web_search
+        search.side_effect = fetch
+        leads = search_agentcore_leads('NVDA', 'NVIDIA', {'2022-05-09': ('2022-05-04', '2022-05-14')}, limit=3)
+
+        self.assertEqual([lead['url'] for lead in leads], [
+            'https://example.com/official', 'https://example.com/shared', 'https://example.com/press',
+        ])
+        self.assertEqual(search.call_count, 3)
 
     def test_cluster_cannot_invent_url_or_date(self):
         import json

@@ -22,6 +22,9 @@ La recherche web utilise Amazon Nova 2 Lite (`web_search.py`), seul modèle dot�
 
 ## Recherche web (travail d’Adam)
 
-`search_web` interroge d’abord **Bedrock AgentCore Search**, qui renvoie des articles datés, puis se replie sur Nova Web Grounding.
-Les articles sont dédupliqués, regroupés par histoire (`story_key`, `related_count`), filtrés par pertinence et résumés en faits courts.
+`search_web` lance **Bedrock AgentCore Search** et **Nova Web Grounding** en parallèle. AgentCore exécute jusqu’à trois requêtes à la fois. Si des résultats déjà classés couvrent les séances clés, le mode rapide peut terminer sans attendre Nova au-delà de 10 secondes. Les recherches avec une couverture plus faible attendent le résultat de Nova jusqu’au délai réseau de 40 secondes.
+
+En mode rapide, le regroupement et la pertinence partagent un appel au modèle, avec un classement séparé si sa réponse est incomplète. L’application vérifie jusqu’à cinq articles de sites officiels, en parallèle entre domaines, et compare les citations au texte récupéré. La recherche approfondie garde les deux appels spécialisés et vérifie toutes les pistes officielles retenues.
+
+Le flux présente les rendements et les limites du profil avant les synthèses. Quand le catalogue contient des extraits vérifiés pour toutes les séances clés, les deux agents peuvent écrire à partir du même dossier validé. L’interface adapte automatiquement la recherche à la couverture disponible. Pour comparer les résultats ou diagnostiquer la couverture, le paramètre API `search=deep` force la recherche web et donne à Nova son délai réseau complet.
 Variables : `MARKET_WEB_SEARCH=1`, `MARKET_WEB_SEARCH_AGENTCORE=1` (facultatives : `MARKET_WEB_CLUSTER`, `MARKET_WEB_RAW_LEAD_MAX`, `MARKET_WEB_CLUSTER_KEEP`, `MARKET_WEB_RELEVANCE_KEEP`).

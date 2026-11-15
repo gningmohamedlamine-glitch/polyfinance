@@ -18,7 +18,7 @@ import { LucideDynamicIcon } from '@lucide/angular';
 import { ICONS } from '../../icons';
 import { PERSONAS, personaOf } from '../../personas';
 import { ReportReveal } from '../../report-reveal';
-import { AgentProgress, Analysis, MarketApi, Price, Profile, Stock } from '../../services/market-api';
+import { AgentProgress, Analysis, AnalysisPreview, EvidencePreview, MarketApi, Price, Profile, Stock } from '../../services/market-api';
 
 type SelectionMode = 'session' | 'range';
 type Chapter = 'analyse' | 'resultat' | 'dossier' | 'controles' | 'traces';
@@ -48,6 +48,8 @@ export class Explorer {
   result = signal<Analysis | null>(null);
   busy = signal(false);
   progress = signal<AgentProgress[]>([]);
+  preview = signal<AnalysisPreview | null>(null);
+  evidencePreview = signal<EvidencePreview | null>(null);
   error = signal('');
   selection = signal<ChartSelection>({ kind: 'session', date: '' });
   mode = signal<SelectionMode>('session');
@@ -421,6 +423,14 @@ export class Explorer {
       profile: this.profile,
     }).subscribe({
       next: (message) => {
+        if ('kind' in message && message.kind === 'preview') {
+          this.preview.set(message);
+          return;
+        }
+        if ('kind' in message && message.kind === 'evidence') {
+          this.evidencePreview.set(message);
+          return;
+        }
         if ('kind' in message) {
           this.progress.update(steps => {
             const index = steps.findIndex(step => step.agent === message.agent && step.action === message.action);
@@ -462,6 +472,8 @@ export class Explorer {
 
   private cancelAnalysis() {
     this.progress.set([]);
+    this.preview.set(null);
+    this.evidencePreview.set(null);
     this.analysisRequest?.unsubscribe();
     this.analysisRequest = undefined;
   }

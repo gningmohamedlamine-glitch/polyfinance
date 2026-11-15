@@ -1,6 +1,8 @@
 import json
 import os
 import unittest
+from concurrent.futures import Future
+from threading import Barrier
 from unittest.mock import Mock, patch
 
 from agents.event_agent import run_event_agent
@@ -72,7 +74,7 @@ class EventAgentTests(unittest.TestCase):
         self.assertEqual(merged[0]["related_count"], 2)
 
     @patch.dict(os.environ, {"MARKET_WEB_SEARCH": "1"}, clear=True)
-    @patch("agents.web_search._cluster_leads", side_effect=lambda _c, _t, _n, leads: leads)
+    @patch("agents.web_search._cluster_leads", side_effect=lambda _c, _t, _n, leads, **_: leads)
     @patch("agents.web_search.search_agentcore_leads", return_value=[])
     def test_grounded_week_includes_followup_but_rejects_uncited_and_outside_dates(self, _agentcore, _cluster):
         session = "2024-08-19"
@@ -105,7 +107,7 @@ class EventAgentTests(unittest.TestCase):
         self.assertEqual(client.converse.call_count, 2)
 
     @patch.dict(os.environ, {"MARKET_WEB_SEARCH": "1"}, clear=True)
-    @patch("agents.web_search._cluster_leads", side_effect=lambda _c, _t, _n, leads: leads)
+    @patch("agents.web_search._cluster_leads", side_effect=lambda _c, _t, _n, leads, **_: leads)
     @patch("agents.web_search.search_agentcore_leads", return_value=[])
     def test_judge_drops_irrelevant_cited_leads(self, _agentcore, _cluster):
         session = "2024-08-19"
@@ -135,7 +137,7 @@ class EventAgentTests(unittest.TestCase):
         self.assertEqual(leads, [])
 
     @patch.dict(os.environ, {"MARKET_WEB_SEARCH": "1"}, clear=True)
-    @patch("agents.web_search._cluster_leads", side_effect=lambda _c, _t, _n, leads: leads)
+    @patch("agents.web_search._cluster_leads", side_effect=lambda _c, _t, _n, leads, **_: leads)
     @patch("agents.web_search.search_agentcore_leads", return_value=[])
     def test_judge_failure_keeps_dated_leads(self, _agentcore, _cluster):
         session = "2024-08-19"
@@ -161,10 +163,10 @@ class EventAgentTests(unittest.TestCase):
         self.assertEqual(leads[0]["relevance"], RELEVANCE_UNEVALUATED)
 
     @patch.dict(os.environ, {"MARKET_WEB_SEARCH": "1"}, clear=True)
-    @patch("agents.web_search._cluster_leads", side_effect=lambda _c, _t, _n, leads: leads)
+    @patch("agents.web_search._cluster_leads", side_effect=lambda _c, _t, _n, leads, **_: leads)
     @patch("agents.web_search._grounding_leads", return_value=([], "not_executed"))
     @patch("agents.web_search.search_agentcore_leads")
-    def test_agentcore_leads_skip_grounding(self, agentcore, _grounding, _cluster):
+    def test_agentcore_leads_survive_unavailable_grounding(self, agentcore, grounding, _cluster):
         session = "2024-08-19"
         window = resolve_window("NVDA", date=session)
         windows = web_windows([session], window)
@@ -177,6 +179,14 @@ class EventAgentTests(unittest.TestCase):
             "source_type": "news",
             "after_session": False,
         }]
+        providers = Barrier(2, timeout=5)
+
+        def collect(result):
+            providers.wait()
+            return result
+
+        agentcore.side_effect = lambda *_args: collect(agentcore.return_value)
+        grounding.side_effect = lambda *_args: collect(grounding.return_value)
         client = Mock()
         client.converse.return_value = _judge_message([{
             "url": "https://www.reuters.com/nvda-story",
@@ -190,3 +200,32 @@ class EventAgentTests(unittest.TestCase):
         self.assertEqual(len(leads), 1)
         client.converse.assert_called_once()
         agentcore.assert_called_once()
+        grounding.assert_called_once()
+
+    @patch.dict(os.environ, {"MARKET_WEB_SEARCH": "1"}, clear=True)
+    @patch("agents.web_search.GROUNDING_SOFT_BUDGET", 0)
+    @patch("agents.web_search._rank_web")
+    @patch("agents.web_search.search_agentcore_leads")
+    @patch("agents.web_search._grounding_workers")
+    def test_fast_search_can_finish_with_ranked_coverage_while_nova_is_pending(self, workers, agentcore, rank):
+        nova = Future()
+        workers.submit.return_value = nova
+        session = "2024-09-03"
+        windows = {session: ("2024-08-30", "2024-09-09")}
+        sources = [
+            {"url": f"https://{host}/story", "session": session, "title": "NVIDIA market news",
+             "published_date": session, "summary": "News", "relevance": "Couvre NVIDIA."}
+            for host in ("news-one.example", "news-two.example")
+        ]
+        agentcore.return_value = sources
+        rank.return_value = (sources, "found")
+        details = {}
+        try:
+            leads, status = find_web_leads(Mock(), "NVDA", "NVIDIA", windows, details=details)
+            self.assertEqual(status, "found")
+            self.assertEqual(len(leads), 2)
+            self.assertEqual(details["grounding"], "budget_elapsed")
+            self.assertFalse(nova.done())
+            rank.assert_called_once()
+        finally:
+            nova.set_result(([], "grounding"))

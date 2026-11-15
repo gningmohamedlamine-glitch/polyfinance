@@ -99,20 +99,21 @@ def analysis(request):
     except ValueError as error:
         return JsonResponse({"error": str(error)}, status=400)
 
+    deep = request.GET.get("search") == "deep"
     if request.GET.get("stream") == "1":
         response = StreamingHttpResponse(
-            analysis_stream(window, profile, scenario), content_type="application/x-ndjson",
+            analysis_stream(window, profile, scenario, deep=deep), content_type="application/x-ndjson",
         )
         response["Cache-Control"] = "no-store"
         response["X-Accel-Buffering"] = "no"
         return response
     try:
-        return JsonResponse(run_analysis(window, profile, scenario))
+        return JsonResponse(run_analysis(window, profile, scenario, **({"deep": True} if deep else {})))
     except ModelUnavailable as error:
         return JsonResponse({"error": str(error)}, status=503)
 
 
-def analysis_stream(window, profile, scenario):
+def analysis_stream(window, profile, scenario, *, deep=False):
     messages = Queue()
 
     def progress(agent, action, status, count, mode, duration_ms, reason):
@@ -122,7 +123,11 @@ def analysis_stream(window, profile, scenario):
 
     def run():
         try:
-            result = run_analysis(window, profile, scenario, progress)
+            result = run_analysis(
+                window, profile, scenario, progress, deep=deep,
+                preview=lambda data: messages.put({"kind": "preview", **data}),
+                evidence_preview=lambda data: messages.put({"kind": "evidence", **data}),
+            )
             messages.put({"kind": "result", "analysis": result})
         except ModelUnavailable as error:
             logger.warning("Model unavailable: %s", error)
@@ -135,5 +140,5 @@ def analysis_stream(window, profile, scenario):
     while True:
         message = messages.get()
         yield json.dumps(message, ensure_ascii=False) + "\n"
-        if message["kind"] != "progress":
+        if message["kind"] in {"result", "error"}:
             return

@@ -145,6 +145,12 @@
           @if (busy()) { <span class="spinner" aria-hidden="true"></span> Analyse en cours… } @else { <svg class="ico" [lucideIcon]="icons.play" aria-hidden="true"></svg> Exécuter l’analyse }
         </button>
       </div>
+      @if (busy() && preview(); as early) {
+        <div class="kpi-row" role="status" aria-label="Premiers résultats">
+          <div class="kpi"><small>Variation constatée</small><strong><app-market-change [value]="early.movement.usd_return" [showIcon]="true" /></strong><span>en USD sur la sélection</span></div>
+          <div class="kpi"><small>Limites du profil</small><strong>{{ early.coherence.conflicts.length ? 'Limite dépassée' : (early.coherence.risk.status === 'ok' ? 'Dans les limites' : 'Données insuffisantes') }}</strong><span>Recherche de sources et synthèses en cours</span></div>
+        </div>
+      }
       @if (kpis(); as k) {
         <div class="kpi-row">
           <div class="kpi" [class.neg]="k.move < 0" [class.pos]="k.move > 0">
@@ -158,6 +164,23 @@
     </section>
 
     @if (busy()) {
+      @if (evidencePreview(); as evidence) {
+        @if (evidence.publications.length || evidence.web_leads.length) {
+          <div class="panel" aria-label="Sources recueillies">
+            <h3>Premières sources</h3>
+            <ul>
+              @for (source of evidence.publications.slice(0, 3); track source.url) {
+                <li><a [href]="source.url" target="_blank" rel="noopener">{{ source.title }}</a> · {{ source.excerpt_status === 'verified' ? 'Extrait vérifié' : 'Publication datée' }}</li>
+              } @empty {
+                @for (lead of evidence.web_leads.slice(0, 3); track lead.url) {
+                  <li><a [href]="lead.url" target="_blank" rel="noopener">{{ lead.title }}</a> · Piste web</li>
+                }
+              }
+            </ul>
+            <small class="muted">Les synthèses et les contrôles sont en cours.</small>
+          </div>
+        }
+      }
       <app-agent-timeline
         [steps]="progress()" [busy]="busy()" [hasResult]="false"
         [selectionLabel]="ticker + ' · ' + fromDate() + ' → ' + toDate()"

@@ -2,14 +2,16 @@
 
 import logging
 import os
+from concurrent.futures import ThreadPoolExecutor
 from threading import Lock
 from time import perf_counter
 
 from agents.dossier import SCHEMA, selection_payload
+from agents.agent_loop import model_for
 from agents.governance import run_controls
 from agents.sensitivity import run_sensitivity
 from agents.events import catalog_fingerprint, publication_coverage, session_window
-from agents.impact_agent import _fallback_text
+from agents.impact_agent import _fallback_text, prepare_profile, search_profile_esg
 from agents.main import event_agent, impact_agent
 
 from .window import movement_legacy, window_returns
@@ -45,24 +47,36 @@ def validate_dossier(window, returns, dossier):
         raise ValueError("La couverture du dossier ne correspond pas à ses publications.")
 
 
-def get_dossier(window, returns, notify):
+def get_dossier(window, returns, notify, *, on_evidence=None, deep=False):
     key = (
         window.ticker, window.requested, window.start_close_date, window.end_close_date,
-        catalog_fingerprint(), os.getenv("MARKET_WEB_SEARCH"), os.getenv("BEDROCK_MODEL_ID"),
+        catalog_fingerprint(), os.getenv("MARKET_WEB_SEARCH"), os.getenv("MARKET_WEB_SEARCH_AGENTCORE"),
+        model_for("event"), deep,
     )
     with _cache_lock:
         cached = _event_cache.get(key)
     if cached is not None:
         notify("event", "cached_dossier", "done")
-    dossier = cached if cached is not None else event_agent(window, notify)
+    def handoff(evidence):
+        notify("event", "validate_dossier", "running")
+        validate_dossier(window, returns, evidence)
+        notify("event", "validate_dossier", "done")
+        on_evidence(evidence)
+
+    options = {"on_evidence": handoff} if on_evidence is not None else {}
+    if deep:
+        options["deep"] = True
+    dossier = cached if cached is not None else event_agent(window, notify, **options)
 
     notify("event", "validate_dossier", "running")
     validate_dossier(window, returns, dossier)
     notify("event", "validate_dossier", "done")
 
-    if cached is None and dossier["synthesis"]["mode_reason"] in (None, "model_unconfigured") and (
-        "unavailable" not in (dossier["coverage"]["web_search"], dossier["coverage"]["sec_search"])
-    ):
+    coverage = dossier["coverage"]
+    grounding = coverage.get("nova_grounding")
+    grounding_complete = grounding in (None, "grounding") or (grounding == "budget_elapsed" and not deep)
+    if (cached is None and dossier["synthesis"]["mode_reason"] in (None, "model_unconfigured")
+            and grounding_complete and "unavailable" not in (coverage["web_search"], coverage["sec_search"])):
         with _cache_lock:
             _event_cache[key] = dossier
             if len(_event_cache) > 64:
@@ -103,42 +117,73 @@ def explain(agent: str, reason: str | None) -> str:
     return f"{agent} : {REASONS.get(code) or REASONS.get(reason or '') or f'le modèle n’a pas répondu ({reason}).'}"
 
 
-def run_analysis(window, profile, scenario, progress=None):
+def run_analysis(window, profile, scenario, progress=None, *, preview=None, evidence_preview=None, deep=False):
     started = {}
+    progress_lock = Lock()
 
     def notify(agent, action, status, count=None, mode=None, *, reason=None):
         key = (agent, action)
         elapsed = None
-        if status == "running":
-            started[key] = perf_counter()
-        elif key in started:
-            elapsed = round((perf_counter() - started.pop(key)) * 1000)
+        with progress_lock:
+            if status == "running":
+                started[key] = perf_counter()
+            elif key in started:
+                elapsed = round((perf_counter() - started.pop(key)) * 1000)
         if status != "running":
             logger.info("analysis agent=%s action=%s status=%s duration_ms=%s count=%s mode=%s reason=%s",
                         agent, action, status, elapsed, count, mode, reason)
         if progress:
             progress(agent, action, status, count, mode, elapsed, reason)
 
-    notify("event", "stage", "running")
     returns = window_returns(window)
-    dossier = get_dossier(window, returns, notify)
-    event = {
-        **dossier["synthesis"],
-        "sources": [{key: value for key, value in row.items() if key != "ticker"}
-                    for row in dossier["publications"]],
-    }
-    if require_model() and event["mode"] != "bedrock":
-        notify("event", "stage", "unavailable", mode="local", reason=event.get("mode_reason"))
-        raise ModelUnavailable(explain("Enquêteur", event.get("mode_reason")))
-    notify("event", "stage", "done", mode=event["mode"])
-    notify("impact", "stage", "running")
-    impact = impact_agent(dossier, profile, scenario, notify)
+    movement = movement_legacy(window, returns)
+    prepared = prepare_profile(window, returns, profile, scenario)
+    coherence = prepared["verify_profile_coherence"][3]
+    if preview:
+        preview({"movement": movement, "coherence": coherence})
+    sensitivity = run_sensitivity(window, returns, profile, scenario, coherence)
+
+    with ThreadPoolExecutor(max_workers=2) as workers:
+        esg_future = (workers.submit(search_profile_esg, window)
+                      if profile == "mateo" and model_for("impact") and os.getenv("MARKET_WEB_SEARCH") == "1" else None)
+        advisor = None
+        trace_size = 0
+
+        def advise(evidence):
+            impact = impact_agent(evidence, profile, scenario, notify, prepared=prepared, esg_future=esg_future)
+            available = impact["mode"] == "bedrock" or not require_model()
+            notify("impact", "stage", "done" if available else "unavailable", mode=impact["mode"],
+                   reason=None if available else impact.get("mode_reason"))
+            return impact
+
+        def start_advisor(evidence):
+            nonlocal advisor, trace_size
+            if evidence_preview:
+                evidence_preview({"publications": evidence["publications"],
+                                  "web_leads": evidence["coverage"].get("web_leads", [])})
+            trace_size = len(evidence["tools_executed"])
+            notify("impact", "stage", "running")
+            advisor = workers.submit(advise, evidence)
+
+        notify("event", "stage", "running")
+        parallel = model_for("event") and model_for("impact")
+        dossier = get_dossier(window, returns, notify, on_evidence=start_advisor if parallel else None, deep=deep)
+        event = {
+            **dossier["synthesis"],
+            "sources": [{key: value for key, value in row.items() if key != "ticker"}
+                        for row in dossier["publications"]],
+        }
+        if require_model() and event["mode"] != "bedrock":
+            notify("event", "stage", "unavailable", mode="local", reason=event.get("mode_reason"))
+            raise ModelUnavailable(explain("Enquêteur", event.get("mode_reason")))
+        notify("event", "stage", "done", mode=event["mode"])
+        if advisor is None:
+            start_advisor(dossier)
+        impact = advisor.result()
+        impact["trace"] = [*dossier["tools_executed"], *impact["trace"][trace_size:]]
     if require_model() and impact["mode"] != "bedrock":
-        notify("impact", "stage", "unavailable", mode="local", reason=impact.get("mode_reason"))
         raise ModelUnavailable(explain("Conseiller", impact.get("mode_reason")))
-    notify("impact", "stage", "done", mode=impact["mode"])
     notify("governance", "stage", "running")
-    sensitivity = run_sensitivity(window, returns, profile, scenario, impact.get("coherence") or {})
     controls = run_controls(dossier, event, impact, window.end_close_date, sensitivity)
     if controls["verdict"] == "fail":
         event["text"] = "La cause du mouvement reste indéterminée. Consulte les rendements calculés et les sources du dossier."
@@ -150,7 +195,7 @@ def run_analysis(window, profile, scenario, progress=None):
     return {
         "controls": controls,
         "sensitivity": sensitivity,
-        "movement": movement_legacy(window, returns),
+        "movement": movement,
         "dossier": dossier,
         "event": event,
         "impact": impact,

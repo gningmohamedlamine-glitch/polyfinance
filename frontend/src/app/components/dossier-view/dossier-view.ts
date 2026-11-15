@@ -43,13 +43,17 @@ export class DossierView {
   webStatus = computed(() => {
     const coverage = this.analysis().dossier?.coverage;
     const reason = coverage?.web_search_reason;
+    if (coverage?.nova_grounding === 'budget_elapsed') return 'Les résultats de recherche disponibles sont affichés. Nova n’a pas répondu dans le délai prévu.';
+    if (coverage?.nova_grounding && ['busy', 'timeout', 'unavailable', 'not_executed', 'invalid_response'].includes(coverage.nova_grounding)) {
+      return 'Recherche partielle : Nova n’a renvoyé aucun résultat exploitable. Les autres sources disponibles sont affichées.';
+    }
     switch (coverage?.web_search) {
       case 'disabled': return 'Recherche web désactivée (MARKET_WEB_SEARCH ≠ 1).';
       case 'not_requested': return 'Recherche web non lancée par l’Enquêteur.';
       case 'unavailable': return `Recherche web indisponible${reason ? ' (' + reason + ')' : ''}.`;
       case 'no_dated_sources': return 'Recherche web lancée : aucun article daté dans la fenêtre.';
       case 'no_relevant_sources': return 'Recherche web lancée : articles trouvés, aucun pertinent pour ce mouvement.';
-      case 'not_needed': return 'Recherche web non nécessaire.';
+      case 'not_needed': return 'Le catalogue vérifié couvre les séances clés de la sélection.';
       default: return coverage?.web_search ? `Recherche web : ${coverage.web_search}.` : '';
     }
   });

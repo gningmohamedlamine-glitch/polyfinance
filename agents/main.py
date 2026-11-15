@@ -14,9 +14,9 @@ __all__ = [
 ]
 
 
-def event_agent(window, progress=None):
-    return run_event_agent(window, progress)
+def event_agent(window, progress=None, **options):
+    return run_event_agent(window, progress, **options)
 
 
-def impact_agent(dossier, profile, scenario, progress=None):
-    return run_impact_agent(dossier, profile, scenario, progress)
+def impact_agent(dossier, profile, scenario, progress=None, **options):
+    return run_impact_agent(dossier, profile, scenario, progress, **options)

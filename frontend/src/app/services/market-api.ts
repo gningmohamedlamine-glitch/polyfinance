@@ -59,7 +59,19 @@ export interface AgentProgress {
   reason?: string | null;
 }
 
-type AnalysisMessage = AgentProgress | { kind: 'result'; analysis: Analysis } | { kind: 'error'; message: string };
+export interface AnalysisPreview {
+  kind: 'preview';
+  movement: Analysis['movement'];
+  coherence: Coherence;
+}
+
+export interface EvidencePreview {
+  kind: 'evidence';
+  publications: Source[];
+  web_leads: NonNullable<NonNullable<Analysis['dossier']>['coverage']['web_leads']>;
+}
+
+type AnalysisMessage = AgentProgress | AnalysisPreview | EvidencePreview | { kind: 'result'; analysis: Analysis } | { kind: 'error'; message: string };
 
 export interface Analysis {
   movement: {
@@ -94,6 +106,7 @@ export interface Analysis {
       sessions_unexplained: string[];
       web_search?: string;
       web_search_reason?: string;
+      nova_grounding?: string;
       web_leads?: {
         url: string;
         title: string;
@@ -183,7 +196,7 @@ export class MarketApi {
   }
 
   analyze(params: Record<string, string | number>) {
-    return new Observable<AgentProgress | Analysis>(subscriber => {
+    return new Observable<AgentProgress | AnalysisPreview | EvidencePreview | Analysis>(subscriber => {
       const controller = new AbortController();
       const query = new URLSearchParams({ stream: '1' });
       Object.entries(params).forEach(([key, value]) => query.set(key, String(value)));

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from concurrent.futures import ThreadPoolExecutor
 
 from botocore.exceptions import BotoCoreError, ClientError
 
@@ -18,7 +19,7 @@ from .tools import ToolContext, build_tool_context
 from .web_search import find_web_leads, web_windows
 
 WEB_READ_TIMEOUT = 40
-WEB_FAILURES = {"timeout", "unavailable", "not_executed", "invalid_response"}
+WEB_FAILURES = {"timeout", "unavailable", "not_executed", "invalid_response", "busy", "budget_elapsed"}
 
 
 SYSTEM = (
@@ -129,7 +130,7 @@ def run_sec_search(context: ToolContext, notify, sessions, mode=None) -> tuple[l
     return filings, sec_status
 
 
-def run_web_search(context: ToolContext, notify, dates, mode=None) -> tuple[list[dict], str]:
+def run_web_search(context: ToolContext, notify, dates, mode=None, *, deep=False) -> tuple[list[dict], str]:
     window = context.window
     windows = web_windows(dates, window)
     leads, web_status = [], "not_needed"
@@ -141,9 +142,12 @@ def run_web_search(context: ToolContext, notify, dates, mode=None) -> tuple[list
             web_status = "unavailable"
         else:
             moves = {row["date"]: row["daily_return"] for row in context.notable["sessions"]}
-            leads, web_status = find_web_leads(
-                client, window.ticker, window.name, windows, moves=moves
-            )
+            details = {}
+            covered = {row["session"] for row in context.publications if row.get("excerpt_status") == "verified"}
+            leads, web_status = find_web_leads(client, window.ticker, window.name, windows, moves=moves,
+                                              covered_sessions=covered, details=details, deep=deep)
+            if details:
+                context.coverage["nova_grounding"] = details["grounding"]
         if web_status in WEB_FAILURES:
             notify("event", "web_search", "unavailable", mode=mode, reason=web_status)
             context.coverage["web_search_reason"] = web_status
@@ -158,20 +162,36 @@ def run_web_search(context: ToolContext, notify, dates, mode=None) -> tuple[list
 
 
 def _enrich_publications(context: ToolContext, notify):
-    """Politique locale (sans modèle) : toutes les recherches réseau, dans un ordre fixe."""
+    """Politique locale (sans modèle) : les deux recherches réseau sont indépendantes."""
     sessions = list(context.window.measured_sessions)
-    run_sec_search(context, notify, sessions)
     dates = [row["date"] for row in context.notable["sessions"]] or sessions[-1:]
-    run_web_search(context, notify, dates)
+    _search_web_and_sec(context, notify, dates, sessions)
     context.coverage.setdefault("web_leads", [])
 
 
-def _executor(context: ToolContext, notify, network: bool):
+def _search_web_and_sec(context, notify, dates, sessions, mode=None, *, deep=False):
+    window = context.window
+    previous = previous_session_dates(window.ticker, sessions, context.price_rows)
+    sec_mode = "guard" if mode == "model" else mode
+    notify("event", "sec_edgar", "running", mode=sec_mode)
+    with ThreadPoolExecutor(max_workers=1) as workers:
+        sec = workers.submit(search_filings, window.ticker, previous, sessions)
+        leads, status = run_web_search(context, notify, dates, mode, deep=deep)
+        filings, sec_status = sec.result()
+    _merge(context, filings)
+    context.coverage["sec_search"] = sec_status
+    notify("event", "sec_edgar", "done" if sec_status == "searched" else "unavailable", len(filings), sec_mode)
+    return leads, status
+
+
+def _executor(context: ToolContext, notify, network: bool, *, sealed=lambda: False, parallel=False, deep=False):
     """Valide chaque décision du modèle avant de l’exécuter (garde-fou en Python)."""
     allowed = set(context.window.measured_sessions)
     done: set[tuple] = set()
 
     def execute(name, args):
+        if sealed():
+            return False, "Le dossier est validé. Termine la synthèse avec les preuves réunies."
         sessions = args.get("sessions")
         if name not in {"search_catalog", "search_sec_filings", "search_web"}:
             return False, "Outil inconnu."
@@ -192,13 +212,20 @@ def _executor(context: ToolContext, notify, network: bool):
         if name == "search_sec_filings":
             rows, status = run_sec_search(context, notify, sessions, mode="model")
             return True, {"filings": rows, "status": status}
-        leads, status = run_web_search(context, notify, sessions, mode="model")
-        return True, {"web_leads": [lead for lead in leads if not lead.get("after_session")], "status": status}
+        model = context.returns.get("market_model") or {}
+        company_move = abs(model.get("residual") or 0) >= abs(model.get("expected_return") or 0)
+        if parallel and company_move and context.coverage.get("sec_search") == "not_requested":
+            leads, status = _search_web_and_sec(context, notify, sessions, sessions, "model", deep=deep)
+            done.add(("search_sec_filings", tuple(sorted(sessions))))
+        else:
+            leads, status = run_web_search(context, notify, sessions, mode="model", deep=deep)
+        return True, {"web_leads": [lead for lead in leads if not lead.get("after_session")], "status": status,
+                      "publications": context.publications[:8]}
 
     return execute
 
 
-def run_event_agent(window: ResolvedWindow, progress=None) -> dict:
+def run_event_agent(window: ResolvedWindow, progress=None, *, on_evidence=None, deep=False) -> dict:
     trace = []
 
     def notify(agent, action, status, count=None, mode=None, *, reason=None):
@@ -223,7 +250,7 @@ def run_event_agent(window: ResolvedWindow, progress=None) -> dict:
 
     if model:
         # Mode agent : faits obligatoires en Python, puis l’Enquêteur choisit ses recherches.
-        context = build_tool_context(window, notify, search_catalog=False)
+        context = build_tool_context(window, notify, search_catalog=on_evidence is not None)
         context.coverage.update(web_search="not_requested" if network else "disabled",
                                 sec_search="not_requested" if network else "disabled", web_leads=[])
         facts = {
@@ -234,22 +261,68 @@ def run_event_agent(window: ResolvedWindow, progress=None) -> dict:
             "notable_sessions": context.notable,
             "network_tools": network,
         }
+        sealed = False
+        material = {row["date"] for row in context.notable["sessions"]} or {window.end_close_date}
+
+        def share():
+            nonlocal sealed
+            if sealed or on_evidence is None:
+                return False
+            sealed = True
+            on_evidence(build_dossier(context, synthesis_text="", tools_executed=list(trace)))
+            return True
+
+        def after_tools():
+            if deep:
+                return False
+            verified = {row["session"] for row in context.publications if row.get("excerpt_status") == "verified"}
+            return material <= verified and share()
+
+        verified = {row["session"] for row in context.publications if row.get("excerpt_status") == "verified"}
+        if on_evidence is not None and not deep and material <= verified:
+            # A verified catalogue already covers the key sessions; both agents can start writing.
+            if network:
+                context.coverage.update(web_search="not_needed", sec_search="not_needed")
+            share()
+            dossier = build_dossier(context, synthesis_text=local_event_text(context), tools_executed=trace)
+            evidence = {key: dossier[key] for key in ("selection", "returns", "benchmarks", "notable_sessions")}
+            evidence["publications"] = context.publications[:8]
+            synthesis = synthesize("event", SYSTEM, evidence, 2000, notify, model_id=model)
+            dossier["usage"] = {**synthesis.pop("usage", {}), "model": model}
+            dossier["agent_decisions"] = []
+            if synthesis["text"]:
+                dossier["synthesis"] = synthesis
+            else:
+                dossier["synthesis"]["mode_reason"] = synthesis["mode_reason"]
+            return dossier
+
         notify("event", "investigate", "running", mode="bedrock")
         loop = run_tool_loop("event", model, INVESTIGATOR, facts, _tool_specs(network),
-                             _executor(context, notify, network), notify)
+                             _executor(context, notify, network, sealed=lambda: sealed,
+                                       parallel=on_evidence is not None, deep=deep), notify,
+                             **({"after_tools": after_tools} if on_evidence is not None else {}))
         notify("event", "investigate", "done" if loop["mode"] == "bedrock" else "unavailable",
                len(loop["decisions"]), "bedrock", reason=None if loop["mode"] == "bedrock" else loop["mode_reason"])
 
         # Garde-fou : sans aucune source, l'Enquêteur ne conclut pas sans avoir cherché sur le web.
         guard_leads = []
-        if (network and not context.publications and not context.coverage.get("web_leads")
+        publication_count = len(context.publications)
+        if (network and (deep or (not context.publications and not context.coverage.get("web_leads")))
                 and context.coverage.get("web_search") == "not_requested"):
             dates = [row["date"] for row in context.notable["sessions"]] or list(window.measured_sessions)[-1:]
-            guard_leads, _ = run_web_search(context, notify, dates, mode="guard")
+            if on_evidence is not None and context.coverage.get("sec_search") == "not_requested":
+                guard_leads, _ = _search_web_and_sec(context, notify, dates, list(window.measured_sessions),
+                                                     "guard", deep=deep)
+            else:
+                guard_leads, _ = run_web_search(context, notify, dates, mode="guard", deep=deep)
+        # The Advisor can work from the sealed evidence while a guard-triggered summary is written.
+        new_evidence = bool(guard_leads) or len(context.publications) > publication_count
+        if new_evidence and on_evidence is not None:
+            share()
         dossier = build_dossier(context, synthesis_text=local_event_text(context), tools_executed=trace)
         dossier["agent_decisions"] = loop["decisions"]
         dossier["usage"] = {**loop["usage"], "model": model}
-        if guard_leads:
+        if new_evidence:
             # Le texte de l'Enquêteur a été écrit sans ces pistes : on le réécrit avec elles.
             evidence = {key: dossier[key] for key in ("selection", "returns", "benchmarks", "notable_sessions")}
             evidence["web_leads"] = [lead for lead in context.coverage.get("web_leads", []) if not lead.get("after_session")]

@@ -29,7 +29,8 @@ def model_for(agent: str) -> str | None:
     return os.getenv(f"{agent.upper()}_MODEL_ID") or os.getenv("BEDROCK_MODEL_ID")
 
 
-def run_tool_loop(agent, model, instructions, payload, tool_specs, execute, notify, max_tokens=2500):
+def run_tool_loop(agent, model, instructions, payload, tool_specs, execute, notify, max_tokens=2500,
+                  *, after_tools=None):
     """Exécute la boucle et renvoie le texte final, le mode et la liste des décisions.
 
     execute(name, args) -> (ok: bool, result: dict | str). Une valeur ok=False est un refus.
@@ -90,6 +91,9 @@ def run_tool_loop(agent, model, instructions, payload, tool_specs, execute, noti
                     "status": "success" if ok else "error",
                 }})
             messages.append({"role": "user", "content": results})
+            if after_tools is not None and after_tools():
+                messages[-1]["content"].append({"text": "Le dossier est validé. Rédige maintenant ta synthèse sans autre outil."})
+                after_tools = None
         return done("", "local", "bedrock_incomplete")
     except ClientError as error:
         return done("", "local", f"bedrock_error:{error.response.get('Error', {}).get('Code', 'ClientError')}")

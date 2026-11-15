@@ -7,7 +7,10 @@ from markets.window import ResolvedWindow, max_drawdown_cad, risk_indicators
 from .agent_loop import MAX_DECISIONS, model_for, run_tool_loop
 import os
 
-from .esg import asset_sector, esg_screen
+from botocore.exceptions import BotoCoreError, ClientError
+
+from .dossier import selection_payload
+from .esg import asset_sector, esg_screen, web_controversies
 from .model_text import bedrock_client, synthesize
 
 PROFILES = {
@@ -215,10 +218,10 @@ def _metrics_amira(scenario: dict, ticker: str | None = None) -> tuple[list[dict
     return metrics, assumptions, tools
 
 
-def _metrics_mateo(dossier: dict) -> tuple[list[dict], str, list[dict]]:
+def _metrics_mateo(dossier: dict, *, web_result=None) -> tuple[list[dict], str, list[dict]]:
     """Vérification ESG : points d'attention et informations manquantes, jamais une certification."""
-    client = bedrock_client(read_timeout=40) if os.getenv("MARKET_WEB_SEARCH") == "1" else None
-    esg = esg_screen(dossier, client)
+    client = bedrock_client(read_timeout=40) if web_result is None and os.getenv("MARKET_WEB_SEARCH") == "1" else None
+    esg = esg_screen(dossier, client, web_result=web_result)
     metrics = []
     stock, reference = esg["comparison"]["stock"], esg["comparison"]["reference"]
     if stock and reference:
@@ -340,6 +343,21 @@ def _run_profile_tool(name, profile, dossier, scenario):
     return (*_metrics_mateo(dossier), None)
 
 
+def prepare_profile(window, returns, profile, scenario):
+    dossier = {"selection": selection_payload(window), "returns": returns, "benchmarks": returns["benchmarks"],
+               "coverage": {"sessions_measured": window.measured_sessions}}
+    return {name: _run_profile_tool(name, profile, dossier, scenario)
+            for name in PROFILE_TOOLS[profile] if name != "esg_screen"}
+
+
+def search_profile_esg(window):
+    try:
+        client = bedrock_client(read_timeout=40)
+    except (BotoCoreError, ClientError):
+        return [], "unavailable"
+    return web_controversies(client, window.ticker, window.name, window.end_close_date)
+
+
 def _esg_of(entries):
     return next((entry["result"] for entry in entries if entry.get("name") == "esg_screen"), None)
 
@@ -349,12 +367,12 @@ def _public(entry):
     return {key: value for key, value in entry.items() if key != "result"}
 
 
-def run_impact_agent(dossier: dict, profile: str, scenario: dict, progress=None) -> dict:
+def run_impact_agent(dossier: dict, profile: str, scenario: dict, progress=None, *, prepared=None, esg_future=None) -> dict:
     notify = progress or (lambda *args, **kwargs: None)
     model = model_for("impact")
     scenario_out = {key: scenario[key] for key in SCENARIO_FIELDS[profile] if key in scenario}
     if model:
-        return _run_advisor(model, dossier, profile, scenario_out, notify)
+        return _run_advisor(model, dossier, profile, scenario_out, notify, prepared or {}, esg_future)
 
     tool_name = "calculate_profile_impact"
     notify("impact", tool_name, "running")
@@ -397,10 +415,17 @@ def run_impact_agent(dossier: dict, profile: str, scenario: dict, progress=None)
     }
 
 
-def _run_advisor(model, dossier, profile, scenario, notify):
+def _run_advisor(model, dossier, profile, scenario, notify, prepared, esg_future):
     """Mode agent : le Conseiller choisit ses calculs ; la cohérence reste garantie par le code."""
     allowed = PROFILE_TOOLS[profile]
     results: dict[str, tuple] = {}
+
+    def calculate(name):
+        if name in prepared:
+            return prepared[name]
+        if name == "esg_screen" and esg_future is not None:
+            return (*_metrics_mateo(dossier, web_result=esg_future.result()), None)
+        return _run_profile_tool(name, profile, dossier, scenario)
 
     def execute(name, args):
         if name not in allowed:
@@ -410,7 +435,7 @@ def _run_advisor(model, dossier, profile, scenario, notify):
         if name in results:
             return False, "Calcul déjà effectué : utilise le résultat précédent ou conclus."
         notify("impact", name, "running", mode="model")
-        results[name] = _run_profile_tool(name, profile, dossier, scenario)
+        results[name] = calculate(name)
         metrics, assumptions, trace_entries, coherence = results[name]
         notify("impact", name, "done", mode="model")
         output = {"metrics": metrics, "assumptions": assumptions, "coherence": coherence}
@@ -428,7 +453,6 @@ def _run_advisor(model, dossier, profile, scenario, notify):
             "selection": dossier["selection"],
             "returns": dossier["returns"],
             "benchmarks": dossier["benchmarks"],
-            "synthesis": dossier["synthesis"]["text"],
             "publications": dossier["publications"][:8],
             "web_leads": [lead for lead in dossier["coverage"].get("web_leads", []) if not lead.get("after_session")],
         },
@@ -447,7 +471,7 @@ def _run_advisor(model, dossier, profile, scenario, notify):
     for name in required:
         if name not in results:
             notify("impact", name, "running", mode="guard")
-            results[name] = _run_profile_tool(name, profile, dossier, scenario)
+            results[name] = calculate(name)
             notify("impact", name, "done", mode="guard")
             for entry in results[name][2]:
                 entry["source"] = "guard"

@@ -1,4 +1,5 @@
 import json
+from threading import Barrier
 from unittest.mock import patch
 
 from botocore.exceptions import ReadTimeoutError
@@ -77,7 +78,11 @@ class AnalysisViewTests(SimpleTestCase):
             "ticker": "NVDA", "date": "2024-08-29", "profile": "amira", "stream": "1",
         })
         messages = [json.loads(chunk) for chunk in response.streaming_content]
-        actions = [(item["agent"], item["action"], item["status"]) for item in messages[:-1]]
+        self.assertEqual(messages[0]["kind"], "preview")
+        self.assertEqual(messages[0]["movement"], messages[-1]["analysis"]["movement"])
+        evidence = next(item for item in messages if item["kind"] == "evidence")
+        self.assertEqual(evidence["publications"][0]["excerpt_status"], "verified")
+        actions = [(item["agent"], item["action"], item["status"]) for item in messages if item["kind"] == "progress"]
         self.assertLess(
             actions.index(("event", "validate_dossier", "done")),
             actions.index(("impact", "stage", "running")),
@@ -95,9 +100,33 @@ class AnalysisViewTests(SimpleTestCase):
             patch("markets.pipeline.impact_agent") as impact,
             self.assertRaisesRegex(ValueError, "publication hors fenêtre"),
         ):
-            run_analysis(window, "amira", {})
+            run_analysis(window, "amira", {"portfolio_cad": 100000, "position_cad": 10000, "purchase_cad": 5000})
         impact.assert_not_called()
         self.assertFalse(_event_cache)
+
+    @patch.dict("os.environ", {"BEDROCK_MODEL_ID": "test-model"}, clear=True)
+    def test_verified_catalogue_allows_both_agents_to_write_concurrently(self):
+        writers = Barrier(2, timeout=5)
+
+        def write_event(*args, **kwargs):
+            writers.wait()
+            return {"text": "Synthèse du mouvement", "mode": "bedrock", "mode_reason": None}
+
+        def write_impact(dossier, profile, scenario, progress, *, prepared, esg_future):
+            self.assertEqual(dossier["publications"][0]["excerpt_status"], "verified")
+            self.assertEqual(dossier["synthesis"]["text"], "")
+            writers.wait()
+            return {"text": "Impact", "mode": "bedrock", "trace": list(dossier["tools_executed"])}
+
+        with (
+            patch("agents.event_agent.synthesize", side_effect=write_event),
+            patch("markets.pipeline.impact_agent", side_effect=write_impact),
+            patch("markets.pipeline.run_controls", return_value={"verdict": "ok"}),
+        ):
+            result = run_analysis(resolve_window("NVDA", date="2024-08-29"), "robert",
+                                  {"position_cad": 10000, "withdrawal_cad": 10000})
+        self.assertEqual(result["event"]["text"], "Synthèse du mouvement")
+        self.assertEqual(result["impact"]["text"], "Impact")
 
     @patch.dict("os.environ", {"MARKET_WEB_SEARCH": "1", "MARKET_ALLOW_LOCAL": "1"}, clear=True)
     def test_web_timeout_keeps_result_and_allows_retry(self):

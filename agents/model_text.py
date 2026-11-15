@@ -25,15 +25,15 @@ def public_text(message: dict, *, separator: str = "\n") -> str:
 
 @lru_cache(maxsize=2)
 def bedrock_client(*, read_timeout=25):
-    return boto3.client(
+    return boto3.session.Session().client(
         "bedrock-runtime",
         region_name=os.getenv("AWS_REGION", "us-east-1"),
         config=Config(connect_timeout=3, read_timeout=read_timeout, retries={"total_max_attempts": 1}),
     )
 
 
-def synthesize(agent, instructions, evidence, max_tokens, notify):
-    model = os.getenv("BEDROCK_MODEL_ID")
+def synthesize(agent, instructions, evidence, max_tokens, notify, *, model_id=None):
+    model = model_id or os.getenv("BEDROCK_MODEL_ID")
     if not model:
         return {"text": "", "mode": "local", "mode_reason": "model_unconfigured"}
 

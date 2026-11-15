@@ -1,4 +1,4 @@
-"""Web news leads via AgentCore Search (dated) with Nova grounding fallback."""
+"""Web news leads via AgentCore Search and Nova grounding."""
 
 from __future__ import annotations
 
@@ -6,7 +6,11 @@ import json
 import logging
 import os
 import re
+from concurrent.futures import ThreadPoolExecutor, TimeoutError
 from datetime import date, datetime, timedelta
+from itertools import batched
+from threading import BoundedSemaphore
+from time import monotonic
 from urllib.parse import urlsplit
 
 import boto3
@@ -25,6 +29,11 @@ SOURCE_TYPE_DEFAULT = "other"
 RAW_COLLECT_MAX = int(os.getenv("MARKET_WEB_RAW_LEAD_MAX", "24"))
 CLUSTER_KEEP = int(os.getenv("MARKET_WEB_CLUSTER_KEEP", "12"))
 RELEVANCE_KEEP = int(os.getenv("MARKET_WEB_RELEVANCE_KEEP", "8"))
+AGENTCORE_WORKERS = 3
+GROUNDING_SOFT_BUDGET = 10
+ARTICLE_CHECK_LIMIT = 5
+_grounding_workers = ThreadPoolExecutor(max_workers=4, thread_name_prefix="web-grounding")
+_grounding_slots = BoundedSemaphore(4)
 
 
 def web_windows(dates, window):
@@ -55,7 +64,7 @@ def normalize_url(url: str) -> str:
 
 
 def agentcore_client():
-    return boto3.client(
+    return boto3.session.Session().client(
         "bedrock-agentcore",
         region_name=os.getenv("AWS_REGION", "us-east-1"),
         config=Config(connect_timeout=3, read_timeout=20, retries={"total_max_attempts": 1}),
@@ -232,7 +241,7 @@ def _facts_from_summary(text: str, *, max_facts: int = 5) -> list[str]:
     return [part[:240] for part in parts[:max_facts]]
 
 
-def _cluster_leads(client, ticker, name, leads: list[dict]) -> list[dict]:
+def _cluster_leads(client, ticker, name, leads: list[dict], *, moves=None) -> list[dict]:
     if not leads:
         return []
     if len(leads) == 1:
@@ -258,8 +267,15 @@ def _cluster_leads(client, ticker, name, leads: list[dict]) -> list[dict]:
         "autres articles du même groupe.\n"
         'Réponds uniquement avec {"stories": [{"story_key": "...", "url": "...", "title": "...", '
         '"published_date": "YYYY-MM-DD", "session": "...", "source_type": "...", '
-        '"facts": ["..."], "also_urls": ["..."]}]}'
+        '"facts": ["..."], "also_urls": ["..."], "relevant": true, "relevance": "..."}]}'
     )
+    if moves is not None:
+        prompt += (
+            f"\nRendements par séance : {json.dumps(moves)}. "
+            "Pour chaque histoire, donne aussi relevant (booléen) et relevance (une courte justification). "
+            "Garde les événements concernant le titre, son secteur ou un facteur macro plausible pour la séance. "
+            "Un suivi publié après la séance peut être utile mais ne constitue pas une cause contemporaine."
+        )
     try:
         response = client.converse(
             modelId=MODEL,
@@ -317,6 +333,9 @@ def _cluster_leads(client, ticker, name, leads: list[dict]) -> list[dict]:
             "story_key": (story.get("story_key") if isinstance(story.get("story_key"), str) else "")[:80],
             "related_count": 1 + len(also),
             "facts": facts,
+            **({"relevant": story["relevant"], "relevance": story.get("relevance") or RELEVANCE_UNEVALUATED}
+               if moves is not None and isinstance(story.get("relevant"), bool)
+               and isinstance(story.get("relevance", ""), str) else {}),
         }, also))
     if clustered:
         logger.info("Clustered %d raw lead(s) into %d story(ies) for %s", len(leads), len(clustered), ticker)
@@ -340,9 +359,8 @@ def search_agentcore_leads(ticker, name, windows, *, limit=RAW_COLLECT_MAX):
         logger.info("AgentCore client unavailable for %s: %s", ticker, type(error).__name__)
         return []
 
-    for session, start, end, query in queries:
-        if len(leads) >= limit:
-            break
+    def fetch(task):
+        _, start, end, query = task
         try:
             response = search.invoke_web_search(
                 webSearchId=WEB_SEARCH_ID,
@@ -355,45 +373,45 @@ def search_agentcore_leads(ticker, name, windows, *, limit=RAW_COLLECT_MAX):
                     },
                 },
             )
+            return response.get("results") or []
         except (ConnectTimeoutError, ReadTimeoutError):
             logger.warning("AgentCore web search timed out for %s (%s)", ticker, query)
-            continue
         except (BotoCoreError, ClientError) as error:
             logger.info("AgentCore web search failed for %s: %s", ticker, type(error).__name__)
-            continue
+        return []
 
-        for item in response.get("results") or []:
+    # Keep query priority independent of network completion order. Submit one
+    # batch at a time so hitting the lead limit leaves at most one batch in flight.
+    with ThreadPoolExecutor(max_workers=AGENTCORE_WORKERS) as workers:
+        for batch in batched(queries, AGENTCORE_WORKERS):
             if len(leads) >= limit:
                 break
-            url = item.get("url")
-            if not isinstance(url, str) or not url.strip():
-                continue
-            url = url.strip()
-            if not url.startswith("https://") or _host_blocked(url):
-                continue
-            published = _parse_published(item.get("publishedAt"))
-            if not published or not start <= published <= end:
-                continue
-            title = _clean_snippet(item.get("title") if isinstance(item.get("title"), str) else "")
-            if not title:
-                title = "Article"
-            text = item.get("text")
-            summary = _clean_snippet(text) if isinstance(text, str) else ""
-            if not summary:
-                summary = "Extrait indisponible."
-            assigned = session if start <= published <= end else _session_for_date(published, windows)
-            if assigned is None:
-                continue
-            _append_lead(leads, seen, {
-                "url": url,
-                "title": title[:500],
-                "published_date": published,
-                "session": assigned,
-                "summary": summary,
-                "original_excerpt": summary,
-                "source_type": "news",
-                "after_session": published > assigned,
-            }, limit=limit)
+            for (session, start, end, _), results in zip(batch, workers.map(fetch, batch)):
+                for item in results:
+                    if len(leads) >= limit:
+                        break
+                    url = item.get("url")
+                    if not isinstance(url, str) or not url.strip():
+                        continue
+                    url = url.strip()
+                    if not url.startswith("https://") or _host_blocked(url):
+                        continue
+                    published = _parse_published(item.get("publishedAt"))
+                    if not published or not start <= published <= end:
+                        continue
+                    title = item.get("title")
+                    text = item.get("text")
+                    summary = (_clean_snippet(text) if isinstance(text, str) else "") or "Extrait indisponible."
+                    _append_lead(leads, seen, {
+                        "url": url,
+                        "title": _clean_snippet(title) if isinstance(title, str) else "Article",
+                        "published_date": published,
+                        "session": session,
+                        "summary": summary,
+                        "original_excerpt": summary,
+                        "source_type": "news",
+                        "after_session": published > session,
+                    }, limit=limit)
     if leads:
         logger.info("AgentCore returned %d dated lead(s) for %s", len(leads), ticker)
     return leads
@@ -583,15 +601,89 @@ def _apply_relevance(leads, judgments):
     return [], "no_relevant_sources"
 
 
-def find_web_leads(client, ticker, name, windows, moves=None):
+def _covers_material_sessions(leads, ticker, name, windows, moves, covered_sessions):
+    targets = set(moves) & windows.keys() or set(windows)
+    company = re.compile(r"\b(?:" + "|".join(re.escape(value) for value in (ticker, name)) + r")\b", re.I)
+    hosts = {session: set() for session in targets}
+    for lead in leads:
+        session = lead["session"]
+        if session in targets and not lead.get("after_session") and company.search(lead["title"]):
+            hosts[session].add(_domain(lead["url"]))
+            if "relevance" in lead and lead["relevance"] != RELEVANCE_UNEVALUATED:
+                hosts[session].update(lead.get("domains", ()))
+    return all(session in covered_sessions or len(hosts[session]) >= 2 for session in targets)
+
+
+def _check_articles(leads, *, limit=ARTICLE_CHECK_LIMIT):
+    # Prioritize contemporary sources. Keep one active fetch per publisher.
+    by_host = {}
+    chosen = sorted(
+        (i for i, lead in enumerate(leads) if is_official(lead["url"])),
+        key=lambda i: bool(leads[i].get("after_session")),
+    )[:limit]
+    checked = [{**lead, "source_origin": "official" if is_official(lead["url"]) else "other",
+                "page_status": "not_checked", "excerpt_status": "no_excerpt"} for lead in leads]
+    for i in chosen:
+        by_host.setdefault(_domain(leads[i]["url"]), []).append(i)
+
+    def verify(indices):
+        return [(i, check_source(leads[i])) for i in indices]
+
+    if by_host:
+        with ThreadPoolExecutor(max_workers=min(4, len(by_host))) as workers:
+            for batch in workers.map(verify, by_host.values()):
+                for i, row in batch:
+                    checked[i] = row
+    return checked
+
+
+def _rank_web(client, ticker, name, moves, leads, *, combined=True):
+    leads = _cluster_leads(client, ticker, name, leads, moves=moves if combined else None)
+    if all("relevant" in lead for lead in leads):
+        judged = {lead["url"]: {"relevant": lead["relevant"], "relevance": lead["relevance"]} for lead in leads}
+    else:
+        judged = _judge_relevance(client, ticker, name, moves, leads)
+    public = [{key: value for key, value in lead.items() if key != "relevant"} for lead in leads]
+    return _apply_relevance(public, judged)
+
+
+def find_web_leads(client, ticker, name, windows, moves=None, *, covered_sessions=(), details=None, deep=False):
     if os.getenv("MARKET_WEB_SEARCH") != "1":
         return [], "disabled"
 
+    moves = moves or {}
+    started = monotonic()
+    grounding = None
+    if _grounding_slots.acquire(blocking=False):
+        try:
+            grounding = _grounding_workers.submit(_grounding_leads, client, ticker, name, windows)
+        except BaseException:
+            _grounding_slots.release()
+            raise
+        grounding.add_done_callback(lambda _: _grounding_slots.release())
+
     agentcore = search_agentcore_leads(ticker, name, windows)
-    extra, detail = _grounding_leads(client, ticker, name, windows)
-    leads = _merge_leads(sorted(agentcore + extra, key=lambda row: not is_official(row['url'])))
+    primary = _merge_leads(sorted(agentcore, key=lambda row: not is_official(row["url"])))
+    early = None
+    extra, detail = [], "busy"
+    if grounding is not None:
+        if (not deep and not grounding.done() and primary
+                and _covers_material_sessions(primary, ticker, name, windows, moves, covered_sessions)):
+            early = _rank_web(client, ticker, name, moves, primary)
+        enough = early is not None and _covers_material_sessions(
+            [lead for lead in early[0] if lead.get("relevance") != RELEVANCE_UNEVALUATED],
+            ticker, name, windows, moves, covered_sessions,
+        )
+        remaining = max(0, GROUNDING_SOFT_BUDGET - (monotonic() - started)) if enough else None
+        try:
+            extra, detail = grounding.result(timeout=remaining)
+        except TimeoutError:
+            detail = "budget_elapsed"
+    if details is not None:
+        details["grounding"] = detail
+    leads = _merge_leads(sorted(agentcore + extra, key=lambda row: not is_official(row['url']))) if extra else primary
     if not leads:
-        if detail in {"timeout", "unavailable", "not_executed", "invalid_response"}:
+        if detail in {"timeout", "unavailable", "not_executed", "invalid_response", "busy", "budget_elapsed"}:
             return [], detail
         return [], "no_dated_sources"
     if agentcore and extra:
@@ -601,11 +693,10 @@ def find_web_leads(client, ticker, name, windows, moves=None):
     else:
         source = "grounding"
 
-    leads = _cluster_leads(client, ticker, name, leads)
-
-    moves = moves or {}
-    judged = _judge_relevance(client, ticker, name, moves, leads)
-    result, status = _apply_relevance(leads, judged)
+    if early is not None and leads == primary:
+        result, status = early
+    else:
+        result, status = _rank_web(client, ticker, name, moves, leads, combined=not deep)
     if result:
         logger.info("Web leads for %s via %s: %d kept", ticker, source, len(result))
-    return [check_source(lead) for lead in result], status
+    return _check_articles(result, limit=RELEVANCE_KEEP if deep else ARTICLE_CHECK_LIMIT), status
