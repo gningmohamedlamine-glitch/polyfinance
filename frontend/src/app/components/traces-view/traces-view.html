@@ -1,0 +1,68 @@
+@let u = usage();
+<section class="panel head">
+  <div>
+    <span class="eyebrow">Traces des agents</span>
+    <h2>Ce que les agents ont fait, étape par étape</h2>
+    <p class="muted">Durées mesurées par le serveur · consommation renvoyée par Amazon Bedrock · aucun coût estimé.</p>
+  </div>
+  <span class="status" [class.on]="bedrock()">{{ bedrock() ? 'Agents GPT-6 Astra (Bedrock)' : 'Calcul local (sans modèle)' }}</span>
+</section>
+
+<section class="kpis">
+  <div class="panel kpi"><small>Durée totale</small><strong class="num">@if (total() < 1000) { {{ total() | number:'1.0-0' }} ms } @else { {{ total() / 1000 | number:'1.1-1' }} s }</strong><small>des deux agents</small></div>
+  <div class="panel kpi"><small>Appels au modèle</small><strong class="num">{{ u.calls }}</strong><small>{{ u.model ?? 'aucun modèle configuré' }}</small></div>
+  <div class="panel kpi"><small>Jetons consommés</small><strong class="num">{{ u.input + u.output | number:'1.0-0' }}</strong><small>{{ u.input | number:'1.0-0' }} en entrée · {{ u.output | number:'1.0-0' }} en sortie</small></div>
+  <div class="panel kpi"><small>Décisions des agents</small><strong class="num">{{ journal().length }}</strong><small>au plus 4 par agent, validées par le code</small></div>
+</section>
+
+@if (timed().length) {
+  <section class="panel">
+    <h3>Répartition du temps</h3>
+    <div class="bar">
+      @for (s of timed(); track $index) { <span [attr.data-hue]="s.hue" [style.flex-grow]="s.share" [title]="label(s.action)"></span> }
+    </div>
+    <ul class="legend">
+      @for (s of timed(); track $index) {
+        <li><i [attr.data-hue]="s.hue"></i>{{ s.agent === 'event' ? 'Enquêteur' : 'Conseiller' }} · {{ label(s.action) }}
+          <span class="num">{{ s.duration_ms | number:'1.0-0' }} ms</span></li>
+      }
+    </ul>
+  </section>
+}
+
+<section class="panel">
+  <div class="section-head"><h3>Journal des appels d’outils</h3><small class="muted">Entrées choisies par le modèle, sorties renvoyées par le code</small></div>
+  @if (!journal().length) {
+    <p class="empty">Mode local : aucune décision de modèle. Une politique fixe a exécuté les outils ci-dessous.</p>
+  }
+  @for (d of journal(); track $index) {
+    <article class="call" [class.refused]="!d.accepted">
+      <header>
+        <span class="n">{{ $index + 1 }}</span>
+        <div><strong>{{ label(d.tool) }}</strong><small class="mono">{{ d.tool }} · {{ d.agent === 'event' ? 'Enquêteur' : 'Conseiller' }}</small></div>
+        <span class="pill" [class.ko]="!d.accepted">{{ d.accepted ? 'Exécuté' : 'Refusé par le garde-fou' }}@if (d.duration != null) { · {{ d.duration | number:'1.0-0' }} ms }</span>
+      </header>
+      @if (d.reason) { <p class="why">« {{ d.reason }} »</p> }
+      <div class="io">
+        <div><small>Entrée</small><pre>{{ d.arguments | json }}</pre></div>
+        <div><small>{{ d.accepted ? 'Sortie' : 'Motif du refus' }}</small><pre>{{ d.accepted ? (d.output | json) : d.refusal }}</pre></div>
+      </div>
+    </article>
+  }
+</section>
+
+@if (analysis().trace?.length) {
+  <section class="panel">
+    <h3>Toutes les étapes exécutées</h3>
+    <table>
+      <thead><tr><th>Agent</th><th>Étape</th><th>Origine</th><th>Statut</th></tr></thead>
+      <tbody>
+        @for (t of analysis().trace!; track $index) {
+          <tr><td>{{ t.agent === 'event' ? 'Enquêteur' : 'Conseiller' }}</td><td>{{ label(t.name) }}</td>
+              <td><span class="src" [attr.data-src]="t.source">{{ t.source }}</span></td><td>{{ t.status }}</td></tr>
+        }
+      </tbody>
+    </table>
+    <small class="muted">Origine : <b>model</b> = choisi par l’agent · <b>guard</b> = imposé par le garde-fou · <b>local</b> = calcul Python · <b>sec</b> / <b>bedrock</b> = service externe.</small>
+  </section>
+}

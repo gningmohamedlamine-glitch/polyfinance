@@ -1,0 +1,83 @@
+@let a = analysis();
+@let sel = selection();
+<section class="panel head">
+  <div>
+    <span class="eyebrow">Dossier de preuves · Agent Enquêteur</span>
+    <h2>{{ sel?.name ?? sel?.ticker }} <span class="muted">· séance du {{ a.movement.date }}</span></h2>
+    <p class="muted">Clôture précédente {{ a.movement.previous_date }}@if (sel?.end_adj_close) { · clôture ajustée <span class="num">{{ sel!.end_adj_close | number:'1.2-2' }} $ US</span> }</p>
+  </div>
+  <span class="status" [attr.data-tone]="status().tone">{{ status().label }}</span>
+</section>
+
+<section class="kpis">
+  <div class="panel kpi"><small>Variation constatée</small><strong class="num" [class.neg]="a.movement.usd_return < 0">{{ a.movement.usd_return | percent:'1.2-2' }}</strong><small>en USD</small></div>
+  <div class="panel kpi"><small>Part propre au titre</small>
+    <strong class="num">@if (model()?.status === 'ok') { {{ model()!.residual_pp | number:'1.2-2' }} pts } @else { — }</strong>
+    <small>après l’effet du marché (bêta)</small></div>
+  <div class="panel kpi"><small>Sources datées</small><strong class="num">{{ sources().length }}</strong><small>dont {{ verified() }} extrait(s) vérifié(s)</small></div>
+  <div class="panel kpi"><small>Pistes web</small><strong class="num">{{ leads().length }}</strong><small>non vérifiées</small></div>
+</section>
+
+<section class="panel rule">
+  <strong>Règle de prudence de l’Enquêteur</strong>
+  <p>Si aucune source datée n’explique le mouvement, l’agent conclut « cause indéterminée » au lieu d’en inventer une.
+     Une publication datée ne prouve pas à elle seule le sens du mouvement.</p>
+  @if (unexplained().length) {
+    <small>Séance(s) sans publication vérifiée : {{ unexplained().join(', ') }}</small>
+  }
+</section>
+
+<section class="panel">
+  <div class="section-head"><h3>Registre des preuves</h3><small class="muted">{{ sources().length + leads().length }} élément(s), par ordre chronologique</small></div>
+  @if (!sources().length && !leads().length) {
+    <p class="empty">Aucune publication trouvée pour cette séance : la cause reste indéterminée.</p>
+  }
+  @for (source of sources(); track source.url) {
+    <article class="evidence">
+      <header>
+        <span class="kind">{{ source.publisher === 'SEC EDGAR' ? 'SEC' : 'Officiel' }}</span>
+        <div class="title"><a [href]="source.url" target="_blank" rel="noopener">{{ source.title }}</a>
+          <small>{{ source.publisher }} · publié le {{ source.time_et.replace('T', ' à ') }} (heure de l’Est)@if (source.session) { · rattaché à la séance du {{ source.session }} }</small></div>
+        <span class="badge" [attr.data-status]="source.excerpt_status ?? 'none'">{{ statusLabel(source.excerpt_status) }}</span>
+      </header>
+      @if (source.excerpt) { <blockquote>« {{ source.excerpt }} »</blockquote> }
+      @if (source.summary) { <p class="summary"><strong>Résumé :</strong> {{ source.summary }}</p> }
+    </article>
+  }
+  @for (lead of leads(); track lead.url) {
+    <article class="evidence lead">
+      <header>
+        <span class="kind web">Web</span>
+        <div class="title"><a [href]="lead.url" target="_blank" rel="noopener">{{ lead.title }}</a>
+          <small>Publié le {{ lead.published_date }} · trouvé par la recherche web (Amazon Nova)</small></div>
+        <span class="badge" data-status="lead">Piste non vérifiée</span>
+      </header>
+      <p class="summary">{{ lead.summary }}</p>
+      @if (lead.after_session) { <small class="warn">Publiée après la séance : elle peut commenter le mouvement, pas l’expliquer.</small> }
+    </article>
+  }
+</section>
+
+@if (decisions().length) {
+  <section class="panel">
+    <div class="section-head"><h3>Comment l’Enquêteur a cherché</h3><small class="muted">Chaque choix est validé par le code</small></div>
+    <ol class="steps">
+      @for (d of decisions(); track $index) {
+        <li [class.refused]="!d.accepted">
+          <strong>{{ toolLabel(d.tool) }}</strong>
+          @if (d.reason) { <p>« {{ d.reason }} »</p> }
+          @if (!d.accepted) { <small class="ko">Refusé : {{ d.refusal }}</small> }
+        </li>
+      }
+    </ol>
+  </section>
+}
+
+@if (limits().length) {
+  <section class="panel">
+    <h3>Limites déclarées du dossier</h3>
+    <dl class="limits">
+      @for (l of limits(); track l.label) { <div><dt>{{ l.label }}</dt><dd>{{ l.value }}</dd></div> }
+    </dl>
+  </section>
+}

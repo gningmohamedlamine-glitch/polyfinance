@@ -89,3 +89,8 @@
 @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(29, 78, 216, .45); } 50% { box-shadow: 0 0 0 7px rgba(29, 78, 216, 0); } }
 .pending { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; border-style: dashed; }
 .pending .primary { margin-left: auto; }
+
+.sub-nav { display: grid; gap: 2px; margin: 2px 0 6px 30px; padding-left: 10px; border-left: 2px solid var(--border); }
+.sub-nav button { text-align: left; border: 0; padding: 6px 8px; font-size: .84rem; color: var(--muted); background: transparent; }
+.sub-nav button.active { color: var(--accent-strong); font-weight: 600; }
+.sub-nav button:disabled { opacity: .4; }

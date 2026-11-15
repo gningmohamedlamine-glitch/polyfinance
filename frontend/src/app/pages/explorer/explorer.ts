@@ -3,6 +3,8 @@ import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { AgentTimeline } from '../../components/agent-timeline/agent-timeline';
+import { DossierView } from '../../components/dossier-view/dossier-view';
+import { TracesView } from '../../components/traces-view/traces-view';
 import { MovementAnalysis } from '../../components/movement-analysis/movement-analysis';
 import { ChartSelection, PriceChart } from '../../components/price-chart/price-chart';
 import { PERSONAS, personaOf } from '../../personas';
@@ -12,7 +14,7 @@ type SelectionMode = 'session' | 'range';
 
 @Component({
   selector: 'app-explorer',
-  imports: [FormsModule, PriceChart, MovementAnalysis, AgentTimeline],
+  imports: [FormsModule, PriceChart, MovementAnalysis, AgentTimeline, DossierView, TracesView],
   templateUrl: './explorer.html',
   styleUrl: './explorer.css',
 })
@@ -39,14 +41,25 @@ export class Explorer {
 
   persona() { return personaOf(this.profile); }
 
+  /** Trois vues : l'analyse (actes 1 à 3), le dossier de preuves et les traces des agents. */
+  view = signal<'analyse' | 'dossier' | 'traces'>('analyse');
+  readonly pages = [
+    { id: 'analyse' as const, label: 'Analyse', icon: '📈' },
+    { id: 'dossier' as const, label: 'Dossier de preuves', icon: '🗂️' },
+    { id: 'traces' as const, label: 'Traces des agents', icon: '🧾' },
+  ];
   readonly sections = [
-    { id: 'acte1', label: 'Séance & marché', icon: '📈' },
-    { id: 'acte2', label: 'Enquête & preuves', icon: '🔎' },
-    { id: 'acte3', label: 'Pour toi', icon: '👤' },
-    { id: 'decisions', label: 'Décisions des agents', icon: '🧭' },
-    { id: 'traces', label: 'Traces techniques', icon: '🧾' },
+    { id: 'acte1', label: 'La séance' },
+    { id: 'acte2', label: 'Ce qui s’est passé' },
+    { id: 'acte3', label: 'Pour toi' },
+    { id: 'decisions', label: 'Décisions des agents' },
   ];
   activeSection = signal('acte1');
+
+  openPage(id: 'analyse' | 'dossier' | 'traces') {
+    this.view.set(id);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
   /** Sélection modifiée sans analyse : on invite à cliquer sur « Exécuter l'analyse ». */
   stale = signal(false);
   private autoRun = false;
@@ -54,9 +67,17 @@ export class Explorer {
   /** Le menu de gauche fait défiler la page vers chaque acte (aucune page fictive). */
   goTo(id: string) {
     this.activeSection.set(id);
-    const element = document.getElementById(id);
-    if (element instanceof HTMLDetailsElement) element.open = true;
-    element?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const scroll = () => {
+      const element = document.getElementById(id);
+      if (element instanceof HTMLDetailsElement) element.open = true;
+      element?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+    if (this.view() !== 'analyse') {
+      this.view.set('analyse');
+      setTimeout(scroll, 50);
+    } else {
+      scroll();
+    }
   }
 
   /** Nouvelle analyse : retour à la sélection de la séance. */
@@ -101,6 +122,7 @@ export class Explorer {
     this.switcherOpen.set(false);
     this.clearPendingAnalysis();
     this.entered.set(false);
+    this.view.set('analyse');
   }
 
   rangeInvalid() {

@@ -26,12 +26,20 @@
       <div><strong>AlphaForge AI</strong><small>Explorateur de mouvements</small></div>
     </div>
     <button type="button" class="primary new" (click)="newAnalysis()">＋ Nouvelle analyse</button>
-    <nav aria-label="Parties de l’analyse">
-      @for (section of sections; track section.id) {
-        <button type="button" class="nav-item" [class.active]="activeSection() === section.id"
-                [disabled]="!available(section.id)" (click)="goTo(section.id)">
-          <span aria-hidden="true">{{ section.icon }}</span>{{ section.label }}
+    <nav aria-label="Navigation">
+      @for (page of pages; track page.id) {
+        <button type="button" class="nav-item" [class.active]="view() === page.id"
+                [disabled]="page.id !== 'analyse' && !result()" (click)="openPage(page.id)">
+          <span aria-hidden="true">{{ page.icon }}</span>{{ page.label }}
         </button>
+        @if (page.id === 'analyse' && view() === 'analyse') {
+          <div class="sub-nav">
+            @for (section of sections; track section.id) {
+              <button type="button" [class.active]="activeSection() === section.id"
+                      [disabled]="!available(section.id)" (click)="goTo(section.id)">{{ section.label }}</button>
+            }
+          </div>
+        }
       }
     </nav>
     <div class="side-foot">
@@ -84,6 +92,11 @@
   </header>
 
   <main class="page">
+  @if (view() === 'dossier') {
+    @if (result(); as analysis) { <app-dossier-view [analysis]="analysis" /> }
+  } @else if (view() === 'traces') {
+    @if (result(); as analysis) { <app-traces-view [analysis]="analysis" [steps]="progress()" /> }
+  } @else {
     <section class="panel act1" id="acte1">
       <div class="act-head">
         <div>
@@ -150,6 +163,7 @@
     @if (result(); as analysis) {
       <app-movement-analysis [analysis]="analysis" [persona]="persona()" (retry)="analyzeCurrent()" />
     }
+  }
     <footer class="disclaimer">Simulation : analyse de cohérence, pas un conseil financier. Profils fictifs.</footer>
   </main>
   </div>

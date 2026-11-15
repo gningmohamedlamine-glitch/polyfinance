@@ -18,6 +18,12 @@ from .model_text import bedrock_client, public_text
 MAX_DECISIONS = 4
 
 
+def _preview(result, limit: int = 2500):
+    """Résultat d’outil renvoyé au modèle, conservé pour la page « Traces » (tronqué s’il est long)."""
+    text = json.dumps(result, ensure_ascii=False, default=str)
+    return result if len(text) <= limit else {"aperçu": text[:limit] + "…", "tronqué": True}
+
+
 def model_for(agent: str) -> str | None:
     """EVENT_MODEL_ID / IMPACT_MODEL_ID, sinon BEDROCK_MODEL_ID (même modèle pour les deux agents)."""
     return os.getenv(f"{agent.upper()}_MODEL_ID") or os.getenv("BEDROCK_MODEL_ID")
@@ -74,7 +80,7 @@ def run_tool_loop(agent, model, instructions, payload, tool_specs, execute, noti
                 decisions.append({
                     "agent": agent, "tool": name, "arguments": args,
                     "accepted": ok, "reason": reason[:400] or None,
-                    **({} if ok else {"refusal": result}),
+                    **({"output": _preview(result)} if ok else {"refusal": result}),
                 })
                 if not ok:
                     notify(agent, name, "unavailable", mode="model", reason="rejected")

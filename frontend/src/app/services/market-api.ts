@@ -28,6 +28,7 @@ export interface AgentDecision {
   accepted: boolean;
   reason?: string | null;
   refusal?: string;
+  output?: unknown;
 }
 export interface Usage { input_tokens: number; output_tokens: number; model_calls: number; model?: string | null }
 export interface Coherence {
@@ -68,6 +69,10 @@ export interface Analysis {
   };
   dossier?: {
     selection: {
+      ticker?: string;
+      name?: string;
+      start_adj_close?: number;
+      end_adj_close?: number;
       requested: string;
       applied: string;
       start_close_date: string;
@@ -77,6 +82,7 @@ export interface Analysis {
     benchmarks: Record<string, { name?: string; kind?: string; return?: number | null; gap_pp: number | null; status: string }>;
     returns?: { market_model?: MarketModel | null };
     agent_decisions?: AgentDecision[];
+    limits?: Record<string, string | number>;
     usage?: Usage;
     notable_sessions: {
       concentration: string;
