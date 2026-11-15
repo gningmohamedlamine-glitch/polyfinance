@@ -24,6 +24,7 @@ h1 { margin: 0; font-size: clamp(2.4rem, 5vw, 3.4rem); letter-spacing: -.04em; }
 .avatar { display: grid; place-items: center; width: 56px; height: 56px; border-radius: 14px; background: var(--p); color: #fff; font-size: 1.5rem; font-weight: 700; }
 .focus { padding: 4px 11px; border-radius: 999px; background: var(--p-soft); color: var(--p); font-size: .78rem; font-weight: 600; border: 1px solid color-mix(in srgb, var(--p) 25%, transparent); }
 h2 { margin: 4px 0 0; font-size: 1.35rem; }
+.job { color: var(--muted); font-size: .86rem; }
 .tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .tag { padding: 3px 9px; border-radius: 8px; background: var(--bg); border: 1px solid var(--border); font-size: .78rem; font-weight: 500; }
 .tag.main { background: var(--p-soft); color: var(--p); border-color: transparent; font-weight: 600; }
