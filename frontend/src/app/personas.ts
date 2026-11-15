@@ -28,7 +28,7 @@ export const PERSONAS: Persona[] = [
     goal: 'Préserver son capital à l’approche de la retraite. Attiré par un titre très médiatisé.', initial: 'R',
     focus: 'Préservation', constraint: 'Retrait à financer',
     limits: { volatility: 0.20, drawdown: -0.20, weight: 0.05 },
-    demo: 'Cas de démo · incohérence' },
+    demo: 'Cas de démo' },
   { id: 'mateo', name: 'Mateo', age: 41, risk: 'Risque modéré', horizon: '8 à 12 ans',
     goal: 'Équilibre croissance et stabilité, avec des critères ESG.', initial: 'M',
     focus: 'ESG', constraint: 'Exclusions ESG documentées',
