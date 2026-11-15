@@ -450,9 +450,11 @@ export class Explorer {
     this.analysisRequest = undefined;
   }
 
-  private showError(error: HttpErrorResponse) {
+  private showError(error: HttpErrorResponse | Error) {
     this.busy.set(false);
-    this.error.set(error.error?.error ?? 'Le service est indisponible. Réessaie dans un instant.');
+    // Les erreurs du flux (ex. modèle indisponible) arrivent avec leur raison exacte.
+    const message = error instanceof HttpErrorResponse ? error.error?.error : error?.message;
+    this.error.set(message || 'Le service est indisponible. Réessaie dans un instant.');
   }
 
   private persistSelection() {

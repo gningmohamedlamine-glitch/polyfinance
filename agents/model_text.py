@@ -53,8 +53,10 @@ def synthesize(agent, instructions, evidence, max_tokens, notify):
                 notify(agent, "synthesize", "done", mode="bedrock")
                 return {"text": text, "mode": "bedrock", "mode_reason": None, "usage": usage}
         reason = "bedrock_incomplete"
-    except (BotoCoreError, ClientError):
-        reason = "bedrock_error"
+    except ClientError as error:
+        reason = f"bedrock_error:{error.response.get('Error', {}).get('Code', 'ClientError')}"
+    except BotoCoreError as error:
+        reason = f"bedrock_error:{type(error).__name__}"
     except (KeyError, TypeError, ValueError, AttributeError):
         reason = "bedrock_invalid_response"
     notify(agent, "synthesize", "unavailable", mode="bedrock")

@@ -13,6 +13,16 @@ class AnalysisViewTests(SimpleTestCase):
     def setUp(self):
         _event_cache.clear()
         self.client = Client()
+        # Les tests tournent sans Bedrock : on autorise explicitement le calcul local.
+        env = patch.dict("os.environ", {"MARKET_ALLOW_LOCAL": "1"})
+        env.start()
+        self.addCleanup(env.stop)
+
+    def test_strict_mode_refuses_local_text(self):
+        with patch.dict("os.environ", {"MARKET_ALLOW_LOCAL": "0", "BEDROCK_MODEL_ID": ""}):
+            response = self.client.get("/api/analysis/", {"ticker": "NVDA", "date": "2024-08-29", "profile": "robert"})
+        self.assertEqual(response.status_code, 503)
+        self.assertIn("BEDROCK_MODEL_ID", response.json()["error"])
 
     def test_session_click_compatible(self):
         response = self.client.get(
@@ -46,7 +56,7 @@ class AnalysisViewTests(SimpleTestCase):
         )
         self.assertEqual(response.status_code, 400)
 
-    @patch.dict("os.environ", {}, clear=True)
+    @patch.dict("os.environ", {"MARKET_ALLOW_LOCAL": "1"}, clear=True)
     def test_stream_validates_market_dossier_before_impact(self):
         response = self.client.get("/api/analysis/", {
             "ticker": "NVDA", "date": "2024-08-29", "profile": "amira", "stream": "1",
@@ -60,7 +70,7 @@ class AnalysisViewTests(SimpleTestCase):
         self.assertEqual(messages[-1]["kind"], "result")
         self.assertGreaterEqual(messages[-2]["duration_ms"], 0)
 
-    @patch.dict("os.environ", {}, clear=True)
+    @patch.dict("os.environ", {"MARKET_ALLOW_LOCAL": "1"}, clear=True)
     def test_invalid_handoff_never_reaches_impact_or_cache(self):
         window = resolve_window("NVDA", date="2024-08-29")
         dossier = run_event_agent(window)
@@ -74,7 +84,7 @@ class AnalysisViewTests(SimpleTestCase):
         impact.assert_not_called()
         self.assertFalse(_event_cache)
 
-    @patch.dict("os.environ", {"MARKET_WEB_SEARCH": "1"}, clear=True)
+    @patch.dict("os.environ", {"MARKET_WEB_SEARCH": "1", "MARKET_ALLOW_LOCAL": "1"}, clear=True)
     def test_web_timeout_keeps_result_and_allows_retry(self):
         request = {"ticker": "NVDA", "date": "2024-09-06", "profile": "amira", "stream": "1"}
         empty_search = {"output": {"message": {"content": [

@@ -69,6 +69,39 @@ def get_dossier(window, returns, notify):
     return dossier
 
 
+class ModelUnavailable(Exception):
+    """Le modèle n'a pas répondu : pas de texte de repli, l'analyse s'arrête avec la raison."""
+
+
+REASONS = {
+    "model_unconfigured": "Aucun modèle configuré : définis BEDROCK_MODEL_ID.",
+    "ExpiredToken": "Identifiants AWS expirés : renouvelle-les (Workshop Studio ou aws login).",
+    "ExpiredTokenException": "Identifiants AWS expirés : renouvelle-les (Workshop Studio ou aws login).",
+    "UnrecognizedClientException": "Identifiants AWS invalides : vérifie la clé et le jeton de session.",
+    "InvalidSignatureException": "Identifiants AWS invalides : vérifie la clé et le jeton de session.",
+    "NoCredentialsError": "Aucun identifiant AWS trouvé : renseigne le .env ou lance aws login.",
+    "AccessDeniedException": "Accès refusé au modèle : vérifie les permissions IAM et l’accès au modèle dans Bedrock.",
+    "ValidationException": "Requête refusée par Bedrock : vérifie l’identifiant du modèle (BEDROCK_MODEL_ID).",
+    "ResourceNotFoundException": "Modèle introuvable : vérifie BEDROCK_MODEL_ID et la région.",
+    "ThrottlingException": "Bedrock limite les requêtes : réessaie dans quelques secondes.",
+    "ServiceUnavailableException": "Bedrock est momentanément indisponible : réessaie dans quelques secondes.",
+    "ReadTimeoutError": "Le modèle a mis trop de temps à répondre : réessaie.",
+    "EndpointConnectionError": "Impossible de joindre Bedrock : vérifie la connexion réseau.",
+    "bedrock_incomplete": "Le modèle n’a pas terminé sa réponse : réessaie.",
+    "bedrock_invalid_response": "Réponse du modèle inexploitable : réessaie.",
+}
+
+
+def require_model() -> bool:
+    """Par défaut, aucun texte de repli : seuls les tests et la CI autorisent le calcul local."""
+    return os.getenv("MARKET_ALLOW_LOCAL") != "1"
+
+
+def explain(agent: str, reason: str | None) -> str:
+    code = (reason or "").split(":", 1)[-1]
+    return f"{agent} : {REASONS.get(code) or REASONS.get(reason or '') or f'le modèle n’a pas répondu ({reason}).'}"
+
+
 def run_analysis(window, profile, scenario, progress=None):
     started = {}
 
@@ -93,9 +126,15 @@ def run_analysis(window, profile, scenario, progress=None):
         "sources": [{key: value for key, value in row.items() if key != "ticker"}
                     for row in dossier["publications"]],
     }
+    if require_model() and event["mode"] != "bedrock":
+        notify("event", "stage", "unavailable", mode="local", reason=event.get("mode_reason"))
+        raise ModelUnavailable(explain("Enquêteur", event.get("mode_reason")))
     notify("event", "stage", "done", mode=event["mode"])
     notify("impact", "stage", "running")
     impact = impact_agent(dossier, profile, scenario, notify)
+    if require_model() and impact["mode"] != "bedrock":
+        notify("impact", "stage", "unavailable", mode="local", reason=impact.get("mode_reason"))
+        raise ModelUnavailable(explain("Conseiller", impact.get("mode_reason")))
     notify("impact", "stage", "done", mode=impact["mode"])
     notify("governance", "stage", "running")
     sensitivity = run_sensitivity(window, returns, profile, scenario, impact.get("coherence") or {})

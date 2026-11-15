@@ -21,6 +21,8 @@ jobs:
     env:
       BEDROCK_MODEL_ID: ""
       MARKET_WEB_SEARCH: "0"
+      # Sans Bedrock en CI : on autorise le calcul local (désactivé par défaut dans l'application).
+      MARKET_ALLOW_LOCAL: "1"
       PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/backend
     steps:
       - uses: actions/checkout@v4
@@ -62,7 +64,7 @@ jobs:
         run: docker build --platform linux/amd64 -t alphaforge:ci .
       - name: Démarrer et vérifier
         run: |
-          docker run -d --name app --read-only --tmpfs /dev/shm -p 8080:8080 alphaforge:ci
+          docker run -d --name app -e MARKET_ALLOW_LOCAL=1 --read-only --tmpfs /dev/shm -p 8080:8080 alphaforge:ci
           curl --fail --silent --show-error --max-time 5 --retry 12 --retry-all-errors --retry-delay 1 http://127.0.0.1:8080/api/health/
           curl --fail --silent --show-error --max-time 5 http://127.0.0.1:8080/ > /dev/null
           # Analyse complète en mode local (sans Bedrock) : le Contrôleur doit répondre.

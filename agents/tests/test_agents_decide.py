@@ -95,11 +95,12 @@ class AdvisorTests(unittest.TestCase):
         from botocore.exceptions import ClientError
         dossier = self.dossier()
         client = Mock()
-        client.converse.side_effect = ClientError({"Error": {"Code": "x", "Message": "x"}}, "Converse")
+        client.converse.side_effect = ClientError({"Error": {"Code": "ExpiredTokenException", "Message": "x"}}, "Converse")
         with patch.dict(os.environ, {"BEDROCK_MODEL_ID": "gpt-6-astra"}, clear=True), \
                 patch("agents.agent_loop.bedrock_client", return_value=client):
             amira = run_impact_agent(dossier, "amira", SCENARIO)
-        self.assertEqual((amira["mode"], amira["mode_reason"]), ("local", "bedrock_error"))
+        # L'agent signale l'échec avec le code AWS ; c'est le pipeline qui refuse ensuite le texte de repli.
+        self.assertEqual((amira["mode"], amira["mode_reason"]), ("local", "bedrock_error:ExpiredTokenException"))
         self.assertTrue(amira["text"])
 
 

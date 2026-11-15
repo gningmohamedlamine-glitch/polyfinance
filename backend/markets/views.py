@@ -11,7 +11,7 @@ from django.views.decorators.http import require_GET
 from agents.main import PROFILES
 
 from .market import STOCKS, load_prices, stock_history
-from .pipeline import run_analysis
+from .pipeline import ModelUnavailable, run_analysis
 from .window import resolve_window
 
 logger = logging.getLogger(__name__)
@@ -99,7 +99,10 @@ def analysis(request):
         response["Cache-Control"] = "no-store"
         response["X-Accel-Buffering"] = "no"
         return response
-    return JsonResponse(run_analysis(window, profile, scenario))
+    try:
+        return JsonResponse(run_analysis(window, profile, scenario))
+    except ModelUnavailable as error:
+        return JsonResponse({"error": str(error)}, status=503)
 
 
 def analysis_stream(window, profile, scenario):
@@ -114,6 +117,9 @@ def analysis_stream(window, profile, scenario):
         try:
             result = run_analysis(window, profile, scenario, progress)
             messages.put({"kind": "result", "analysis": result})
+        except ModelUnavailable as error:
+            logger.warning("Model unavailable: %s", error)
+            messages.put({"kind": "error", "message": str(error)})
         except Exception:
             logger.exception("Analysis failed while streaming")
             messages.put({"kind": "error", "message": "L’analyse a échoué. Réessaie dans un instant."})
