@@ -27,7 +27,12 @@ SYSTEM = (
     "Qualifie-les de pistes. Une piste marquée after_session décrit un suivi ou une réaction "
     "publiée après la séance, donc elle ne peut pas expliquer le mouvement par sa publication. "
     "Un écart avec les indices ne démontre pas une cause. "
-    "Si les sources ne permettent pas d’expliquer le mouvement, indique que la cause est indéterminée."
+    "Lorsque les publications évoquent un départ de PDG, une transition de direction ou un "
+    "scandale de gouvernance, relie-les prudemment au mouvement observé en citant ces sources. "
+    "Ne confonds pas une nomination (ex. CFO PDG par intérim) avec les personnes citées dans les reportages. "
+    "Si les sources ne permettent pas d’expliquer le mouvement, indique que la cause est indéterminée. "
+    "N’utilise pas de liens Markdown ni d’URL dans les puces; cite les médias par leur nom seulement "
+    "(les liens sont listés séparément sous les pistes web)."
 )
 
 
@@ -57,7 +62,10 @@ def _enrich_publications(context: ToolContext, notify):
         except (BotoCoreError, ClientError):
             web_status = "unavailable"
         else:
-            leads, web_status = find_web_leads(client, window.ticker, window.name, windows)
+            moves = {row["date"]: row["daily_return"] for row in context.notable["sessions"]}
+            leads, web_status = find_web_leads(
+                client, window.ticker, window.name, windows, moves=moves
+            )
         if web_status in WEB_FAILURES:
             notify("event", "web_search", "unavailable", reason=web_status)
             context.coverage["web_search_reason"] = web_status

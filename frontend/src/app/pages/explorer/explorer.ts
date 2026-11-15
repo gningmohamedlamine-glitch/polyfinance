@@ -9,6 +9,17 @@ import { AgentProgress, Analysis, MarketApi, Price, Profile, Stock } from '../..
 
 type SelectionMode = 'session' | 'range';
 
+const STORAGE_KEY = 'alphaforge.explorer.v1';
+
+type SavedExplorer = {
+  ticker: string;
+  profile: Profile;
+  mode: SelectionMode;
+  sessionDate?: string;
+  rangeStart?: string;
+  rangeEnd?: string;
+};
+
 @Component({
   selector: 'app-explorer',
   imports: [FormsModule, PriceChart, MovementAnalysis, AgentTimeline],
@@ -52,12 +63,17 @@ export class Explorer {
 
   constructor() {
     this.api.stocks().subscribe({
-      next: ({ stocks }) => { this.stocks.set(stocks); this.load('NVDA', '2024-08-29'); },
+      next: ({ stocks }) => {
+        this.stocks.set(stocks);
+        const saved = this.readSaved();
+        if (saved?.profile) this.profile = saved.profile;
+        this.load(saved?.ticker ?? 'NVDA', { restore: true });
+      },
       error: (error) => this.showError(error),
     });
   }
 
-  load(ticker: string, date?: string) {
+  load(ticker: string, opts?: { demoDate?: string; restore?: boolean }) {
     this.historyRequest?.unsubscribe();
     this.cancelAnalysis();
     this.error.set('');
@@ -70,8 +86,16 @@ export class Explorer {
     this.historyRequest = this.api.history(ticker).subscribe({
       next: ({ rows }) => {
         this.rows.set(rows);
-        const session = this.pickSessionDate(rows, date);
-        this.applySession(session, true);
+        const saved = opts?.restore ? this.readSaved() : null;
+        const sameTicker = saved?.ticker === ticker;
+        if (sameTicker && saved?.mode === 'range' && saved.rangeStart && saved.rangeEnd) {
+          this.mode.set('range');
+          this.applyRange(saved.rangeStart, saved.rangeEnd);
+          return;
+        }
+        const preferred = opts?.demoDate
+          ?? (sameTicker && saved?.mode === 'session' ? saved.sessionDate : undefined);
+        this.applySession(this.pickSessionDate(rows, preferred), true);
       },
       error: (error) => this.showError(error),
     });
@@ -123,12 +147,14 @@ export class Explorer {
 
   selectProfile(profile: Profile) {
     this.profile = profile;
+    this.persistSelection();
     this.analyzeCurrent();
   }
 
   private applySession(date: string, run = false) {
     this.sessionDate = date;
     this.selection.set({ kind: 'session', date });
+    this.persistSelection();
     this.clearPendingAnalysis();
     if (!run) return;
     if (date === this.rows()[0]?.date) {
@@ -145,18 +171,16 @@ export class Explorer {
     const end = rows.findIndex(row => row.date === endDate);
     if (start < 0 || end < 0) return;
     const [lo, hi] = start <= end ? [startDate, endDate] : [endDate, startDate];
-    this.rangeStart = startDate;
-    this.rangeEnd = endDate;
+    this.rangeStart = lo;
+    this.rangeEnd = hi;
+    this.persistSelection();
     this.clearPendingAnalysis();
     if (lo === hi) {
       this.mode.set('session');
       this.applySession(lo, true);
       return;
     }
-    if (start > end) {
-      this.error.set('La date de début doit précéder ou égaler la date de fin.');
-      return;
-    }
+    this.error.set('');
     this.selection.set({ kind: 'range', startDate: lo, endDate: hi });
     this.analyzeCurrent();
   }
@@ -224,5 +248,31 @@ export class Explorer {
   private showError(error: HttpErrorResponse) {
     this.busy.set(false);
     this.error.set(error.error?.error ?? 'Le service est indisponible. Réessaie dans un instant.');
+  }
+
+  private persistSelection() {
+    if (!this.rows().length) return;
+    const payload: SavedExplorer = {
+      ticker: this.ticker,
+      profile: this.profile,
+      mode: this.mode(),
+      sessionDate: this.sessionDate,
+      rangeStart: this.rangeStart,
+      rangeEnd: this.rangeEnd,
+    };
+    try {
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    } catch {
+      /* private browsing */
+    }
+  }
+
+  private readSaved(): SavedExplorer | null {
+    try {
+      const raw = sessionStorage.getItem(STORAGE_KEY);
+      return raw ? (JSON.parse(raw) as SavedExplorer) : null;
+    } catch {
+      return null;
+    }
   }
 }

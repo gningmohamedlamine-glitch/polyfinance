@@ -65,6 +65,11 @@ export interface Analysis {
         summary: string;
         session?: string;
         after_session?: boolean;
+        source_type?: string;
+        relevance?: string;
+        story_key?: string;
+        related_count?: number;
+        facts?: string[];
       }[];
     };
   };

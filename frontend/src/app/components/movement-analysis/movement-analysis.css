@@ -3,7 +3,12 @@
 dt, small { color: var(--muted); font-size: .8rem; }
 dd { margin: .35rem 0 0; color: var(--accent); font-size: 1.25rem; font-weight: 700; }
 p { line-height: 1.6; }
-a, small { display: block; margin-top: .5rem; }
+.source-list { list-style: none; margin: 12px 0 0; padding: 0; }
+.source-line { margin: 0 0 10px; }
+.source-line a { display: inline; font-weight: 600; }
+.source-meta, .source-blurb { display: block; margin-top: 2px; color: var(--muted); font-size: .8rem; line-height: 1.45; }
+.source-blurb { color: var(--text); font-size: .85rem; }
+small { display: block; margin-top: .5rem; }
 .retry { margin-top: .5rem; font-size: .8rem; }
 .notable ul { margin: 0; padding-left: 1.2rem; color: var(--muted); font-size: .9rem; }
 .trace { margin-top: 20px; }
@@ -16,5 +21,6 @@ summary { font-weight: 600; }
 
 .takeaways { padding-left: 1.2rem; line-height: 1.55; }
 .takeaways li { margin: .45rem 0; }
+.takeaways a { font-weight: 600; }
 .takeaways strong { color: var(--accent); }
 .takeaways .negative strong { color: #a03832; }

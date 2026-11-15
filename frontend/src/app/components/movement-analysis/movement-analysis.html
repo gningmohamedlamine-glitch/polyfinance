@@ -13,7 +13,17 @@
           <li [class.negative]="gap < 0"><strong>{{ gap > 0 ? 'Positif' : 'Négatif' }}</strong> · L’action {{ gap > 0 ? 'surperforme' : 'sous-performe' }} {{ benchmark }} de {{ ((gap > 0 ? gap : -gap) * 100) | number:'1.1-2' }} points de pourcentage.</li>
         }
       }
-      @for (bullet of bullets(result.event.text); track $index) { <li>{{ bullet }}</li> }
+      @for (line of bulletLines(result.event.text); track $index) {
+        <li>
+          @for (part of line.parts; track $index) {
+            @if (part.href) {
+              <a [href]="part.href" target="_blank" rel="noopener">{{ part.text }}</a>
+            } @else {
+              {{ part.text }}
+            }
+          }
+        </li>
+      }
     </ul>
     @if (result.dossier?.notable_sessions?.sessions?.length) {
       <details><summary>Séances marquantes</summary>
@@ -24,26 +34,41 @@
         </ul>
       </details>
     }
-    @for (source of result.event.sources; track source.url) {
-      <a [href]="source.url" target="_blank" rel="noopener">{{ source.title }}</a>
-      <small>
-        @if (source.session) { Séance {{ source.session }} · }
-        {{ source.publisher }} · {{ source.time_et.replace('T', ' ') }} HE
-      </small>
-    }
+    <ul class="source-list">
+      @for (source of result.event.sources; track source.url) {
+        <li class="source-line">
+          <a [href]="source.url" target="_blank" rel="noopener">{{ source.title }}</a>
+          <span class="source-meta">
+            @if (source.session) { {{ source.session }} · }
+            {{ source.publisher }} · {{ source.time_et.replace('T', ' ') }}
+          </span>
+          @if (oneLine(source.summary); as blurb) { <span class="source-blurb">{{ blurb }}</span> }
+        </li>
+      }
+    </ul>
     @if (result.dossier?.coverage?.web_leads?.length) {
       <details open>
         <summary>Pistes trouvées sur le web</summary>
-        @for (lead of result.dossier!.coverage.web_leads; track lead.url) {
-          <a [href]="lead.url" target="_blank" rel="noopener">{{ lead.title }}</a>
-          <small>
-            {{ lead.published_date }} ·
-            @if (lead.after_session) { Suivi publié après la séance du {{ lead.session }} }
-            @else { Heure à vérifier }
-          </small>
-          <p>{{ lead.summary }}</p>
-        }
+        <ul class="source-list">
+          @for (lead of result.dossier!.coverage.web_leads; track lead.url) {
+            <li class="source-line">
+              <a [href]="lead.url" target="_blank" rel="noopener">{{ lead.title }}</a>
+              <span class="source-meta">
+                {{ lead.published_date }}
+                @if (lead.source_type) { · {{ lead.source_type }} }
+                @if (lead.story_key) { · {{ lead.story_key }} }
+                @if (lead.related_count && lead.related_count > 1) {
+                  · {{ lead.related_count }} sources fusionnées
+                }
+                @if (lead.after_session) { · après séance {{ lead.session }} }
+              </span>
+              <span class="source-blurb">{{ leadLine(lead) }}</span>
+            </li>
+          }
+        </ul>
       </details>
+    } @else if (result.dossier?.coverage?.web_search === 'no_relevant_sources') {
+      <small>Des sources datées ont été trouvées, mais aucune ne paraît pertinente pour ce mouvement.</small>
     } @else if (result.dossier?.coverage?.web_search === 'no_dated_sources') {
       <small>Aucune piste web avec une date et un lien cités dans la fenêtre élargie.</small>
     } @else if (result.dossier?.coverage?.web_search === 'unavailable') {
@@ -82,7 +107,17 @@
       }
     </dl>
     <ul class="takeaways">
-      @for (bullet of bullets(result.impact.text); track $index) { <li>{{ bullet }}</li> }
+      @for (line of bulletLines(result.impact.text); track $index) {
+        <li>
+          @for (part of line.parts; track $index) {
+            @if (part.href) {
+              <a [href]="part.href" target="_blank" rel="noopener">{{ part.text }}</a>
+            } @else {
+              {{ part.text }}
+            }
+          }
+        </li>
+      }
     </ul>
   </article>
 </section>
