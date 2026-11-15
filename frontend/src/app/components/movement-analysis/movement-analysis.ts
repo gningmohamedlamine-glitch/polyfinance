@@ -42,15 +42,67 @@ export class MovementAnalysis {
 
   benchmarks = computed(() => {
     const rows = this.analysis().movement.benchmarks;
-    const spark = this.compareSpark(this.analysis().movement.path ?? [], rows['QQQ']?.path ?? []);
-    return ['SPY', 'QQQ', 'XLK']
+    const sector = Object.keys(rows).filter(symbol => symbol !== 'SPY' && symbol !== 'QQQ');
+    return ['SPY', 'QQQ', ...sector]
       .filter(symbol => rows[symbol]?.return != null)
       .map(symbol => ({
         symbol,
-        label: symbol === 'XLK' ? 'Secteur techno' : rows[symbol].name,
+        label: symbol === 'SPY' || symbol === 'QQQ' ? rows[symbol].name : 'Secteur',
         ret: rows[symbol].return!,
-        spark: symbol === 'QQQ' ? spark : null,
       }));
+  });
+
+  /** Tracé à part : le titre, le S&P 500, le Nasdaq-100 et le secteur du titre s’il existe. */
+  compareChart = computed(() => {
+    const rows = this.analysis().movement.benchmarks;
+    const stock = this.analysis().movement.path ?? [];
+    const ticker = this.analysis().dossier?.selection?.ticker ?? 'Titre';
+    const palette = { SPY: '#9a6b2f', QQQ: '#1d4ed8' };
+    const sector = Object.keys(rows).find(symbol => symbol !== 'SPY' && symbol !== 'QQQ' && (rows[symbol]?.path?.length ?? 0) >= 2);
+    const specs = [
+      { symbol: 'SPY', label: 'S&P 500', values: rows['SPY']?.path ?? [], color: palette.SPY },
+      { symbol: 'QQQ', label: 'Nasdaq-100', values: rows['QQQ']?.path ?? [], color: palette.QQQ },
+      ...(sector ? [{ symbol: sector, label: 'Secteur', values: rows[sector]?.path ?? [], color: '#667085' }] : []),
+      { symbol: ticker, label: ticker, values: stock, color: '#111827' },
+    ].filter(series => series.values.length >= 2);
+    const length = stock.length >= 2 ? stock.length : specs[0]?.values.length ?? 0;
+    const series = specs.filter(item => item.values.length === length);
+    if (series.length < 2 || series.every(item => item.symbol === ticker)) return null;
+    const all = series.flatMap(item => item.values);
+    const min = Math.min(...all, 0);
+    const max = Math.max(...all, 0);
+    const span = max - min || 1;
+    const padL = 44;
+    const padT = 10;
+    const plotW = 560;
+    const plotH = 132;
+    const yOf = (value: number) => padT + (1 - (value - min) / span) * plotH;
+    const xOf = (index: number, count: number) => padL + (index / (count - 1)) * plotW;
+    const levels = [max, min];
+    if (min < -span * 0.04 && max > span * 0.04) levels.push(0);
+    const ticks = levels
+      .map(value => ({ value, y: yOf(value) }))
+      .sort((a, b) => a.y - b.y)
+      .filter((tick, index, items) => index === 0 || tick.y - items[index - 1].y > 18)
+      .map(tick => ({
+        y: tick.y.toFixed(1),
+        label: `${(tick.value * 100).toLocaleString('fr-CA', { maximumFractionDigits: 0, signDisplay: 'exceptZero' })} %`,
+      }));
+    const drawn = series.map(item => ({
+      ...item,
+      width: item.symbol === ticker ? 2.4 : 1.5,
+      points: item.values.map((value, index) => `${xOf(index, item.values.length).toFixed(1)},${yOf(value).toFixed(1)}`).join(' '),
+    }));
+    const legendOrder = [ticker, 'SPY', 'QQQ', sector].filter((symbol): symbol is string => !!symbol);
+    return {
+      width: padL + plotW + 8,
+      height: padT + plotH + 8,
+      plotLeft: padL,
+      plotRight: padL + plotW,
+      ticks,
+      drawn,
+      lines: legendOrder.flatMap(symbol => drawn.filter(item => item.symbol === symbol)),
+    };
   });
 
   rules = computed(() => {
@@ -152,23 +204,6 @@ export class MovementAnalysis {
       .trim();
     if (!out) return '';
     return out.charAt(0).toUpperCase() + out.slice(1);
-  }
-
-  /** Deux tracés sur la même échelle : le titre et le Nasdaq-100. */
-  private compareSpark(stock: number[], market: number[]) {
-    if (stock.length < 2 || market.length !== stock.length) return null;
-    const all = [...stock, ...market];
-    const min = Math.min(...all);
-    const max = Math.max(...all);
-    const span = max - min || 1;
-    const w = 112;
-    const h = 36;
-    const line = (values: number[]) => values.map((value, index) => {
-      const x = (index / (values.length - 1)) * w;
-      const y = h - 2 - ((value - min) / span) * (h - 4);
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    }).join(' ');
-    return { w, h, stock: line(stock), market: line(market) };
   }
 
   /** Inline marks the model writes: `code`, **bold**, *italic*, and [label](https://…). */

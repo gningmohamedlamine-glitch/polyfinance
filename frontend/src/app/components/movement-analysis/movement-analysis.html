@@ -20,17 +20,27 @@
 
     <div class="bench">
       @for (b of benchmarks(); track b.symbol) {
-        <div [class.with-spark]="!!b.spark">
-          <div><small>{{ b.label }}</small><strong><app-market-change [value]="b.ret" /></strong></div>
-          @if (b.spark; as spark) {
-            <svg class="spark" [attr.viewBox]="'0 0 ' + spark.w + ' ' + spark.h" role="img" [attr.aria-label]="'Comparaison du titre et de ' + b.label">
-              <polyline [attr.points]="spark.market" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" />
-              <polyline [attr.points]="spark.stock" fill="none" stroke="#111827" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" />
-            </svg>
-          }
-        </div>
+        <div><small>{{ b.label }}</small><strong><app-market-change [value]="b.ret" /></strong></div>
       }
     </div>
+    @if (compareChart(); as chart) {
+      <figure class="compare">
+        <svg [attr.viewBox]="'0 0 ' + chart.width + ' ' + chart.height" role="img" aria-label="Comparaison du titre avec le S&P 500, le Nasdaq-100 et le secteur">
+          @for (tick of chart.ticks; track tick.label) {
+            <line [attr.x1]="chart.plotLeft" [attr.x2]="chart.plotRight" [attr.y1]="tick.y" [attr.y2]="tick.y" stroke="#e4e7ee" stroke-width="1" />
+            <text x="0" [attr.y]="tick.y" dy="0.35em">{{ tick.label }}</text>
+          }
+          @for (line of chart.drawn; track line.symbol) {
+            <polyline [attr.points]="line.points" fill="none" [attr.stroke]="line.color" [attr.stroke-width]="line.width" stroke-linejoin="round" stroke-linecap="round" />
+          }
+        </svg>
+        <ul>
+          @for (line of chart.lines; track line.symbol) {
+            <li><i [style.background]="line.color"></i>{{ line.label }}</li>
+          }
+        </ul>
+      </figure>
+    }
 
     @if (d) {
       <div class="decomp">

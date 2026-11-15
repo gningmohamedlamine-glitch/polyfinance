@@ -214,6 +214,25 @@ def _search_web_and_sec(context, notify, dates, sessions, mode=None, *, deep=Fal
     return leads, status
 
 
+def _session_list(raw) -> list[str]:
+    """Le modèle envoie parfois une chaîne ou une date avec l’heure. On ne garde que AAAA-MM-JJ."""
+    if isinstance(raw, str):
+        text = raw.strip()
+        if text.startswith("[") and text.endswith("]"):
+            text = text[1:-1]
+        raw = [part.strip().strip('"').strip("'") for part in text.split(",")]
+    if not isinstance(raw, list):
+        return []
+    days = []
+    for item in raw:
+        if not isinstance(item, str):
+            continue
+        day = item.strip()[:10]
+        if len(day) == 10:
+            days.append(day)
+    return days
+
+
 def _executor(context: ToolContext, notify, network: bool, *, sealed=lambda: False, parallel=False, deep=False):
     """Valide chaque décision du modèle avant de l’exécuter (garde-fou en Python)."""
     allowed = set(context.window.measured_sessions)
@@ -222,19 +241,23 @@ def _executor(context: ToolContext, notify, network: bool, *, sealed=lambda: Fal
     def execute(name, args):
         if sealed():
             return False, "Le dossier est validé. Termine la synthèse avec les preuves réunies."
-        sessions = args.get("sessions")
         if name not in {"search_catalog", "search_sec_filings", "search_web"}:
             return False, "Outil inconnu."
         if name != "search_catalog" and not network:
             return False, "Recherche réseau désactivée dans cet environnement."
         if name == 'search_web' and context.coverage.get('web_search_reason') == 'budget_elapsed':
             return False, 'Budget de recherche terminé. Conclus avec les calculs et sources déjà réunis en signalant la couverture incomplète.'
-        if not isinstance(sessions, list) or not sessions or not all(isinstance(d, str) for d in sessions):
+        requested = _session_list(args.get("sessions"))
+        if not requested:
             return False, "Fournis une liste non vide de séances."
-        outside = [d for d in sessions if d not in allowed]
-        if outside:
-            return False, f"Séances hors de la sélection : {', '.join(outside[:3])}. Choisis parmi measured_sessions."
+        sessions = list(dict.fromkeys(day for day in requested if day in allowed))
+        if not sessions:
+            return False, f"Séances hors de la sélection : {', '.join(requested[:3])}. Choisis parmi measured_sessions."
         key = (name, tuple(sorted(sessions)))
+        if name == "search_sec_filings" and (key in done or context.coverage.get("sec_search") not in {None, "not_requested", "disabled"}):
+            filings = [row for row in context.publications if row.get("publisher") == "SEC EDGAR" and row.get("session") in set(sessions)]
+            return True, {"filings": filings[:8], "status": context.coverage.get("sec_search") or "searched",
+                          "note": "Dépôts SEC déjà consultés pour ces séances, en même temps que la recherche web."}
         if key in done:
             return False, "Recherche déjà effectuée avec ces séances : utilise le résultat précédent ou conclus."
         done.add(key)
