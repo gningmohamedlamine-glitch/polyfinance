@@ -50,6 +50,7 @@ export class Explorer {
   stocks = signal<Stock[]>([]);
   rows = signal<Price[]>([]);
   result = signal<Analysis | null>(null);
+  private resultContext = signal<{ ticker: string; name: string; profile: Profile } | null>(null);
   busy = signal(false);
   progress = signal<AgentProgress[]>([]);
   preview = signal<AnalysisPreview | null>(null);
@@ -456,6 +457,7 @@ export class Explorer {
   }
 
   private requestAnalysis(selection: Record<string, string>) {
+    const context = { ticker: this.ticker, name: this.stockName(), profile: this.profile };
     this.clearPendingAnalysis();
     this.stale.set(false);
     this.error.set('');
@@ -481,6 +483,7 @@ export class Explorer {
           });
           return;
         }
+        this.resultContext.set(context);
         this.result.set(message);
         this.busy.set(false);
         afterNextRender(() => this.openChapter('resultat'), { injector: this.injector });
@@ -534,6 +537,21 @@ export class Explorer {
     if (!selection) return '';
     const end = selection.end_close_date;
     return `${selection.ticker} · ${selection.applied === 'period' ? selection.start_close_date + ' → ' + end : end}`;
+  }
+
+  displayedResult() {
+    const analysis = this.result();
+    if (!analysis) return null;
+    const selection = analysis.dossier?.selection;
+    const context = this.resultContext();
+    return {
+      ticker: selection?.ticker ?? context?.ticker ?? '—',
+      name: selection?.name ?? context?.name ?? 'Société',
+      persona: personaOf(context?.profile ?? this.profile),
+      period: selection?.applied === 'period',
+      start: selection?.start_close_date ?? analysis.movement.previous_date,
+      end: selection?.end_close_date ?? analysis.movement.date,
+    };
   }
 
   private cancelAnalysis() {

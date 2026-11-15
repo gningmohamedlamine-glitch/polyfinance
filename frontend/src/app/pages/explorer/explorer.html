@@ -170,13 +170,34 @@
 
   @if (result(); as analysis) {
     <section class="chapter" id="chapter-resultat" aria-labelledby="results-title">
-      <header class="view-heading">
-        <div><span class="eyebrow">Ton analyse</span><h2 id="results-title" tabindex="-1" data-chapter-title>L’essentiel pour décider.</h2>
-          <p>{{ resultLabel() }} · {{ persona().name }}</p></div>
-        <button type="button" class="work-link" aria-haspopup="dialog" (click)="openChapter('agents')"><svg class="ico" [lucideIcon]="icons.traces" aria-hidden="true"></svg> Voir le travail des agents <span aria-hidden="true">↗</span></button>
+      @if (displayedResult(); as context) {
+      <header class="result-heading">
+        <div class="result-identity">
+          <app-stock-logo [ticker]="context.ticker" />
+          <div><span class="eyebrow">Résultat affiché</span>
+            <h2 id="results-title" tabindex="-1" data-chapter-title>{{ context.name }} <span class="result-symbol">{{ context.ticker }}</span></h2>
+          </div>
+          <span class="result-state" [class.pending]="stale() || busy() || error()">{{ busy() ? 'Nouvelle analyse en cours' : error() ? 'Dernier résultat disponible' : stale() ? 'Sélection modifiée' : 'Analyse terminée' }}</span>
+        </div>
+        <div class="result-context-row">
+          <div class="result-period"><small>{{ context.period ? 'Période analysée' : 'Séance analysée' }}</small>
+            <strong>@if (context.period) { {{ context.start | date:'d MMM y':'UTC' }} → } {{ context.end | date:'d MMM y':'UTC' }}</strong>
+          </div>
+          <div class="result-persona"><span class="avatar small" [attr.data-profile]="context.persona.id">{{ context.persona.initial }}</span>
+            <div><small>Profil analysé</small><strong>{{ context.persona.name }} <span>· {{ context.persona.risk }}</span></strong></div>
+          </div>
+          <button type="button" class="work-link" aria-haspopup="dialog" (click)="openChapter('agents')"><svg class="ico" [lucideIcon]="icons.traces" aria-hidden="true"></svg> Voir le travail des agents <span aria-hidden="true">↗</span></button>
+        </div>
       </header>
       @if (stale() || busy() || error()) {
-        <div class="previous-result" role="status">Dernière analyse exécutée. Ta sélection a changé ou une nouvelle analyse est en cours.</div>
+        <aside class="selection-notice" role="status">
+          <div><strong>{{ busy() ? 'La nouvelle analyse est en cours.' : error() ? 'Une erreur empêche la mise à jour.' : 'La sélection doit être réanalysée.' }}</strong>
+            <p>Le résultat ci-dessous reste celui de <b>{{ context.name }} · @if (context.period) { {{ context.start | date:'d MMM y':'UTC' }} → } {{ context.end | date:'d MMM y':'UTC' }} · {{ context.persona.name }}</b>.</p>
+            <p class="pending-selection">{{ busy() ? 'Analyse demandée' : 'Sélection actuelle' }} : <b>{{ stockName() }} · @if (mode() === 'range') { {{ rangeStart | date:'d MMM y':'UTC' }} → {{ rangeEnd | date:'d MMM y':'UTC' }} } @else { {{ sessionDate | date:'d MMM y':'UTC' }} } · {{ persona().name }}</b></p>
+          </div>
+          @if (!busy()) { <button type="button" class="primary" [disabled]="!canAnalyze()" (click)="run()">Analyser cette sélection</button> }
+        </aside>
+      }
       }
       <app-movement-analysis [analysis]="analysis" [persona]="persona()" />
       <aside class="evidence-door">

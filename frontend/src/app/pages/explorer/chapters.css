@@ -78,3 +78,28 @@
 .drawer-footer span { max-width:50%; font-size:.7rem; }
 }
 @media(prefers-reduced-motion:reduce) { .agent-drawer[open] { animation:none; } }
+
+.result-heading { padding:24px; background:#fff; border:1px solid var(--border); border-top:3px solid var(--accent); border-radius:16px; box-shadow:var(--shadow); }
+.result-identity { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+.result-identity h2 { margin-top:4px; font-size:clamp(1.5rem,3vw,2rem); display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.result-symbol { font:.75rem var(--mono); color:var(--muted); background:var(--bg); padding:5px 8px; border-radius:6px; letter-spacing:.03em; }
+.result-state { margin-left:auto; color:var(--ok); background:var(--ok-soft); padding:6px 10px; border-radius:999px; font-size:.75rem; font-weight:600; }
+.result-state.pending { color:var(--warn); background:var(--warn-soft); }
+.result-context-row { display:flex; align-items:center; flex-wrap:wrap; gap:20px 30px; border-top:1px solid var(--border); padding-top:18px; margin-top:18px; }
+.result-context-row small { display:block; color:var(--muted); font-size:.72rem; margin-bottom:4px; }
+.result-context-row strong { font-size:.95rem; font-variant-numeric:tabular-nums; }
+.result-persona { display:flex; align-items:center; gap:10px; }
+.result-persona strong span { font-size:.78rem; color:var(--muted); font-weight:400; }
+.result-context-row .work-link { margin-left:auto; }
+.selection-notice { display:flex; align-items:center; gap:20px; justify-content:space-between; padding:18px 22px; border:1px solid #f4d9ab; border-left:4px solid #d88b18; border-radius:12px; background:var(--warn-soft); font-size:.86rem; color:#7a4109; }
+.selection-notice p { margin:6px 0 0; line-height:1.5; }
+.selection-notice .pending-selection { margin-top:10px; padding-top:10px; border-top:1px solid #f3e4c9; }
+.selection-notice button { flex-shrink:0; font-size:.82rem; }
+@media(max-width:720px) {
+.result-heading { padding:18px; }
+.result-state { margin-left:0; }
+.result-context-row { gap:18px; align-items:flex-start; }
+.result-context-row .work-link { width:100%; margin:0; }
+.selection-notice { flex-direction:column; align-items:flex-start; padding:16px; }
+.selection-notice button { width:100%; }
+}
