@@ -29,6 +29,7 @@ export interface AgentDecision {
   reason?: string | null;
   refusal?: string;
 }
+export interface Usage { input_tokens: number; output_tokens: number; model_calls: number; model?: string | null }
 export interface Coherence {
   coherent: boolean;
   conflicts: string[];
@@ -76,6 +77,7 @@ export interface Analysis {
     benchmarks: Record<string, { name?: string; kind?: string; return?: number | null; gap_pp: number | null; status: string }>;
     returns?: { market_model?: MarketModel | null };
     agent_decisions?: AgentDecision[];
+    usage?: Usage;
     notable_sessions: {
       concentration: string;
       sessions: { date: string; daily_return: number }[];
@@ -103,6 +105,7 @@ export interface Analysis {
     assumptions?: string;
     coherence?: Coherence;
     decisions?: AgentDecision[];
+    usage?: Usage;
     scenario?: Partial<Record<'position_cad' | 'purchase_cad' | 'portfolio_cad' | 'withdrawal_cad', number>>;
   };
   trace?: ToolTrace[];

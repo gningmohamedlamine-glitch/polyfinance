@@ -82,6 +82,15 @@ export class MovementAnalysis {
   extraMetrics = computed(() => this.analysis().impact.metrics.filter(metric =>
     !['Volatilité annuelle (12 mois)', 'Variation de la position'].includes(metric.label)));
 
+  /** Consommation réelle du modèle, renvoyée par Bedrock (aucun coût estimé). */
+  usage = computed(() => {
+    const parts = [
+      { agent: 'Enquêteur', usage: this.analysis().dossier?.usage },
+      { agent: 'Conseiller', usage: this.analysis().impact.usage },
+    ].filter(part => part.usage && part.usage.model_calls > 0);
+    return parts.length ? parts : null;
+  });
+
   sourceCount = computed(() => this.analysis().event.sources.length);
   verifiedCount = computed(() => this.analysis().event.sources.filter(s => s.excerpt_status === 'verified').length);
 

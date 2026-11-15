@@ -2,7 +2,7 @@
 @let d = decomposition();
 <section class="acts">
   <!-- ACTE 2 : l'Enquêteur -->
-  <article class="panel act">
+  <article class="panel act" id="acte2">
     <header class="act-title">
       <span class="eyebrow">Acte 2 · Ce qui s’est passé</span>
       <span class="chip" [class.bedrock]="result.event.mode === 'bedrock'">
@@ -82,7 +82,7 @@
   </article>
 
   <!-- ACTE 3 : le Conseiller -->
-  <article class="panel act">
+  <article class="panel act" id="acte3">
     <header class="act-title">
       <span class="eyebrow">Acte 3 · Ce que ça change pour toi</span>
       <span class="chip" [class.bedrock]="result.impact.mode === 'bedrock'">
@@ -149,7 +149,7 @@
 </section>
 
 @if (decisions().length) {
-  <section class="panel decisions">
+  <section class="panel decisions" id="decisions">
     <header class="act-title">
       <span class="eyebrow">Ce que les agents ont décidé</span>
       <small class="muted">Chaque choix est validé par le code avant d’être exécuté</small>
@@ -170,8 +170,19 @@
 }
 
 @if (result.trace?.length) {
-  <details class="panel trace">
+  <details class="panel trace" id="traces">
     <summary>Traces techniques ({{ result.trace!.length }} outils exécutés)</summary>
+    @if (usage(); as parts) {
+      <div class="usage">
+        @for (part of parts; track part.agent) {
+          <div><small>{{ part.agent }} · {{ part.usage!.model }}</small>
+            <strong class="num">{{ part.usage!.input_tokens + part.usage!.output_tokens | number:'1.0-0' }} jetons</strong>
+            <small>{{ part.usage!.input_tokens | number:'1.0-0' }} en entrée · {{ part.usage!.output_tokens | number:'1.0-0' }} en sortie · {{ part.usage!.model_calls }} appel(s)</small></div>
+        }
+      </div>
+    } @else {
+      <p class="muted usage-none">Aucun appel au modèle : analyse produite en calcul local.</p>
+    }
     @for (step of result.trace!; track $index) {
       <div class="trace-row">
         <span class="num">{{ step.agent }} · {{ step.name }}</span>

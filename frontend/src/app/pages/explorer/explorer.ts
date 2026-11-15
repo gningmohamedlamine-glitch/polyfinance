@@ -39,6 +39,51 @@ export class Explorer {
 
   persona() { return personaOf(this.profile); }
 
+  readonly sections = [
+    { id: 'acte1', label: 'Séance & marché', icon: '📈' },
+    { id: 'acte2', label: 'Enquête & preuves', icon: '🔎' },
+    { id: 'acte3', label: 'Pour toi', icon: '👤' },
+    { id: 'decisions', label: 'Décisions des agents', icon: '🧭' },
+    { id: 'traces', label: 'Traces techniques', icon: '🧾' },
+  ];
+  activeSection = signal('acte1');
+  /** Sélection modifiée sans analyse : on invite à cliquer sur « Exécuter l'analyse ». */
+  stale = signal(false);
+  private autoRun = false;
+
+  /** Le menu de gauche fait défiler la page vers chaque acte (aucune page fictive). */
+  goTo(id: string) {
+    this.activeSection.set(id);
+    const element = document.getElementById(id);
+    if (element instanceof HTMLDetailsElement) element.open = true;
+    element?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  /** Nouvelle analyse : retour à la sélection de la séance. */
+  newAnalysis() {
+    this.goTo('acte1');
+  }
+
+  /** Bouton « Exécuter l'analyse » : relance les deux agents sur la sélection courante. */
+  run() {
+    this.analyzeCurrent();
+  }
+
+  available(id: string) {
+    const result = this.result();
+    if (id === 'acte1') return true;
+    if (!result) return false;
+    if (id === 'decisions') return !!(result.dossier?.agent_decisions?.length || result.impact.decisions?.length);
+    if (id === 'traces') return !!result.trace?.length;
+    return true;
+  }
+
+  aiMode() {
+    const result = this.result();
+    if (!result) return null;
+    return result.event.mode === 'bedrock' || result.impact.mode === 'bedrock' ? 'GPT-6 Astra (Bedrock)' : 'Calcul local';
+  }
+
   /** Simulation de connexion : aucun mot de passe, seul le profil fictif change. */
   enter(profile: Profile) {
     this.profile = profile;
@@ -82,7 +127,8 @@ export class Explorer {
     });
   }
 
-  load(ticker: string, date?: string) {
+  load(ticker: string, date?: string, run = false) {
+    this.autoRun = run;
     this.historyRequest?.unsubscribe();
     this.cancelAnalysis();
     this.error.set('');
@@ -148,7 +194,19 @@ export class Explorer {
 
   selectProfile(profile: Profile) {
     this.profile = profile;
-    this.analyzeCurrent();
+    // Même séance, autre profil : on relance si une analyse est affichée (seul l'impact change).
+    if (this.result() || this.busy()) this.analyzeCurrent();
+    else this.stale.set(this.canAnalyze());
+  }
+
+  /** Les scénarios de démo lancent l'analyse ; un clic de sélection attend le bouton. */
+  private maybeRun() {
+    if (this.autoRun) {
+      this.autoRun = false;
+      this.analyzeCurrent();
+    } else {
+      this.stale.set(this.canAnalyze());
+    }
   }
 
   private applySession(date: string, run = false) {
@@ -161,7 +219,7 @@ export class Explorer {
       return;
     }
     this.error.set('');
-    this.analyzeCurrent();
+    this.maybeRun();
   }
 
   private applyRange(startDate: string, endDate: string) {
@@ -183,7 +241,7 @@ export class Explorer {
       return;
     }
     this.selection.set({ kind: 'range', startDate: lo, endDate: hi });
-    this.analyzeCurrent();
+    this.maybeRun();
   }
 
   analyzeCurrent() {
@@ -201,6 +259,7 @@ export class Explorer {
 
   private requestAnalysis(selection: Record<string, string>) {
     this.clearPendingAnalysis();
+    this.stale.set(false);
     this.error.set('');
     this.busy.set(true);
     this.analysisRequest = this.api.analyze({

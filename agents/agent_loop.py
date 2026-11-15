@@ -87,3 +87,6 @@ def run_tool_loop(agent, model, instructions, payload, tool_specs, execute, noti
         return done("", "local", "bedrock_incomplete")
     except (BotoCoreError, ClientError):
         return done("", "local", "bedrock_error")
+    except (KeyError, TypeError, ValueError, AttributeError):
+        # Réponse inattendue du modèle : on bascule en mode local plutôt que de faire échouer l'analyse.
+        return done("", "local", "bedrock_invalid_response")

@@ -20,8 +20,32 @@
     <p class="disclaimer">Profils fictifs · aucune donnée personnelle · pas un conseil financier.</p>
   </main>
 } @else {
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand"><span class="brand-mark" aria-hidden="true">α</span>
+      <div><strong>AlphaForge AI</strong><small>Explorateur de mouvements</small></div>
+    </div>
+    <button type="button" class="primary new" (click)="newAnalysis()">＋ Nouvelle analyse</button>
+    <nav aria-label="Parties de l’analyse">
+      @for (section of sections; track section.id) {
+        <button type="button" class="nav-item" [class.active]="activeSection() === section.id"
+                [disabled]="!available(section.id)" (click)="goTo(section.id)">
+          <span aria-hidden="true">{{ section.icon }}</span>{{ section.label }}
+        </button>
+      }
+    </nav>
+    <div class="side-foot">
+      <div class="side-profile">
+        <span class="avatar small" [attr.data-profile]="profile">{{ persona().initial }}</span>
+        <div><strong>{{ persona().name }}, {{ persona().age }} ans</strong><small>{{ persona().risk }}</small></div>
+      </div>
+      @if (aiMode(); as mode) { <span class="ai-mode" [class.on]="mode !== 'Calcul local'">● {{ mode }}</span> }
+      <button type="button" class="leave" (click)="leave()">Se déconnecter</button>
+    </div>
+  </aside>
+
+  <div class="main-col">
   <header class="topbar">
-    <div class="brand"><span class="brand-mark" aria-hidden="true">α</span><strong>AlphaForge AI</strong></div>
     <label class="ticker-select"><span class="sr-only">Action</span>
       <select [(ngModel)]="ticker" (ngModelChange)="load($event)">
         @for (stock of stocks(); track stock.ticker) {
@@ -30,14 +54,15 @@
       </select>
     </label>
     <nav class="scenarios" aria-label="Cas de démo">
-      <button type="button" [class.active]="ticker === 'NVDA' && sessionDate === '2024-08-29'" (click)="load('NVDA', '2024-08-29')">Résultats NVIDIA · 29 août 2024</button>
-      <button type="button" [class.active]="ticker === 'NVDA' && sessionDate === '2022-09-13'" (click)="load('NVDA', '2022-09-13')">IPC américain · 13 sept. 2022</button>
+      <span class="eyebrow">Scénarios</span>
+      <button type="button" [class.active]="ticker === 'NVDA' && sessionDate === '2024-08-29'" (click)="load('NVDA', '2024-08-29', true)">Résultats NVIDIA · 29 août 2024</button>
+      <button type="button" [class.active]="ticker === 'NVDA' && sessionDate === '2022-09-13'" (click)="load('NVDA', '2022-09-13', true)">IPC américain · 13 sept. 2022</button>
     </nav>
     <div class="who">
       <button type="button" class="profile-chip" (click)="switcherOpen.set(!switcherOpen())"
               [attr.aria-expanded]="switcherOpen()" aria-haspopup="true">
         <span class="avatar small" [attr.data-profile]="profile">{{ persona().initial }}</span>
-        <span><strong>{{ persona().name }}</strong><small>{{ persona().risk }}</small></span>
+        <span><strong>{{ persona().name }}</strong><small>Changer de profil</small></span>
         <span class="caret" aria-hidden="true">▾</span>
       </button>
       @if (switcherOpen()) {
@@ -53,15 +78,18 @@
         </div>
       }
     </div>
+    <button type="button" class="primary run" [class.pulse]="stale()" (click)="run()" [disabled]="busy() || !canAnalyze()">
+      @if (busy()) { <span class="spinner" aria-hidden="true"></span> Analyse en cours… } @else { ▶ Exécuter l’analyse }
+    </button>
   </header>
 
   <main class="page">
-    <section class="panel act1">
+    <section class="panel act1" id="acte1">
       <div class="act-head">
         <div>
           <span class="eyebrow">Acte 1 · La séance</span>
           <h2>{{ stockName() }} <span class="muted">({{ ticker }})</span></h2>
-          <p class="muted">Clique sur une séance ou glisse sur une période pour comprendre le mouvement.</p>
+          <p class="muted">Clique sur une séance ou glisse sur une période, puis exécute l’analyse.</p>
         </div>
         <div class="controls">
           <fieldset class="mode" role="radiogroup" aria-label="Type de sélection">
@@ -112,9 +140,18 @@
       />
     }
     @if (error()) { <p class="status" role="alert">{{ error() }}</p> }
+    @if (stale() && !busy() && !error()) {
+      <div class="panel pending">
+        <strong>Sélection prête : {{ ticker }} · {{ mode() === 'range' ? rangeStart + ' → ' + rangeEnd : sessionDate }}</strong>
+        <span class="muted">Les deux agents analyseront cette séance pour {{ persona().name }}.</span>
+        <button type="button" class="primary" (click)="run()">▶ Exécuter l’analyse</button>
+      </div>
+    }
     @if (result(); as analysis) {
       <app-movement-analysis [analysis]="analysis" [persona]="persona()" (retry)="analyzeCurrent()" />
     }
     <footer class="disclaimer">Simulation : analyse de cohérence, pas un conseil financier. Profils fictifs.</footer>
   </main>
+  </div>
+</div>
 }

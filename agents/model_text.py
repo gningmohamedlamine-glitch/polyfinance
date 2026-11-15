@@ -55,5 +55,7 @@ def synthesize(agent, instructions, evidence, max_tokens, notify):
         reason = "bedrock_incomplete"
     except (BotoCoreError, ClientError):
         reason = "bedrock_error"
+    except (KeyError, TypeError, ValueError, AttributeError):
+        reason = "bedrock_invalid_response"
     notify(agent, "synthesize", "unavailable", mode="bedrock")
     return {"text": "", "mode": "local", "mode_reason": reason}
