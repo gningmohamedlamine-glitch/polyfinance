@@ -1,0 +1,63 @@
+<div class="welcome">
+  <header class="top">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"><svg class="ico" [lucideIcon]="icons.brand"></svg></span>
+      <strong>AlphaForge AI</strong>
+      <span class="chip">Simulation</span>
+    </div>
+    <span class="engine"><span class="dot" aria-hidden="true"></span> 2 agents · GPT-6 Astra sur Amazon Bedrock</span>
+  </header>
+
+  <main>
+    <div class="head">
+      <span class="kicker"><svg class="ico" [lucideIcon]="icons.analyse" aria-hidden="true"></svg> Explorateur de mouvements boursiers</span>
+      <h1>Qui es-tu&nbsp;?</h1>
+      <p>Choisis un profil d’investisseur fictif. Le même mouvement de marché sera expliqué, puis confronté
+        à ta tolérance au risque et à ton horizon.</p>
+    </div>
+
+    <div class="grid">
+      @for (p of personas; track p.id) {
+        <article class="card" [attr.data-profile]="p.id" [class.featured]="p.demo">
+          @if (p.demo) { <span class="ribbon">{{ p.demo }}</span> }
+          <div class="card-top">
+            <span class="avatar">{{ p.initial }}</span>
+            <span class="focus">{{ p.focus }}</span>
+          </div>
+          <h2>{{ p.name }}, {{ p.age }} ans</h2>
+          <div class="tags">
+            <span class="tag main">{{ p.risk }}</span>
+            <span class="tag">{{ p.horizon }}</span>
+            <span class="tag soft">{{ p.constraint }}</span>
+          </div>
+          <p class="goal">{{ p.goal }}</p>
+
+          <div class="limits">
+            <div class="limit-head"><span>Volatilité max</span><strong class="num">{{ p.limits.volatility | percent:'1.0-0' }}</strong></div>
+            <div class="bar"><span [style.width.%]="p.limits.volatility / scale * 100"></span></div>
+            <dl>
+              <div><dt>Pire baisse tolérée</dt><dd class="num">{{ p.limits.drawdown | percent:'1.0-0' }}</dd></div>
+              <div><dt>Poids max d’un titre</dt><dd class="num">{{ p.limits.weight | percent:'1.0-0' }}</dd></div>
+            </dl>
+            <small>Limites fictives sur 12 mois, utilisées par le garde-fou.</small>
+          </div>
+
+          <button type="button" class="enter" (click)="enter.emit(p.id)">
+            Entrer en tant {{ p.name === 'Amira' ? 'qu’' : 'que ' }}{{ p.name }} <svg class="ico" [lucideIcon]="icons.arrow" aria-hidden="true"></svg>
+          </button>
+        </article>
+      }
+    </div>
+
+    <aside class="note">
+      <span class="note-icon" aria-hidden="true"><svg class="ico" [lucideIcon]="icons.shield"></svg></span>
+      <div>
+        <strong>Le même mouvement, trois lectures</strong>
+        <span>L’Enquêteur explique le mouvement avec des sources datées ; le Conseiller vérifie la cohérence avec
+          les limites du profil. Aucune recommandation d’achat ou de vente.</span>
+      </div>
+    </aside>
+  </main>
+
+  <footer>Profils fictifs · aucune donnée personnelle · simulation, pas un conseil financier.</footer>
+</div>

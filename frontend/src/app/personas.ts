@@ -8,16 +8,31 @@ export interface Persona {
   horizon: string;
   goal: string;
   initial: string;
+  /** Mot-clé du profil (énoncé du défi). */
+  focus: string;
+  /** Contrainte propre au profil. */
+  constraint: string;
+  /** Limites fictives : copie de PROFILE_LIMITS (agents/impact_agent.py), à garder synchronisée. */
+  limits: { volatility: number; drawdown: number; weight: number };
+  /** Cas de démo mis en avant. */
+  demo?: string;
 }
 
 // Profils fictifs de l'énoncé (simulation : aucune donnée personnelle réelle).
 export const PERSONAS: Persona[] = [
   { id: 'amira', name: 'Amira', age: 26, risk: 'Risque élevé', horizon: '15 ans et plus',
-    goal: 'Croissance à long terme, sans renoncer à la diversification.', initial: 'A' },
+    goal: 'Croissance à long terme, sans renoncer à la diversification.', initial: 'A',
+    focus: 'Croissance', constraint: 'Concentration limitée',
+    limits: { volatility: 0.60, drawdown: -0.60, weight: 0.15 } },
   { id: 'robert', name: 'Robert', age: 59, risk: 'Risque faible à modéré', horizon: '3 à 5 ans',
-    goal: 'Préserver son capital à l’approche de la retraite.', initial: 'R' },
+    goal: 'Préserver son capital à l’approche de la retraite. Attiré par un titre très médiatisé.', initial: 'R',
+    focus: 'Préservation', constraint: 'Retrait à financer',
+    limits: { volatility: 0.20, drawdown: -0.20, weight: 0.05 },
+    demo: 'Cas de démo · incohérence' },
   { id: 'mateo', name: 'Mateo', age: 41, risk: 'Risque modéré', horizon: '8 à 12 ans',
-    goal: 'Équilibre croissance et stabilité, avec des critères ESG.', initial: 'M' },
+    goal: 'Équilibre croissance et stabilité, avec des critères ESG.', initial: 'M',
+    focus: 'ESG', constraint: 'Exclusions ESG documentées',
+    limits: { volatility: 0.30, drawdown: -0.35, weight: 0.10 } },
 ];
 
 export const personaOf = (id: Profile) => PERSONAS.find(persona => persona.id === id)!;

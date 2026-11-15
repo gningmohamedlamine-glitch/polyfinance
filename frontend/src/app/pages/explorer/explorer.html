@@ -1,24 +1,5 @@
 @if (!entered()) {
-  <main class="welcome">
-    <div class="welcome-head">
-      <span class="brand-mark" aria-hidden="true"><svg class="ico" [lucideIcon]="icons.brand"></svg></span>
-      <span class="eyebrow">AlphaForge AI · Simulation</span>
-      <h1>Qui es-tu&nbsp;?</h1>
-      <p>Choisis un profil d’investisseur fictif. Le même mouvement de marché sera expliqué, puis analysé selon ta situation.</p>
-    </div>
-    <div class="persona-grid">
-      @for (p of personas; track p.id) {
-        <button type="button" class="persona-card" (click)="enter(p.id)">
-          <span class="avatar" [attr.data-profile]="p.id">{{ p.initial }}</span>
-          <strong>{{ p.name }}, {{ p.age }} ans</strong>
-          <span class="tags"><span>{{ p.risk }}</span><span>{{ p.horizon }}</span></span>
-          <span class="goal">{{ p.goal }}</span>
-          <span class="enter">Entrer <svg class="ico" [lucideIcon]="icons.arrow" aria-hidden="true"></svg></span>
-        </button>
-      }
-    </div>
-    <p class="disclaimer">Profils fictifs · aucune donnée personnelle · pas un conseil financier.</p>
-  </main>
+  <app-welcome (enter)="enter($event)" />
 } @else {
 <div class="shell">
   <aside class="sidebar">

@@ -1,14 +1,4 @@
 /* Accueil : choix du profil (simulation de connexion) */
-.welcome { min-height: 100vh; display: grid; align-content: center; justify-items: center; gap: 28px; padding: 40px 20px; }
-.welcome-head { display: grid; justify-items: center; gap: 10px; text-align: center; max-width: 620px; }
-.welcome h1 { font-size: clamp(2.2rem, 5vw, 3.2rem); letter-spacing: -.04em; }
-.welcome-head p { color: var(--muted); line-height: 1.55; margin: 0; }
-.persona-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 260px)); gap: 16px; }
-.persona-card { display: grid; justify-items: start; gap: 10px; padding: 22px; text-align: left; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); transition: transform .15s ease, border-color .15s ease; }
-.persona-card:hover { transform: translateY(-2px); border-color: var(--accent); }
-.persona-card strong { font-size: 1.1rem; }
-.persona-card .goal { color: var(--muted); font-size: .88rem; line-height: 1.45; min-height: 2.6em; }
-.persona-card .enter { color: var(--accent); font-weight: 600; font-size: .9rem; }
 .tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .tags span { padding: 3px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-strong); font-size: .75rem; font-weight: 600; }
 .disclaimer { color: var(--muted); font-size: .78rem; text-align: center; }
@@ -84,7 +74,6 @@
   .side-foot { margin-top: 0; border-top: 0; padding-top: 0; }
 }
 @media (max-width: 900px) {
-  .persona-grid { grid-template-columns: 1fr; }
   .topbar { flex-wrap: wrap; padding: 10px 14px; }
   .page { padding: 16px 14px 40px; }
 }
@@ -99,7 +88,7 @@
 .sub-nav button.active { color: var(--accent-strong); font-weight: 600; }
 .sub-nav button:disabled { opacity: .4; }
 .brand-mark svg.ico { width: 20px; height: 20px; }
-.new, .leave, .persona-card .enter, .pending .primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.new, .leave, .pending .primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 .nav-item svg.ico { width: 18px; height: 18px; }
 .caret { color: var(--muted); }
 
