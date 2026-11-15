@@ -22,7 +22,9 @@ BENCHMARKS = {"SPY": "S&P 500", "QQQ": "Nasdaq-100"}
 SECTORS = {"XLK": "Technologie (XLK)", "XLE": "Énergie (XLE)", "XLF": "Finance (XLF)", "XLV": "Santé (XLV)"}
 # Secteur de comparaison par titre ; None quand aucun FNB sectoriel adapté n'est disponible.
 STOCK_SECTOR = {"NVDA": "XLK", "AAPL": "XLK", "MSFT": "XLK", "GOOGL": None, "AMZN": None, "TSLA": None}
-REFERENCE_NAMES = BENCHMARKS | SECTORS
+# FNB filtré ESG du jeu de départ : référence de comparaison pour le profil de Mateo.
+ESG_REFERENCE = {"ESGV": "Vanguard ESG U.S. Stock ETF"}
+REFERENCE_NAMES = BENCHMARKS | SECTORS | ESG_REFERENCE
 
 
 @dataclass(frozen=True)
@@ -38,7 +40,7 @@ class Price:
 
 @lru_cache(maxsize=1)
 def load_prices():
-    tables = {ticker: {} for ticker in STOCKS | BENCHMARKS | SECTORS}
+    tables = {ticker: {} for ticker in STOCKS | BENCHMARKS | SECTORS | ESG_REFERENCE}
     files = [DATA / "prices_daily.csv"]
     if (DATA / "sector_etfs_daily.csv").exists():
         files.append(DATA / "sector_etfs_daily.csv")

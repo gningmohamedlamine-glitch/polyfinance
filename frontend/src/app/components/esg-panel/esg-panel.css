@@ -1,0 +1,20 @@
+.esg { display: grid; gap: 10px; margin: 16px 0; padding: 16px 18px; border: 1px solid var(--border); border-radius: 14px; background: #fbfcfe; }
+header { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+h3 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 1rem; }
+h3 .ico { color: var(--ok); }
+h4 { margin: 6px 0 0; font-size: .82rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.status { padding: 3px 10px; border-radius: 999px; background: var(--bg); border: 1px solid var(--border); font-size: .76rem; font-weight: 600; color: var(--muted); }
+.status.warn { background: #fef3c7; border-color: #fcd34d; color: #92400e; }
+.sector { margin: 0; font-size: .88rem; }
+.flag { color: #92400e; }
+table { width: 100%; border-collapse: collapse; font-size: .86rem; }
+caption { text-align: left; color: var(--muted); font-size: .76rem; padding-bottom: 6px; }
+th, td { padding: 6px 8px; border-bottom: 1px solid var(--border); text-align: right; }
+th:first-child, tbody th { text-align: left; font-weight: 500; color: var(--muted); }
+thead th small { display: block; font-weight: 400; color: var(--muted); font-size: .7rem; }
+.list, .missing { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: .86rem; }
+.list small { display: block; color: var(--muted); }
+.list span { display: block; }
+.missing { color: var(--muted); }
+.muted { margin: 0; color: var(--muted); font-size: .86rem; }
+.notice { margin: 0; font-size: .74rem; color: var(--muted); font-style: italic; }

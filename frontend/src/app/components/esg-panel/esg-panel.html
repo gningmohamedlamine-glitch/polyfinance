@@ -1,0 +1,48 @@
+@let e = esg();
+<section class="esg" aria-label="Vérification ESG">
+  <header>
+    <h3><svg class="ico" [lucideIcon]="icons.leaf" aria-hidden="true"></svg> Vérification ESG</h3>
+    <span class="status" [class.warn]="e.conclusion === 'points_attention'">
+      {{ e.conclusion === 'points_attention' ? 'Points d’attention' : 'Information insuffisante pour conclure' }}
+    </span>
+  </header>
+
+  <p class="sector">Secteur&nbsp;: <strong>{{ e.sector ?? 'inconnu' }}</strong>
+    @if (e.sector_flag) { · <span class="flag">{{ e.sector_flag }}</span> }
+    @if (e.membership.status === 'ok') {
+      · {{ e.membership.member ? 'figure dans' : 'ne figure pas dans' }} la liste d’ESGV
+      @if (e.membership.as_of) { (au {{ e.membership.as_of }}) }
+    }
+  </p>
+
+  @if (e.comparison.stock && e.comparison.reference; as _) {
+    <table>
+      <caption>12 mois avant la séance ({{ e.comparison.stock!.start_date }} → {{ e.comparison.stock!.end_date }})</caption>
+      <thead><tr><th></th><th>{{ e.ticker }}</th><th>ESGV <small>FNB filtré ESG</small></th></tr></thead>
+      <tbody>
+        <tr><th>Rendement</th><td class="num">{{ e.comparison.stock!.return_12m | percent:'1.0-0' }}</td><td class="num">{{ e.comparison.reference!.return_12m | percent:'1.0-0' }}</td></tr>
+        <tr><th>Volatilité</th><td class="num">{{ e.comparison.stock!.annual_volatility | percent:'1.0-0' }}</td><td class="num">{{ e.comparison.reference!.annual_volatility | percent:'1.0-0' }}</td></tr>
+        <tr><th>Pire baisse</th><td class="num">{{ e.comparison.stock!.max_drawdown | percent:'1.0-0' }}</td><td class="num">{{ e.comparison.reference!.max_drawdown | percent:'1.0-0' }}</td></tr>
+      </tbody>
+    </table>
+  }
+
+  <h4>Controverses datées (12 mois avant la séance)</h4>
+  @if (e.controversies.length) {
+    <ul class="list">
+      @for (c of e.controversies; track c.title) {
+        <li>
+          @if (c.url) { <a [href]="c.url" target="_blank" rel="noopener">{{ c.title }}</a> } @else { {{ c.title }} }
+          <small>{{ c.published_date }} · {{ c.kind }}@if (c.topic) { · {{ c.topic }} }</small>
+          @if (c.summary) { <span>{{ c.summary }}</span> }
+        </li>
+      }
+    </ul>
+  } @else {
+    <p class="muted">Aucune controverse trouvée dans les sources consultées{{ e.web_status === 'disabled' ? ' (recherche web désactivée)' : '' }}.</p>
+  }
+
+  <h4>Ce qui manque pour conclure</h4>
+  <ul class="missing">@for (m of e.missing; track m) { <li>{{ m }}</li> }</ul>
+  <p class="notice">{{ e.notice }}</p>
+</section>

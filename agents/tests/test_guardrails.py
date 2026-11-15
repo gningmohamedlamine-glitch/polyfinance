@@ -63,3 +63,28 @@ class ExcerptTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class EsgTests(unittest.TestCase):
+    def setUp(self):
+        self.env = mock.patch.dict("os.environ", {"MARKET_WEB_SEARCH": "0", "BEDROCK_MODEL_ID": ""})
+        self.env.start()
+        self.addCleanup(self.env.stop)
+
+    def test_mateo_gets_esg_screen_without_certifying(self):
+        dossier = run_event_agent(resolve_window("NVDA", date="2024-08-29"))
+        impact = run_impact_agent(dossier, "mateo", SCENARIO)
+        esg = impact["esg"]
+        self.assertIsNotNone(esg)
+        self.assertEqual(esg["sector"], "Information Technology")
+        self.assertIn(esg["conclusion"], ("insuffisant", "points_attention"))
+        self.assertNotIn("conforme", impact["text"].lower().replace("non conforme", ""))
+        self.assertTrue(esg["missing"])
+        # Comparaison avec le FNB filtré ESG, sans données futures.
+        self.assertEqual(esg["comparison"]["reference"]["symbol"], "ESGV")
+        self.assertLessEqual(esg["comparison"]["reference"]["end_date"], "2024-08-29")
+        self.assertFalse(any("result" in entry for entry in impact["trace"]))
+
+    def test_energy_sector_is_flagged(self):
+        from agents.esg import SENSITIVE_SECTORS, asset_sector
+        self.assertIn(asset_sector("XOM"), SENSITIVE_SECTORS)

@@ -5,7 +5,10 @@ from __future__ import annotations
 from markets.window import ResolvedWindow, max_drawdown_cad, risk_indicators
 
 from .agent_loop import MAX_DECISIONS, model_for, run_tool_loop
-from .model_text import synthesize
+import os
+
+from .esg import esg_screen
+from .model_text import bedrock_client, synthesize
 
 PROFILES = {
     "amira": "Amira envisage un achat. Elle vise la croissance à long terme et veut limiter la concentration.",
@@ -13,7 +16,8 @@ PROFILES = {
         "Robert s’intéresse à ce titre très médiatisé. Il préserve son capital et doit financer un retrait ; "
         "l’agent vérifie si le titre est cohérent avec son profil avant tout calcul."
     ),
-    "mateo": "Mateo évalue un achat et applique des exclusions ESG documentées.",
+    "mateo": ("Mateo évalue un achat. Il accorde une grande importance aux facteurs ESG et veut éviter les entreprises "
+               "liées à des controverses environnementales ou sociales importantes."),
 }
 SCENARIO_FIELDS = {
     "amira": ("position_cad", "purchase_cad", "portfolio_cad"),
@@ -176,21 +180,28 @@ def _metrics_amira(scenario: dict) -> tuple[list[dict], str, list[dict]]:
     return metrics, assumptions, tools
 
 
-def _metrics_mateo() -> tuple[list[dict], str, list[dict]]:
-    assumptions = (
-        "Le catalogue ne contient pas de preuves ESG dédiées. Les publications de marché ne suffisent pas "
-        "pour conclure sur les exclusions de Mateo."
-    )
-    tools = [
-        {
-            "agent": "impact",
-            "name": "exclusion_evidence",
-            "source": "local",
-            "status": "executed",
-            "arguments": {"matched": []},
-        }
-    ]
-    return [], assumptions, tools
+def _metrics_mateo(dossier: dict) -> tuple[list[dict], str, list[dict]]:
+    """Vérification ESG : points d'attention et informations manquantes, jamais une certification."""
+    client = bedrock_client(read_timeout=40) if os.getenv("MARKET_WEB_SEARCH") == "1" else None
+    esg = esg_screen(dossier, client)
+    metrics = []
+    stock, reference = esg["comparison"]["stock"], esg["comparison"]["reference"]
+    if stock and reference:
+        metrics += [
+            {"label": f"Rendement 12 mois ({stock['symbol']})", "value": stock["return_12m"], "unit": "%"},
+            {"label": "Rendement 12 mois (ESGV, FNB filtré ESG)", "value": reference["return_12m"], "unit": "%"},
+            {"label": "Volatilité 12 mois (ESGV)", "value": reference["annual_volatility"], "unit": "%"},
+        ]
+    if esg["attention"]:
+        assumptions = "Points d’attention ESG : " + " ".join(esg["attention"])
+    else:
+        assumptions = ("Aucun point d’attention ESG relevé avec les données disponibles, ce qui ne prouve pas "
+                       "que le titre respecte les exclusions de Mateo.")
+    assumptions += " Manque : " + " ".join(esg["missing"])
+    tools = [{"agent": "impact", "name": "esg_screen", "source": "local", "status": "executed",
+              "arguments": {"ticker": esg["ticker"], "end_date": dossier["selection"]["end_close_date"]},
+              "result": esg}]
+    return metrics, assumptions, tools
 
 
 def _compute(profile: str, dossier: dict, scenario: dict) -> tuple[list[dict], str, list[dict], dict]:
@@ -203,7 +214,7 @@ def _compute(profile: str, dossier: dict, scenario: dict) -> tuple[list[dict], s
         if scenario.get("portfolio_cad"):
             weight_after = (scenario["position_cad"] + scenario["purchase_cad"]) / scenario["portfolio_cad"]
     else:
-        metrics, assumptions, tools = _metrics_mateo()
+        metrics, assumptions, tools = _metrics_mateo(dossier)
     coherence = profile_coherence(profile, selection["ticker"], selection["end_close_date"], weight_after)
     if coherence["risk"].get("status") == "ok":
         metrics = [
@@ -242,19 +253,22 @@ ADVISOR = (
     "Tous les chiffres viennent des outils : n’en invente aucun. "
     "Réponds ensuite en français, en trois puces courtes au plus. Si verify_profile_coherence signale des "
     "conflits, la première puce doit le dire clairement, chiffres à l’appui. Ne donne aucun conseil d’achat "
-    "ou de vente : décris ce que le mouvement implique pour ce profil. Qualifie les pistes web de non vérifiées."
+    "ou de vente : décris ce que le mouvement implique pour ce profil. Qualifie les pistes web de non vérifiées. "
+    "Pour les critères ESG, n’affirme jamais qu’un titre est conforme : cite les points d’attention trouvés "
+    "et les informations manquantes."
 )
 
 PROFILE_TOOLS = {
     "robert": ("verify_profile_coherence", "position_value_cad"),
     "amira": ("verify_profile_coherence", "direct_weight", "position_value_cad"),
-    "mateo": ("verify_profile_coherence", "exclusion_evidence"),
+    "mateo": ("verify_profile_coherence", "esg_screen"),
 }
 TOOL_DESCRIPTIONS = {
     "verify_profile_coherence": "Compare la volatilité et la baisse maximale du titre sur 12 mois (et la concentration après achat) aux limites du profil.",
     "position_value_cad": "Calcule la variation en CAD de la position fictive, l’effet du change et, sur une période, la baisse maximale ; compare au retrait prévu s’il existe.",
     "direct_weight": "Calcule le poids direct du titre dans le portefeuille avant et après l’achat fictif.",
-    "exclusion_evidence": "Vérifie si les sources contiennent des preuves liées aux exclusions ESG du profil.",
+    "esg_screen": ("Vérification ESG : secteur du titre, controverses datées des 12 derniers mois et comparaison "
+                   "avec ESGV (FNB filtré ESG). Signale les points d’attention et les informations manquantes."),
 }
 
 
@@ -282,7 +296,16 @@ def _run_profile_tool(name, profile, dossier, scenario):
         return (*_metrics_robert(dossier, scenario), None)
     if name == "direct_weight":
         return (*_metrics_amira(scenario), None)
-    return (*_metrics_mateo(), None)
+    return (*_metrics_mateo(dossier), None)
+
+
+def _esg_of(entries):
+    return next((entry["result"] for entry in entries if entry.get("name") == "esg_screen"), None)
+
+
+def _public(entry):
+    """La trace garde l'appel ; le résultat ESG détaillé est exposé à part (champ esg)."""
+    return {key: value for key, value in entry.items() if key != "result"}
 
 
 def run_impact_agent(dossier: dict, profile: str, scenario: dict, progress=None) -> dict:
@@ -328,7 +351,8 @@ def run_impact_agent(dossier: dict, profile: str, scenario: dict, progress=None)
         "scenario": scenario_out,
         "assumptions": assumptions,
         "decisions": [],
-        "trace": [*dossier["tools_executed"], *calculations],
+        "esg": _esg_of(calculations),
+        "trace": [*dossier["tools_executed"], *(_public(entry) for entry in calculations)],
     }
 
 
@@ -346,9 +370,13 @@ def _run_advisor(model, dossier, profile, scenario, scenario_out, notify):
             return False, "Calcul déjà effectué : utilise le résultat précédent ou conclus."
         notify("impact", name, "running", mode="model")
         results[name] = _run_profile_tool(name, profile, dossier, scenario)
-        metrics, assumptions, _, coherence = results[name]
+        metrics, assumptions, trace_entries, coherence = results[name]
         notify("impact", name, "done", mode="model")
-        return True, {"metrics": metrics, "assumptions": assumptions, "coherence": coherence}
+        output = {"metrics": metrics, "assumptions": assumptions, "coherence": coherence}
+        esg = _esg_of(trace_entries)
+        if esg:
+            output["esg"] = {key: esg[key] for key in ("sector", "attention", "missing", "controversies", "conclusion")}
+        return True, output
 
     specs = [{"toolSpec": {"name": name, "description": TOOL_DESCRIPTIONS[name],
                            "inputSchema": {"json": {"type": "object", "properties": {}}}}} for name in allowed]
@@ -397,5 +425,6 @@ def _run_advisor(model, dossier, profile, scenario, scenario_out, notify):
         "assumptions": assumptions_text,
         "decisions": loop["decisions"],
         "usage": {**loop["usage"], "model": model},
-        "trace": trace,
+        "esg": _esg_of(trace),
+        "trace": [_public(entry) for entry in trace],
     }

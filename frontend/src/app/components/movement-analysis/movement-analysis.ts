@@ -2,6 +2,7 @@ import { CurrencyPipe, DecimalPipe, PercentPipe } from '@angular/common';
 import { Component, computed, input, output } from '@angular/core';
 import { LucideDynamicIcon } from '@lucide/angular';
 import { ICONS } from '../../icons';
+import { EsgPanel } from '../esg-panel/esg-panel';
 import { Persona } from '../../personas';
 import { AgentDecision, Analysis } from '../../services/market-api';
 
@@ -17,7 +18,7 @@ const TOOL_LABELS: Record<string, string> = {
 
 @Component({
   selector: 'app-movement-analysis',
-  imports: [CurrencyPipe, DecimalPipe, PercentPipe, LucideDynamicIcon],
+  imports: [CurrencyPipe, DecimalPipe, PercentPipe, LucideDynamicIcon, EsgPanel],
   templateUrl: './movement-analysis.html',
   styleUrl: './movement-analysis.css',
 })
@@ -83,7 +84,8 @@ export class MovementAnalysis {
 
   /** Métriques non déjà montrées dans les cartes de règles ou les expositions. */
   extraMetrics = computed(() => this.analysis().impact.metrics.filter(metric =>
-    !['Volatilité annuelle (12 mois)', 'Variation de la position'].includes(metric.label)));
+    !['Volatilité annuelle (12 mois)', 'Variation de la position'].includes(metric.label)
+    && !metric.label.startsWith('Rendement 12 mois') && metric.label !== 'Volatilité 12 mois (ESGV)'));
 
   /** Consommation réelle du modèle, renvoyée par Bedrock (aucun coût estimé). */
   usage = computed(() => {

@@ -194,6 +194,14 @@ def _rows_any(symbol: str):
     return prices[symbol]
 
 
+def period_return(ticker: str, end_date: str, sessions: int = RISK_WINDOW_SESSIONS) -> float | None:
+    """Rendement ajusté sur les `sessions` séances qui se terminent à end_date (aucune donnée future)."""
+    rows = [row for row in _rows_any(ticker) if row.date <= end_date][-(sessions + 1):]
+    if len(rows) < 30:
+        return None
+    return rows[-1].adj_close / rows[0].adj_close - 1
+
+
 def risk_indicators(ticker: str, end_date: str, sessions: int = RISK_WINDOW_SESSIONS) -> dict:
     """Volatilité annualisée et pire baisse sur l'année qui précède end_date (incluse)."""
     rows = [row for row in _rows_any(ticker) if row.date <= end_date][-(sessions + 1):]

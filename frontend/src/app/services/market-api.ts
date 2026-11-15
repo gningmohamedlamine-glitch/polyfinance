@@ -112,11 +112,30 @@ export interface Analysis {
     coherence?: Coherence;
     decisions?: AgentDecision[];
     usage?: Usage;
+    esg?: Esg | null;
     scenario?: Partial<Record<'position_cad' | 'purchase_cad' | 'portfolio_cad' | 'withdrawal_cad', number>>;
   };
   trace?: ToolTrace[];
 }
 export type Profile = 'amira' | 'robert' | 'mateo';
+
+export interface EsgSnapshot {
+  symbol: string; return_12m: number | null; annual_volatility: number; max_drawdown: number;
+  start_date: string; end_date: string;
+}
+export interface Esg {
+  ticker: string;
+  sector: string | null;
+  sector_flag: string | null;
+  membership: { status: 'ok' | 'unavailable'; member?: boolean; as_of?: string | null };
+  comparison: { stock: EsgSnapshot | null; reference: EsgSnapshot | null };
+  controversies: { title: string; url?: string; published_date?: string; kind: string; topic?: string | null; summary?: string }[];
+  web_status: string;
+  attention: string[];
+  missing: string[];
+  conclusion: 'points_attention' | 'insuffisant';
+  notice: string;
+}
 
 @Injectable({ providedIn: 'root' })
 export class MarketApi {

@@ -119,6 +119,8 @@
       </div>
     }
 
+    @if (result.impact.esg; as esg) { <app-esg-panel [esg]="esg" /> }
+
     @if (exposures().length) {
       <h3>Si une position avait été détenue ce jour-là</h3>
       <div class="exposures">

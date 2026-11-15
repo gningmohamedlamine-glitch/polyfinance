@@ -52,6 +52,7 @@ export class AgentTimeline {
     max_drawdown_cad: 'Mesurer la baisse maximale',
     direct_weight: 'Comparer le poids avant et après l’achat',
     exclusion_evidence: 'Vérifier les preuves liées aux exclusions',
+    esg_screen: 'Vérification ESG (secteur, controverses, ESGV)',
     profile_coherence: 'Vérifier la cohérence avec ton profil',
     verify_profile_coherence: 'Vérifier la cohérence avec ton profil',
     investigate: 'L’Enquêteur choisit ses recherches (GPT-6 Astra)',
