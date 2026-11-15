@@ -1,7 +1,7 @@
 import {
   LucideArrowRight, LucideBot, LucideChartCandlestick, LucideChartLine, LucideChevronDown, LucideCircleCheck,
   LucideCircleX, LucideFileText, LucideFolderSearch, LucideGlobe, LucideLandmark, LucideListTree, LucideLogOut,
-  LucidePlay, LucidePlus, LucideShieldCheck, LucideTriangleAlert,
+  LucidePlay, LucidePlus, LucideShieldCheck, LucideTriangleAlert, LucideCalendarDays, LucideCalendarRange,
 } from '@lucide/angular';
 
 /** Icônes Lucide partagées (remplacent les émojis et caractères spéciaux). */
@@ -23,4 +23,8 @@ export const ICONS = {
   doc: LucideFileText.icon,
   web: LucideGlobe.icon,
   shield: LucideShieldCheck.icon,
+  line: LucideChartLine.icon,
+  candles: LucideChartCandlestick.icon,
+  day: LucideCalendarDays.icon,
+  range: LucideCalendarRange.icon,
 };

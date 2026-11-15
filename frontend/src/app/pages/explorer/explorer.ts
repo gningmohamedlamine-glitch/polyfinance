@@ -1,6 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { DatePipe } from '@angular/common';
 import { Subscription } from 'rxjs';
 import { AgentTimeline } from '../../components/agent-timeline/agent-timeline';
 import { DossierView } from '../../components/dossier-view/dossier-view';
@@ -16,7 +17,7 @@ type SelectionMode = 'session' | 'range';
 
 @Component({
   selector: 'app-explorer',
-  imports: [FormsModule, LucideDynamicIcon, PriceChart, MovementAnalysis, AgentTimeline, DossierView, TracesView],
+  imports: [FormsModule, DatePipe, LucideDynamicIcon, PriceChart, MovementAnalysis, AgentTimeline, DossierView, TracesView],
   templateUrl: './explorer.html',
   styleUrl: './explorer.css',
 })

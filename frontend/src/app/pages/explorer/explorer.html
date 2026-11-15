@@ -102,33 +102,40 @@
         <div>
           <span class="eyebrow">Acte 1 · La séance</span>
           <h2>{{ stockName() }} <span class="muted">({{ ticker }})</span></h2>
-          <p class="muted">Clique sur une séance ou glisse sur une période, puis exécute l’analyse.</p>
+          <p class="muted">{{ mode() === 'session'
+            ? 'Choisis une journée de bourse dans la liste ou clique sur le graphique, puis exécute l’analyse.'
+            : 'Choisis le début et la fin, ou glisse sur le graphique, puis exécute l’analyse.' }}</p>
         </div>
         <div class="controls">
-          <fieldset class="mode" role="radiogroup" aria-label="Type de sélection">
-            <legend class="sr-only">Type de sélection</legend>
-            <label [class.on]="mode() === 'session'"><input type="radio" name="selection-mode" [value]="'session'"
-              [checked]="mode() === 'session'" (change)="setMode('session')"> Séance</label>
-            <label [class.on]="mode() === 'range'"><input type="radio" name="selection-mode" [value]="'range'"
-              [checked]="mode() === 'range'" (change)="setMode('range')"> Période</label>
-          </fieldset>
+          <div class="field">
+            <span class="field-label">J’analyse</span>
+            <fieldset class="mode" role="radiogroup" aria-label="Ce que j’analyse">
+              <legend class="sr-only">Ce que j’analyse</legend>
+              <label [class.on]="mode() === 'session'"><input type="radio" name="selection-mode" [value]="'session'"
+                [checked]="mode() === 'session'" (change)="setMode('session')">
+                <svg class="ico" [lucideIcon]="icons.day" aria-hidden="true"></svg> Une journée</label>
+              <label [class.on]="mode() === 'range'"><input type="radio" name="selection-mode" [value]="'range'"
+                [checked]="mode() === 'range'" (change)="setMode('range')">
+                <svg class="ico" [lucideIcon]="icons.range" aria-hidden="true"></svg> Une période</label>
+            </fieldset>
+          </div>
           @if (mode() === 'session') {
-            <label>Séance
+            <label class="field"><span class="field-label">Date</span>
               <select [ngModel]="sessionDate" (ngModelChange)="onSessionDateChange($event)" [disabled]="!rows().length">
                 @for (row of rows(); track row.date; let first = $first) {
-                  @if (!first) { <option [value]="row.date">{{ row.date }}</option> }
+                  @if (!first) { <option [value]="row.date">{{ row.date | date:'EEE d MMM y':'UTC' }}</option> }
                 }
               </select>
             </label>
           } @else {
-            <label>Début
+            <label class="field"><span class="field-label">Du</span>
               <select [ngModel]="rangeStart" (ngModelChange)="onRangeStartChange($event)" [disabled]="!rows().length">
-                @for (row of rows(); track row.date) { <option [value]="row.date">{{ row.date }}</option> }
+                @for (row of rows(); track row.date) { <option [value]="row.date">{{ row.date | date:'d MMM y':'UTC' }}</option> }
               </select>
             </label>
-            <label>Fin
+            <label class="field"><span class="field-label">Au</span>
               <select [ngModel]="rangeEnd" (ngModelChange)="onRangeEndChange($event)" [disabled]="!rows().length">
-                @for (row of rows(); track row.date) { <option [value]="row.date">{{ row.date }}</option> }
+                @for (row of rows(); track row.date) { <option [value]="row.date">{{ row.date | date:'d MMM y':'UTC' }}</option> }
               </select>
             </label>
           }

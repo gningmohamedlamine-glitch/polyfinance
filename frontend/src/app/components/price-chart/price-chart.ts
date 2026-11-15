@@ -10,11 +10,15 @@ import {
   viewChild,
 } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
+import { LucideDynamicIcon } from '@lucide/angular';
+import { ICONS } from '../../icons';
 import { Price } from '../../services/market-api';
 
 export type ChartSelection =
   | { kind: 'session'; date: string }
   | { kind: 'range'; startDate: string; endDate: string };
+
+type Horizon = '5J' | '1M' | '6M' | 'YTD' | '1A' | '5A' | 'Max';
 
 const DRAG_THRESHOLD = 8;
 const VIEW_WIDTH = 720;
@@ -25,7 +29,7 @@ type ChartPoint = Price & {
 
 @Component({
   selector: 'app-price-chart',
-  imports: [DecimalPipe],
+  imports: [DecimalPipe, LucideDynamicIcon],
   templateUrl: './price-chart.html',
   styleUrl: './price-chart.css',
 })
@@ -33,8 +37,18 @@ export class PriceChart {
   rows = input.required<Price[]>();
   rangeMode = input(false);
   chartStyle = signal<'line' | 'candles'>('line');
-  horizons = ["1J", "5J", "1M", "6M", "YTD", "1A", "5A", "Max"] as const;
-  horizon = signal<(typeof this.horizons)[number]>("1M");
+  readonly icons = ICONS;
+  /** Fenêtre affichée autour de la séance choisie : libellés en clair. */
+  readonly horizons = [
+    { key: '5J', label: '1 semaine' },
+    { key: '1M', label: '1 mois' },
+    { key: '6M', label: '6 mois' },
+    { key: 'YTD', label: 'Depuis janvier' },
+    { key: '1A', label: '1 an' },
+    { key: '5A', label: '5 ans' },
+    { key: 'Max', label: 'Tout' },
+  ] as const;
+  horizon = signal<Horizon>('1M');
   firstBound = signal<string | null>(null);
   selection = input.required<ChartSelection>();
   selectionChange = output<ChartSelection>();
@@ -59,7 +73,7 @@ export class PriceChart {
     const anchor = sel.kind === 'range' ? sel.endDate : sel.date;
     const selected = rows.findIndex(row => row.date === anchor);
     const horizon = this.horizon();
-    const counts = { '1J': 2, '5J': 6, '1M': 22, '6M': 127, '1A': 253, '5A': 1261 };
+    const counts: Record<string, number> = { '5J': 6, '1M': 22, '6M': 127, '1A': 253, '5A': 1261 };
     const count = horizon === 'YTD' || horizon === 'Max' ? rows.length : counts[horizon];
     const end = horizon === 'Max' || selected < 0 ? rows.length - 1
       : Math.min(rows.length - 1, selected + (horizon === '1M' ? 8 : 0));
@@ -68,7 +82,7 @@ export class PriceChart {
     return rows.slice(start, end + 1);
   });
 
-  setHorizon(horizon: (typeof this.horizons)[number]) {
+  setHorizon(horizon: Horizon) {
     this.firstBound.set(null);
     this.horizon.set(horizon);
   }

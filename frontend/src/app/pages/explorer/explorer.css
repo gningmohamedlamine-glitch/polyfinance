@@ -68,6 +68,8 @@
 .act-head p { margin: 6px 0 0; font-size: .88rem; }
 .controls { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
 .mode { display: flex; gap: 2px; border: 1px solid var(--border); border-radius: 10px; margin: 0; padding: 3px; }
+.field { display: grid; gap: 6px; }
+.field-label { font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
 .mode label { display: flex; gap: 6px; align-items: center; padding: 5px 10px; border-radius: 8px; color: var(--muted); cursor: pointer; }
 .mode label.on { background: var(--accent-soft); color: var(--accent-strong); font-weight: 600; }
 .mode input { position: absolute; opacity: 0; pointer-events: none; }

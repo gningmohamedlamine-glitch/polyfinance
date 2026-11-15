@@ -1,6 +1,6 @@
 .chart { padding: 16px 0 0; }
 p, .dates { color: var(--muted); font-size: .78rem; }
-svg { width: 100%; display: block; }
+svg:not(.ico) { width: 100%; display: block; }
 svg.interactive { touch-action: none; cursor: crosshair; }
 .grid { stroke: var(--border); fill: none; }
 .series { fill: none; stroke: var(--accent); stroke-width: 2.5; }
@@ -11,9 +11,12 @@ svg.interactive { touch-action: none; cursor: crosshair; }
 .dates strong { color: var(--text); text-align: center; }
 .area { fill: url(#chart-fill); }
 
-.chart-toolbar { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; color:var(--muted); font-size:.8rem; }
+.chart-toolbar { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px 16px; color:var(--muted); font-size:.82rem; }
+.group { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.group-label { font-size:.72rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
 .horizons { display:flex; gap:4px; flex-wrap:wrap; }
-.horizons button { padding:6px 9px; border:0; font-weight:600; }
+.horizons button { display:inline-flex; align-items:center; gap:6px; padding:6px 11px; border:0; border-radius:8px; font-weight:600; color:var(--muted); background:transparent; cursor:pointer; white-space:nowrap; }
+.horizons button:hover { color:var(--text); }
 .horizons button[aria-pressed="true"] { color:var(--accent); background:var(--accent-soft); }
 
 .chart-style { padding: 2px; border: 1px solid var(--border); border-radius: 11px; }

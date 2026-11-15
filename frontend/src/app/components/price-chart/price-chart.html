@@ -1,13 +1,22 @@
 <div class="chart">
   <div class="chart-toolbar">
-    <div class="horizons chart-style" role="group" aria-label="Type de graphique">
-      <button type="button" [attr.aria-pressed]="chartStyle() === 'line'" (click)="chartStyle.set('line')">Courbe</button>
-      <button type="button" [attr.aria-pressed]="chartStyle() === 'candles'" (click)="chartStyle.set('candles')">Bougies</button>
+    <div class="group" role="group" aria-label="Fenêtre affichée">
+      <span class="group-label">Afficher</span>
+      <div class="horizons">
+        @for (option of horizons; track option.key) {
+          <button type="button" [attr.aria-pressed]="horizon() === option.key" (click)="setHorizon(option.key)">{{ option.label }}</button>
+        }
+      </div>
     </div>
-    <div class="horizons" role="group" aria-label="Horizon du graphique">
-      @for (option of horizons; track option) {
-        <button type="button" [attr.aria-pressed]="horizon() === option" (click)="setHorizon(option)">{{ option }}</button>
-      }
+    <div class="horizons chart-style" role="group" aria-label="Type de graphique">
+      <button type="button" [attr.aria-pressed]="chartStyle() === 'line'" (click)="chartStyle.set('line')"
+        title="Prix de clôture de chaque séance">
+        <svg class="ico" [lucideIcon]="icons.line" aria-hidden="true"></svg> Ligne
+      </button>
+      <button type="button" [attr.aria-pressed]="chartStyle() === 'candles'" (click)="chartStyle.set('candles')"
+        title="Ouverture, haut, bas et clôture de chaque séance">
+        <svg class="ico" [lucideIcon]="icons.candles" aria-hidden="true"></svg> Bougies
+      </button>
     </div>
   </div>
   @if (points().length) {
