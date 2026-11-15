@@ -1,20 +1,19 @@
-import { CurrencyPipe, DatePipe, DecimalPipe, PercentPipe } from '@angular/common';
+import { CurrencyPipe, DatePipe, DecimalPipe, NgTemplateOutlet, PercentPipe } from '@angular/common';
 import { Component, computed, input } from '@angular/core';
 import { ReportReveal } from '../../report-reveal';
 import { LucideDynamicIcon } from '@lucide/angular';
 import { ICONS } from '../../icons';
 import { EsgPanel } from '../esg-panel/esg-panel';
+import { InfoTip } from '../info-tip/info-tip';
 import { MarketChange } from '../market-change/market-change';
 import { Persona } from '../../personas';
 import { Analysis } from '../../services/market-api';
 
-export type TextPart = { text: string; href?: string };
-
-import { InfoTip } from '../info-tip/info-tip';
+export type TextPart = { text: string; kind?: 'link' | 'code' | 'strong' | 'em'; href?: string };
 
 @Component({
   selector: 'app-movement-analysis',
-  imports: [InfoTip, CurrencyPipe, DatePipe, DecimalPipe, PercentPipe, LucideDynamicIcon, EsgPanel, MarketChange, ReportReveal],
+  imports: [InfoTip, CurrencyPipe, DatePipe, DecimalPipe, NgTemplateOutlet, PercentPipe, LucideDynamicIcon, EsgPanel, MarketChange, ReportReveal],
   templateUrl: './movement-analysis.html',
   styleUrl: './movement-analysis.css',
 })
@@ -92,7 +91,7 @@ export class MovementAnalysis {
     && !metric.label.startsWith('Part techno')));
 
   bullets(text: string) {
-    const lines = text.split(/\r?\n/).map(line => line.trim().replace(/^(?:[-*•]|\d+[.)])\s+/, '').replaceAll('**', '')).filter(Boolean);
+    const lines = text.split(/\r?\n/).map(line => line.trim().replace(/^(?:[-*•]|\d+[.)])\s+/, '')).filter(Boolean);
     // Texte local en un seul paragraphe : une phrase par puce pour rester lisible.
     if (lines.length === 1 && lines[0].length > 220) {
       return lines[0].split(/(?<=[.!?])\s+(?=[A-ZÀ-ÖØ-Ý«])/).filter(Boolean);
@@ -104,16 +103,20 @@ export class MovementAnalysis {
     return this.bullets(text).map(line => ({ parts: this.parseInlineParts(line) }));
   }
 
+  /** Inline marks the model writes: `code`, **bold**, *italic*, and [label](https://…). */
   parseInlineParts(line: string): TextPart[] {
     const parts: TextPart[] = [];
-    const re = /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g;
+    const re = /(`([^`\n]+)`)|(\*\*([^*\n]+)\*\*)|(\*([^*\n]+)\*)|(\[([^\]]+)\]\((https?:\/\/[^)\s]+)\))/g;
     let last = 0;
     let match: RegExpExecArray | null;
     while ((match = re.exec(line)) !== null) {
       if (match.index > last) {
         parts.push({ text: line.slice(last, match.index) });
       }
-      parts.push({ text: match[1], href: match[2] });
+      if (match[2] != null) parts.push({ text: match[2], kind: 'code' });
+      else if (match[4] != null) parts.push({ text: match[4], kind: 'strong' });
+      else if (match[6] != null) parts.push({ text: match[6], kind: 'em' });
+      else if (match[8] != null) parts.push({ text: match[8], kind: 'link', href: match[9] });
       last = match.index + match[0].length;
     }
     if (last < line.length) {

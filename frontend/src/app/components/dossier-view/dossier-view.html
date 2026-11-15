@@ -24,53 +24,69 @@
   <strong><svg class="ico" [lucideIcon]="icons.shield" aria-hidden="true"></svg> Règle de prudence de l’Enquêteur<app-info term="prudence" label="règle de prudence" /></strong>
   <p>Si aucune source datée n’explique le mouvement, l’agent conclut « cause indéterminée » au lieu d’en inventer une.
      Une publication datée ne prouve pas à elle seule le sens du mouvement.</p>
-  @if (unexplained().length) {
-    <small>{{ unexplainedSummary() }}</small>
+  @if (notableGaps().length) {
+    <small>
+      Séance{{ notableGaps().length > 1 ? 's' : '' }} marquante{{ notableGaps().length > 1 ? 's' : '' }}
+      sans publication au catalogue :
+      @for (gap of notableGaps(); track gap.date; let last = $last) {
+        {{ gap.date | date:'d MMM y':'UTC' }}@if (!last) {, }
+      }.
+      Les autres journées de la période ne sont pas listées.
+    </small>
   }
 </section>
 
-<section class="panel" reportReveal>
-  <div class="section-head"><h3>Publications et pistes web</h3><small class="muted">{{ sources().length + leads().length }} élément(s)</small></div>
-  @if (webStatus(); as web) { <p class="web-status muted">{{ web }}</p> }
-  @if (!sources().length && !leads().length) {
+<section class="panel sources" reportReveal>
+  <div class="section-head">
+    <h3><svg class="ico" [lucideIcon]="icons.dossier" aria-hidden="true"></svg> Publications et sources</h3>
+    <small class="muted">{{ resultCount() }} résultat{{ resultCount() > 1 ? 's' : '' }}</small>
+  </div>
+  @if (searchNote(); as note) {
+    <details class="search-note">
+      <summary>
+        <svg class="ico" [lucideIcon]="icons.info" aria-hidden="true"></svg>
+        <span>{{ note.summary }}</span>
+        <em>Détails</em>
+        <svg class="ico chevron" [lucideIcon]="icons.chevron" aria-hidden="true"></svg>
+      </summary>
+      <p>{{ note.detail }}</p>
+    </details>
+  }
+  @if (!resultCount()) {
     <p class="empty">Aucune publication trouvée pour la sélection{{ marketDriven()
       ? ' : l’effet attendu du marché (bêta × indice) explique l’essentiel du mouvement, aucune nouvelle propre au titre n’est nécessaire.'
       : ' : la cause reste indéterminée.' }}</p>
   }
-  @for (source of sources(); track source.url) {
-    <article class="evidence">
-      <header>
-        <span class="kind" [title]="source.publisher"><svg class="ico" [lucideIcon]="source.publisher === 'SEC EDGAR' ? icons.sec : icons.doc" aria-hidden="true"></svg></span>
-        <div class="title"><a [href]="source.url" target="_blank" rel="noopener">{{ source.title }}</a>
-          <small>{{ source.publisher }} · publié le {{ source.time_et.replace('T', ' à ') }} (heure de l’Est)@if (source.session) { · rattaché à la séance du {{ source.session }} }</small></div>
-        <span class="badge" [attr.data-status]="source.excerpt_status ?? 'none'">@if (source.excerpt_status === 'verified') { <svg class="ico" [lucideIcon]="icons.check" aria-hidden="true"></svg> } @else if (source.excerpt_status === 'mismatch') { <svg class="ico" [lucideIcon]="icons.cross" aria-hidden="true"></svg> }{{ statusLabel(source.excerpt_status) }}</span>
-      </header>
-      @if (source.excerpt) { <blockquote>« {{ source.excerpt }} »</blockquote> }
-      @if (source.summary) { <p class="summary"><strong>Résumé :</strong> {{ source.summary }}</p> }
-    </article>
-  }
-  @for (lead of leads(); track lead.url) {
-    <article class="evidence lead">
-      <header>
-        <span class="kind web" title="Web"><svg class="ico" [lucideIcon]="icons.web" aria-hidden="true"></svg></span>
-        <div class="title"><a [href]="lead.url" target="_blank" rel="noopener">{{ lead.title }}</a>
-          <small>Publié le {{ lead.published_date | date:'d MMM y':'UTC' }}@if (lead.session) { · {{ lead.after_session ? 'suivi de la séance du' : 'rattaché à la séance du' }} {{ lead.session | date:'d MMM y':'UTC' }} }@if (lead.related_count && lead.related_count > 1) { · {{ lead.related_count }} articles regroupés } · trouvé par la recherche web (Bedrock AgentCore ou Nova)</small></div>
-        @if (lead.excerpt_status === 'verified') {
-          <span class="badge" data-status="verified">Source officielle · extrait retrouvé</span>
-        } @else if (lead.source_origin === 'official') {
-          <span class="badge" data-status="lead">Source officielle · extrait à vérifier</span>
-        } @else if ((lead.corroboration ?? 1) >= 2) {
-          <span class="badge" data-status="lead" [title]="'Rapportée par : ' + (lead.domains ?? []).join(', ')">Corroborée par {{ lead.corroboration }} sites · contenu non vérifié</span>
-        } @else {
-          <span class="badge" data-status="lead">Source unique · non vérifiée</span>
+  @for (group of groups(); track group.id) {
+    <details class="source-group" [open]="isOpen(group.id)" (toggle)="onToggle(group.id, $event)">
+      <summary>
+        <span class="g-icon"><svg class="ico" [lucideIcon]="icons[group.icon]" aria-hidden="true"></svg></span>
+        <strong>{{ group.title }} <span class="count">({{ group.rows.length }})</span></strong>
+        <small>{{ group.hint }}</small>
+        <svg class="ico chevron" [lucideIcon]="icons.chevron" aria-hidden="true"></svg>
+      </summary>
+      <ul>
+        @for (row of group.rows; track row.url) {
+          <li class="source-row">
+            <span class="mark" [attr.data-bucket]="group.id" aria-hidden="true">{{ row.publisher.slice(0, 1) }}</span>
+            <span class="who">{{ row.publisher }}</span>
+            <span class="what">
+              <a [href]="row.url" target="_blank" rel="noopener" [attr.title]="row.tip || null">{{ row.title }}</a>
+              @if (row.form) { <span class="form">{{ row.form }}</span> }
+              @if (row.also.length) {
+                <details class="also">
+                  <summary>{{ row.also.length }} autre{{ row.also.length > 1 ? 's' : '' }}</summary>
+                  @for (alt of row.also; track alt.url) {
+                    <a [href]="alt.url" target="_blank" rel="noopener">{{ alt.title }} <small>{{ alt.publisher }}</small></a>
+                  }
+                </details>
+              }
+            </span>
+            <time [attr.title]="row.tip || null">{{ row.when }}</time>
+          </li>
         }
-      </header>
-      <p class="summary">{{ lead.summary }}</p>
-      @if (lead.excerpt_status === 'verified') { <blockquote>« {{ lead.original_excerpt }} »</blockquote> }
-      @if (lead.page_status === 'unavailable') { <small class="warn">La page n’a pas pu être consultée automatiquement.</small> }
-      @if (lead.excerpt_status === 'verified') { <small>Passage retrouvé dans la page ; le résumé, la date et le lien avec le mouvement restent à apprécier.</small> }
-      @if (lead.after_session) { <small class="warn">Publiée après la séance : elle peut commenter le mouvement, pas l’expliquer.</small> }
-    </article>
+      </ul>
+    </details>
   }
 </section>
 

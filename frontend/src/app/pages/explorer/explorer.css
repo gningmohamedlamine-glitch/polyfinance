@@ -1,4 +1,10 @@
 .disclaimer { color: var(--muted); font-size: .78rem; text-align: center; }
+.live-sources { display: grid; gap: 10px; }
+.live-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.live-sources h3 { margin: 0; font-size: 1rem; }
+.live-sources ul { list-style: none; display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; }
+.live-sources li { display: flex; align-items: center; gap: 8px; max-width: 100%; padding: 6px 12px; border: 1px solid var(--border); border-radius: 999px; font-size: .84rem; }
+.live-sources li span { flex: none; font-weight: 600; color: var(--accent-strong); }
 
 .avatar { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; color: #fff; font-weight: 700; background: var(--accent); }
 .avatar.small { width: 32px; height: 32px; font-size: .85rem; }

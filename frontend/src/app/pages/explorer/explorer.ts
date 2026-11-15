@@ -19,6 +19,11 @@ import { PERSONAS, personaOf } from '../../personas';
 import { ReportReveal } from '../../report-reveal';
 import { AgentProgress, Analysis, AnalysisPreview, EvidencePreview, MarketApi, Price, Profile, Stock } from '../../services/market-api';
 
+function clipTitle(text: string, max = 72): string {
+  const value = text.replace(/\s+/g, ' ').trim();
+  return value.length > max ? `${value.slice(0, max - 1).trimEnd()}…` : value;
+}
+
 type SelectionMode = 'session' | 'range';
 type Chapter = 'analyse' | 'resultat' | 'dossier' | 'controles' | 'traces';
 
@@ -463,7 +468,30 @@ export class Explorer {
     this.busy.set(false);
   }
 
-  /** Libellé de la sélection du résultat affiché, pour signaler qu'il est antérieur. */
+  /** Compact counts for the pipeline. Full titles and excerpts stay in the dossier. */
+  liveBrief(evidence: EvidencePreview) {
+    const filings = evidence.publications.filter(source =>
+      source.publisher === 'SEC EDGAR' || /8-k|10-q|10-k|424b2|edgar|dépôt/i.test(source.title));
+    const filingUrls = new Set(filings.map(source => source.url));
+    const highlighted = evidence.publications.filter(source => !filingUrls.has(source.url) && source.excerpt_status === 'verified');
+    const lines: { label: string; detail: string }[] = highlighted.slice(0, 2).map(source => ({
+      label: 'Confirmé',
+      detail: clipTitle(source.title),
+    }));
+    if (filings.length) {
+      lines.push({ label: 'SEC', detail: filings.length === 1 ? '1 dépôt' : `${filings.length} dépôts` });
+    }
+    const other = evidence.publications.length - filings.length - highlighted.length;
+    if (other > 0) {
+      lines.push({ label: 'Catalogue', detail: other === 1 ? '1 autre publication' : `${other} autres publications` });
+    }
+    if (evidence.web_leads.length) {
+      const count = evidence.web_leads.length;
+      lines.push({ label: 'Web', detail: count === 1 ? '1 piste' : `${count} pistes` });
+    }
+    return lines;
+  }
+
   resultLabel() {
     const selection = this.result()?.dossier?.selection;
     if (!selection) return '';

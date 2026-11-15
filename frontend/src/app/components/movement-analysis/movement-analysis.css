@@ -30,6 +30,8 @@ small { color: var(--muted); font-size: .78rem; }
 .verdict-line { margin: 0; font-size: .88rem; color: var(--text); }
 
 .points { margin: 0; padding-left: 1.1rem; display: grid; gap: 8px; line-height: 1.55; font-size: .93rem; }
+.points code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .84em; padding: 1px 5px; border-radius: 5px; background: #f2f4f7; }
+.points a { color: var(--accent-strong); }
 .empty { margin: 0; padding: 12px; border-radius: 10px; background: #f8f9fc; color: var(--muted); font-size: .88rem; }
 
 .source { display: grid; gap: 6px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; }

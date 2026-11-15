@@ -47,7 +47,7 @@
     <h3>Synthèse de l’Enquêteur</h3>
     <ul class="points">
       @for (line of bulletLines(result.event.text); track $index) {
-        <li>@for (part of line.parts; track $index) {@if (part.href) {<a [href]="part.href" target="_blank" rel="noopener">{{ part.text }}</a>} @else {{{ part.text }}}}</li>
+        <li>@for (part of line.parts; track $index) {<ng-container *ngTemplateOutlet="rich; context: { $implicit: part }" />}</li>
       }
     </ul>
 
@@ -98,7 +98,7 @@
     <h3>Analyse du Conseiller</h3>
     <ul class="points">
       @for (line of bulletLines(result.impact.text); track $index) {
-        <li>@for (part of line.parts; track $index) {@if (part.href) {<a [href]="part.href" target="_blank" rel="noopener">{{ part.text }}</a>} @else {{{ part.text }}}}</li>
+        <li>@for (part of line.parts; track $index) {<ng-container *ngTemplateOutlet="rich; context: { $implicit: part }" />}</li>
       }
     </ul>
     <details class="disclosure">
@@ -149,3 +149,13 @@
     <p class="note">Simulation : analyse de cohérence, pas un conseil financier. Les limites des profils sont des hypothèses fictives.</p>
   </article>
 </section>
+
+<ng-template #rich let-part>
+  @switch (part.kind) {
+    @case ('link') { <a [href]="part.href" target="_blank" rel="noopener">{{ part.text }}</a> }
+    @case ('code') { <code>{{ part.text }}</code> }
+    @case ('strong') { <strong>{{ part.text }}</strong> }
+    @case ('em') { <em>{{ part.text }}</em> }
+    @default { {{ part.text }} }
+  }
+</ng-template>

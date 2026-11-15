@@ -166,20 +166,20 @@
 
     @if (busy()) {
       @if (evidencePreview(); as evidence) {
-        @if (evidence.publications.length || evidence.web_leads.length) {
-          <div class="panel" aria-label="Sources recueillies">
-            <h3>Premières sources</h3>
-            <ul>
-              @for (source of evidence.publications.slice(0, 3); track source.url) {
-                <li><a [href]="source.url" target="_blank" rel="noopener">{{ source.title }}</a> · {{ source.excerpt_status === 'verified' ? 'Extrait vérifié' : 'Publication datée' }}</li>
-              } @empty {
-                @for (lead of evidence.web_leads.slice(0, 3); track lead.url) {
-                  <li><a [href]="lead.url" target="_blank" rel="noopener">{{ lead.title }}</a> · Piste web</li>
+        @if (liveBrief(evidence); as brief) {
+          @if (brief.length) {
+            <div class="panel live-sources" aria-label="Sources recueillies">
+              <div class="live-head">
+                <h3>Sources en cours</h3>
+                <small class="muted">Le détail arrive dans le dossier.</small>
+              </div>
+              <ul>
+                @for (line of brief; track line.label + line.detail) {
+                  <li><span>{{ line.label }}</span>{{ line.detail }}</li>
                 }
-              }
-            </ul>
-            <small class="muted">Les synthèses et les contrôles sont en cours.</small>
-          </div>
+              </ul>
+            </div>
+          }
         }
       }
       <app-agent-timeline
