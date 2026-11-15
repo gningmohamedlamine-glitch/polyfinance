@@ -3,7 +3,6 @@
 .top { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 32px; border-bottom: 1px solid var(--border); background: var(--surface); }
 .brand { display: flex; align-items: center; gap: 10px; }
 .brand strong { font-size: 1.05rem; }
-.brand-mark { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: var(--accent); color: #fff; }
 .chip { padding: 2px 9px; border-radius: 999px; border: 1px solid #bfd0fb; background: var(--accent-soft); color: var(--accent); font-size: .68rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
 .engine { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; background: var(--bg); border: 1px solid var(--border); color: var(--muted); font-size: .8rem; }
 .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); }

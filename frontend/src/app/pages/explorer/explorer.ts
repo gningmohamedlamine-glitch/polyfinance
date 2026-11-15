@@ -7,6 +7,7 @@ import { AgentTimeline } from '../../components/agent-timeline/agent-timeline';
 import { DossierView } from '../../components/dossier-view/dossier-view';
 import { TracesView } from '../../components/traces-view/traces-view';
 import { Welcome } from '../../components/welcome/welcome';
+import { Logo } from '../../components/logo/logo';
 import { MovementAnalysis } from '../../components/movement-analysis/movement-analysis';
 import { ChartSelection, ChartStyle, HORIZONS, Horizon, PriceChart } from '../../components/price-chart/price-chart';
 import { LucideDynamicIcon } from '@lucide/angular';
@@ -18,7 +19,7 @@ type SelectionMode = 'session' | 'range';
 
 @Component({
   selector: 'app-explorer',
-  imports: [FormsModule, DatePipe, DecimalPipe, PercentPipe, LucideDynamicIcon, PriceChart, MovementAnalysis, AgentTimeline, DossierView, TracesView, Welcome],
+  imports: [FormsModule, DatePipe, DecimalPipe, PercentPipe, LucideDynamicIcon, PriceChart, MovementAnalysis, AgentTimeline, DossierView, TracesView, Welcome, Logo],
   templateUrl: './explorer.html',
   styleUrl: './explorer.css',
 })

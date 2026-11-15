@@ -2,13 +2,14 @@ import { Component, output } from '@angular/core';
 import { PercentPipe } from '@angular/common';
 import { LucideDynamicIcon } from '@lucide/angular';
 import { ICONS } from '../../icons';
+import { Logo } from '../logo/logo';
 import { PERSONAS } from '../../personas';
 import { Profile } from '../../services/market-api';
 
 /** Écran d'accueil : choix d'un profil fictif de l'énoncé. */
 @Component({
   selector: 'app-welcome',
-  imports: [PercentPipe, LucideDynamicIcon],
+  imports: [PercentPipe, LucideDynamicIcon, Logo],
   templateUrl: './welcome.html',
   styleUrl: './welcome.css',
 })

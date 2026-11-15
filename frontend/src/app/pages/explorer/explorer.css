@@ -3,7 +3,6 @@
 .tags span { padding: 3px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-strong); font-size: .75rem; font-weight: 600; }
 .disclaimer { color: var(--muted); font-size: .78rem; text-align: center; }
 
-.brand-mark { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: var(--accent); color: #fff; font-weight: 800; }
 .avatar { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; color: #fff; font-weight: 700; background: var(--accent); }
 .avatar.small { width: 32px; height: 32px; font-size: .85rem; }
 .avatar[data-profile="amira"] { background: #6941c6; }
@@ -87,7 +86,6 @@
 .sub-nav button { text-align: left; border: 0; padding: 6px 8px; font-size: .84rem; color: var(--muted); background: transparent; }
 .sub-nav button.active { color: var(--accent-strong); font-weight: 600; }
 .sub-nav button:disabled { opacity: .4; }
-.brand-mark svg.ico { width: 20px; height: 20px; }
 .new, .leave, .pending .primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 .nav-item svg.ico { width: 18px; height: 18px; }
 .caret { color: var(--muted); }
