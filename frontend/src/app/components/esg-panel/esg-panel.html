@@ -17,7 +17,7 @@
 
   @if (e.comparison.stock && e.comparison.reference; as _) {
     <table>
-      <caption>12 mois avant la séance ({{ e.comparison.stock!.start_date }} → {{ e.comparison.stock!.end_date }})</caption>
+      <caption>12 mois avant la fin de la sélection, pas la période sélectionnée ({{ e.comparison.stock!.start_date }} → {{ e.comparison.stock!.end_date }})</caption>
       <thead><tr><th></th><th>{{ e.ticker }}</th><th>ESGV<app-info term="esgv" label="ESGV" align="right" /> <small>FNB filtré ESG</small></th></tr></thead>
       <tbody>
         <tr><th>Rendement</th><td class="num">{{ e.comparison.stock!.return_12m | percent:'1.0-0' }}</td><td class="num">{{ e.comparison.reference!.return_12m | percent:'1.0-0' }}</td></tr>

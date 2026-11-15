@@ -67,12 +67,12 @@ def profile_coherence(profile: str, ticker: str, end_date: str, weight_after: fl
     if risk.get("status") == "ok":
         if risk["annual_volatility"] > limits["annual_volatility"]:
             conflicts.append(
-                f"Volatilité annuelle de {risk['annual_volatility']:.0%} sur les 12 derniers mois, "
+                f"Volatilité annuelle de {risk['annual_volatility']:.0%} sur les 12 mois précédant le {risk['end_date']}, "
                 f"au-delà de la limite de {limits['annual_volatility']:.0%} retenue pour ce profil."
             )
         if risk["max_drawdown"] < limits["max_drawdown"]:
             conflicts.append(
-                f"Baisse maximale de {risk['max_drawdown']:.0%} sur les 12 derniers mois, "
+                f"Baisse maximale de {risk['max_drawdown']:.0%} sur les 12 mois précédant le {risk['end_date']}, "
                 f"au-delà de la baisse tolérée de {limits['max_drawdown']:.0%}."
             )
     if sector and limits.get("max_sector_weight") and sector["after"] > limits["max_sector_weight"]:
@@ -226,9 +226,12 @@ def _metrics_mateo(dossier: dict, *, web_result=None) -> tuple[list[dict], str, 
     stock, reference = esg["comparison"]["stock"], esg["comparison"]["reference"]
     if stock and reference:
         metrics += [
-            {"label": f"Rendement 12 mois ({stock['symbol']})", "value": stock["return_12m"], "unit": "%"},
-            {"label": "Rendement 12 mois (ESGV, FNB filtré ESG)", "value": reference["return_12m"], "unit": "%"},
-            {"label": "Volatilité 12 mois (ESGV)", "value": reference["annual_volatility"], "unit": "%"},
+            {"label": f"Rendement 12 mois ({stock['symbol']}, {stock['start_date']} → {stock['end_date']})",
+             "value": stock["return_12m"], "unit": "%"},
+            {"label": f"Rendement 12 mois (ESGV, FNB filtré ESG, {reference['start_date']} → {reference['end_date']})",
+             "value": reference["return_12m"], "unit": "%"},
+            {"label": f"Volatilité 12 mois (ESGV, {reference['start_date']} → {reference['end_date']})",
+             "value": reference["annual_volatility"], "unit": "%"},
         ]
     if esg["attention"]:
         assumptions = "Points d’attention ESG : " + " ".join(esg["attention"])
@@ -295,6 +298,9 @@ ADVISOR = (
     "Réponds ensuite en français, en trois puces au plus. Sois bref : chaque puce fait au plus 25 mots, une idée par puce. Ne répète pas les chiffres déjà affichés à l’écran (variation, indices, limites du profil) sauf s’ils servent ta phrase. Si verify_profile_coherence signale des "
     "conflits, la première puce le dit en une phrase (la liste détaillée est déjà affichée au-dessus). Ne donne aucun conseil d’achat "
     "ou de vente : décris ce que le mouvement implique pour ce profil. Qualifie les pistes web de non vérifiées. "
+    "Chaque mesure a sa propre fenêtre : la variation de la sélection est dans dossier.returns ; la volatilité, "
+    "la pire baisse et la comparaison avec ESGV portent sur les 12 mois avant la fin de la sélection. "
+    "Ne les attribue jamais à la période sélectionnée et dis « sur les 12 derniers mois » quand tu les cites. "
     "Pour les critères ESG, n’affirme jamais qu’un titre est conforme : résume en une puce les points "
     "d’attention, ou dis que l’information est insuffisante (le détail est affiché dans le panneau ESG)."
 )
@@ -441,7 +447,10 @@ def _run_advisor(model, dossier, profile, scenario, notify, prepared, esg_future
         output = {"metrics": metrics, "assumptions": assumptions, "coherence": coherence}
         esg = _esg_of(trace_entries)
         if esg:
-            output["esg"] = {key: esg[key] for key in ("sector", "attention", "missing", "controversies", "conclusion")}
+            output["esg"] = {key: esg[key] for key in ("sector", "attention", "missing", "controversies", "conclusion",
+                                                        "comparison")}
+            output["esg"]["comparison_note"] = ("Comparaison sur les 12 mois avant la fin de la sélection, "
+                                                "pas sur la période sélectionnée.")
         return True, output
 
     specs = [{"toolSpec": {"name": name, "description": TOOL_DESCRIPTIONS[name],

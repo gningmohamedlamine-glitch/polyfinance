@@ -77,7 +77,7 @@ export class MovementAnalysis {
   /** Métriques non déjà montrées dans les cartes de règles ou les expositions. */
   extraMetrics = computed(() => this.analysis().impact.metrics.filter(metric =>
     !['Volatilité annuelle (12 mois)', 'Variation de la position'].includes(metric.label)
-    && !metric.label.startsWith('Rendement 12 mois') && metric.label !== 'Volatilité 12 mois (ESGV)'
+    && !metric.label.startsWith('Rendement 12 mois') && !metric.label.startsWith('Volatilité 12 mois (ESGV')
     && !metric.label.startsWith('Part techno')));
 
   bullets(text: string) {
