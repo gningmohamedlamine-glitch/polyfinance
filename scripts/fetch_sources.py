@@ -49,7 +49,19 @@ def html_to_text(html: str) -> str:
     return "".join(parser.parts)
 
 
+def load_env(path: Path) -> None:
+    """Lit le .env du projet (sans écraser l'environnement), comme backend/manage.py."""
+    if not path.is_file():
+        return
+    for line in path.read_text(encoding="utf-8-sig").splitlines():
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            key, value = line.removeprefix("export ").split("=", 1)
+            os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+
+
 def main() -> int:
+    load_env(ROOT / ".env")
     agent = os.getenv("SEC_USER_AGENT")
     if not agent:
         print("Définis SEC_USER_AGENT (nom de l'équipe et courriel), exigé par la SEC.")
