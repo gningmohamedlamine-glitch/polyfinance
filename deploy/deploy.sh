@@ -53,7 +53,7 @@ if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
 fi
 curl --fail --silent --show-error --max-time 15 --retry 10 --retry-all-errors --retry-delay 5 "$endpoint/api/health/"
 curl --fail --silent --show-error --max-time 15 "$endpoint/" > /dev/null
-curl --fail --silent --show-error --no-buffer --max-time 600 "$endpoint/api/analysis/?ticker=NVDA&date=2024-08-29&profile=mateo&stream=1" |
+curl --fail --silent --show-error --no-buffer --max-time 600 "$endpoint/api/analysis/?ticker=NVDA&date=2024-08-29&profile=mateo&stream=1&search=deep" |
   python deploy/check_analysis.py
 if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
   printf '\nValidation réussie : frontend, santé, agents Bedrock, recherche web et ESG.\n' >> "$GITHUB_STEP_SUMMARY"
