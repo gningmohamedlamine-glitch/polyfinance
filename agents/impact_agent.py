@@ -300,7 +300,7 @@ def _fallback_text(profile: str, metrics: list[dict], assumptions: str, coherenc
 
 
 ADVISOR = (
-    "Tu es le Conseiller de profil d’AlphaForge. Tu reçois le dossier de l’Enquêteur (calculs et sources aux statuts explicites) "
+    "Tu es le Conseiller de profil d’ALPHA Déclic. Tu reçois le dossier de l’Enquêteur (calculs et sources aux statuts explicites) "
     "et le profil fictif d’un investisseur. Les calculs déjà faits en Python sont dans profile_calculations : "
     "Pour Amira, crypto_context fournit des repères BTC/ETH datés : ce ne sont ni ses positions ni des achats proposés. "
     "Ne déduis jamais que tout le portefeuille est diversifié des seules limites respectées par l’action. "

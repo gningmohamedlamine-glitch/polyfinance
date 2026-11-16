@@ -1,10 +1,10 @@
 import { Component, input } from '@angular/core';
 
-/** Logo AlphaForge : un alpha dont la queue remonte comme une courbe de prix. */
+/** Logo ALPHA Déclic : un alpha dont la queue remonte comme une courbe de prix. */
 @Component({
   selector: 'app-logo',
   template: `
-    <svg viewBox="0 0 48 48" [attr.width]="size()" [attr.height]="size()" role="img" aria-label="AlphaForge AI">
+    <svg viewBox="0 0 48 48" [attr.width]="size()" [attr.height]="size()" role="img" aria-label="ALPHA Déclic">
       <defs>
         <linearGradient id="af-logo-g" x1="0" y1="0" x2="1" y2="1">
           <stop offset="0" stop-color="#3b6ef5" /><stop offset="1" stop-color="#1d3fb8" />

@@ -1,4 +1,4 @@
-# Agents AlphaForge
+# Agents d’ALPHA Déclic
 
 Deux agents, un seul modèle Bedrock (GPT-6 Astra, via `BEDROCK_MODEL_ID` ; `EVENT_MODEL_ID` et `IMPACT_MODEL_ID` permettent d’en choisir un par agent).
 

@@ -1,4 +1,6 @@
-# AlphaForge AI — Datathon PolyFinances 2026
+# ALPHA Déclic — AlphaForge AI Datathon (PolyFinances 2026)
+
+**ALPHA** : **A**nalyse · **L**imites · **P**reuves · **H**ypothèses · **A**gents.
 
 Clique sur une séance pour comprendre le mouvement, puis change le profil pour voir l’impact sur un scénario fictif.
 
